@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, date, timedelta
 import random
 from enum import Enum
+import csv
+import io
 
 app = FastAPI()
 
@@ -143,8 +146,61 @@ class BillingCategory(str, Enum):
     STORE = "Store"
     OTHER = "Other"
 
+class UserRole(str, Enum):
+    SUPER_ADMIN = "Super Admin"
+    CAMPUS_ADMIN = "Campus Admin"
+    TEACHER = "Teacher"
+    PARENT = "Parent"
+
+class AuditAction(str, Enum):
+    CREATE = "Create"
+    UPDATE = "Update"
+    DELETE = "Delete"
+    LOGIN = "Login"
+    LOGOUT = "Logout"
+
+class Organization(BaseModel):
+    organization_id: str
+    name: str
+    created_date: date
+
+class Campus(BaseModel):
+    campus_id: str
+    organization_id: str
+    name: str
+    location: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    active: bool = True
+
+class User(BaseModel):
+    user_id: str
+    email: str
+    password_hash: str  # In production, use proper password hashing
+    first_name: str
+    last_name: str
+    role: UserRole
+    campus_ids: List[str]  # Campuses this user has access to
+    active: bool = True
+    created_date: date
+    last_login: Optional[datetime] = None
+
+class AuditLog(BaseModel):
+    audit_id: str
+    user_id: Optional[str]
+    campus_id: Optional[str]
+    entity_type: str  # "Student", "Family", etc.
+    entity_id: str
+    action: AuditAction
+    before_data: Optional[dict] = None
+    after_data: Optional[dict] = None
+    timestamp: datetime
+    ip_address: Optional[str] = None
+
 class Student(BaseModel):
     student_id: str
+    campus_id: str
     first_name: str
     last_name: str
     date_of_birth: date
@@ -162,7 +218,7 @@ class Student(BaseModel):
     ixl_status_flag: IXLStatus
     overall_risk_flag: RiskFlag
     funding_source: FundingSource = FundingSource.OUT_OF_POCKET
-    step_up_percentage: int = 0  # 0-100
+    step_up_percentage: int = 0
 
 class Family(BaseModel):
     family_id: str
@@ -189,6 +245,7 @@ class Parent(BaseModel):
 
 class Staff(BaseModel):
     staff_id: str
+    campus_ids: List[str]
     first_name: str
     last_name: str
     role: StaffRole
@@ -198,6 +255,7 @@ class Staff(BaseModel):
 
 class GradeRecord(BaseModel):
     grade_record_id: str
+    campus_id: str
     student_id: str
     subject: str
     term: str
@@ -206,6 +264,7 @@ class GradeRecord(BaseModel):
 
 class BehaviorNote(BaseModel):
     behavior_note_id: str
+    campus_id: str
     student_id: str
     date: date
     type: BehaviorType
@@ -214,6 +273,7 @@ class BehaviorNote(BaseModel):
 
 class AttendanceRecord(BaseModel):
     attendance_id: str
+    campus_id: str
     student_id: str
     date: date
     status: AttendanceStatus
@@ -233,15 +293,16 @@ class IXLSummary(BaseModel):
 
 class BillingRecord(BaseModel):
     billing_record_id: str
+    campus_id: str
     family_id: str
     date: date
-    type: str  # "Charge" or "Payment"
+    type: str
     description: str
     amount: float
-    source: Optional[PaymentSource] = None  # Required for Payment, null for Charge
-    period_month: Optional[str] = None  # "YYYY-MM" for tuition charges/payments
-    category: Optional[BillingCategory] = None  # Tuition, Fee, Store, Other
-    student_id: Optional[str] = None  # Optional per-student tracking
+    source: Optional[PaymentSource] = None
+    period_month: Optional[str] = None
+    category: Optional[BillingCategory] = None
+    student_id: Optional[str] = None
 
 class Conference(BaseModel):
     conference_id: str
@@ -265,6 +326,7 @@ class Message(BaseModel):
 
 class Event(BaseModel):
     event_id: str
+    campus_id: str
     title: str
     description: str
     event_type: EventType
@@ -288,10 +350,11 @@ class EventRSVP(BaseModel):
 
 class Document(BaseModel):
     document_id: str
+    campus_id: str
     title: str
     document_type: DocumentType
     description: str
-    required_for: str  # "All Students", "Grade K-5", specific student_id, etc.
+    required_for: str
     status: DocumentStatus
     created_date: date
     expiration_date: Optional[date]
@@ -326,16 +389,18 @@ class Order(BaseModel):
 
 class PhotoAlbum(BaseModel):
     album_id: str
+    campus_id: str
     title: str
     description: str
     created_by_staff_id: str
     created_date: date
     status: PhotoAlbumStatus
     photo_urls: List[str]
-    visible_to_grades: List[str]  # ["K", "1", "2"] or ["All"]
+    visible_to_grades: List[str]
 
 class Incident(BaseModel):
     incident_id: str
+    campus_id: str
     student_id: str
     reported_by_staff_id: str
     incident_type: IncidentType
@@ -349,6 +414,7 @@ class Incident(BaseModel):
 
 class HealthRecord(BaseModel):
     health_record_id: str
+    campus_id: str
     student_id: str
     allergies: List[str]
     medications: List[str]
@@ -360,6 +426,10 @@ class HealthRecord(BaseModel):
     physician_phone: Optional[str]
     last_updated: date
 
+organizations_db: List[Organization] = []
+campuses_db: List[Campus] = []
+users_db: List[User] = []
+audit_logs_db: List[AuditLog] = []
 students_db: List[Student] = []
 families_db: List[Family] = []
 parents_db: List[Parent] = []
@@ -383,6 +453,7 @@ health_records_db: List[HealthRecord] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
+    global organizations_db, campuses_db, users_db, audit_logs_db
     global students_db, families_db, parents_db, staff_db, grade_records_db
     global behavior_notes_db, attendance_records_db, ixl_summaries_db
     global billing_records_db, conferences_db, messages_db
@@ -392,6 +463,10 @@ def generate_demo_data():
     from .demo_data import generate_all_demo_data
     
     data = generate_all_demo_data()
+    organizations_db = data.get("organizations", [])
+    campuses_db = data.get("campuses", [])
+    users_db = data.get("users", [])
+    audit_logs_db = data.get("audit_logs", [])
     students_db = data["students"]
     families_db = data["families"]
     parents_db = data["parents"]
@@ -422,8 +497,51 @@ async def healthz():
     return {"status": "ok"}
 
 
+@app.get("/api/organizations", response_model=List[Organization])
+async def get_organizations():
+    return organizations_db
+
+@app.get("/api/organizations/{organization_id}", response_model=Organization)
+async def get_organization(organization_id: str):
+    org = next((o for o in organizations_db if o.organization_id == organization_id), None)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return org
+
+@app.get("/api/campuses", response_model=List[Campus])
+async def get_campuses(organization_id: Optional[str] = None):
+    filtered_campuses = campuses_db
+    if organization_id:
+        filtered_campuses = [c for c in filtered_campuses if c.organization_id == organization_id]
+    return filtered_campuses
+
+@app.get("/api/campuses/{campus_id}", response_model=Campus)
+async def get_campus(campus_id: str):
+    campus = next((c for c in campuses_db if c.campus_id == campus_id), None)
+    if not campus:
+        raise HTTPException(status_code=404, detail="Campus not found")
+    return campus
+
+@app.get("/api/users", response_model=List[User])
+async def get_users(role: Optional[UserRole] = None, campus_id: Optional[str] = None):
+    filtered_users = users_db
+    if role:
+        filtered_users = [u for u in filtered_users if u.role == role]
+    if campus_id:
+        filtered_users = [u for u in filtered_users if campus_id in u.campus_ids]
+    return filtered_users
+
+@app.get("/api/users/{user_id}", response_model=User)
+async def get_user(user_id: str):
+    user = next((u for u in users_db if u.user_id == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @app.get("/api/students", response_model=List[Student])
 async def get_students(
+    campus_id: Optional[str] = None,
     grade: Optional[str] = None,
     session: Optional[Session] = None,
     room: Optional[Room] = None,
@@ -433,6 +551,8 @@ async def get_students(
 ):
     filtered_students = students_db
     
+    if campus_id:
+        filtered_students = [s for s in filtered_students if s.campus_id == campus_id]
     if grade:
         filtered_students = [s for s in filtered_students if s.grade == grade]
     if session:
@@ -455,6 +575,56 @@ async def get_student(student_id: str):
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
+
+@app.post("/api/students", response_model=Student)
+async def create_student(student: Student):
+    if any(s.student_id == student.student_id for s in students_db):
+        raise HTTPException(status_code=400, detail="Student ID already exists")
+    
+    campus = next((c for c in campuses_db if c.campus_id == student.campus_id), None)
+    if not campus:
+        raise HTTPException(status_code=400, detail="Invalid campus_id")
+    
+    family = next((f for f in families_db if f.family_id == student.family_id), None)
+    if not family:
+        raise HTTPException(status_code=400, detail="Invalid family_id")
+    
+    students_db.append(student)
+    
+    family.student_ids.append(student.student_id)
+    
+    return student
+
+@app.get("/api/students/export/csv")
+async def export_students_csv(campus_id: Optional[str] = None):
+    filtered_students = students_db
+    if campus_id:
+        filtered_students = [s for s in filtered_students if s.campus_id == campus_id]
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow([
+        "Student ID", "Campus ID", "First Name", "Last Name", "Date of Birth", 
+        "Grade", "Session", "Room", "Status", "Family ID", "Enrollment Start Date",
+        "Funding Source", "Step-Up %", "Overall Grade", "IXL Status", "Risk Flag"
+    ])
+    
+    for student in filtered_students:
+        writer.writerow([
+            student.student_id, student.campus_id, student.first_name, student.last_name,
+            student.date_of_birth, student.grade, student.session, student.room,
+            student.status, student.family_id, student.enrollment_start_date,
+            student.funding_source, student.step_up_percentage, student.overall_grade_flag,
+            student.ixl_status_flag, student.overall_risk_flag
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=students_export.csv"}
+    )
 
 @app.get("/api/families", response_model=List[Family])
 async def get_families(billing_status: Optional[BillingStatus] = None):

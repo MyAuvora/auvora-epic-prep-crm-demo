@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 import random
 from typing import List
 from .main import (
+    Organization, Campus, User, AuditLog,
     Student, Family, Parent, Staff, GradeRecord, BehaviorNote,
     AttendanceRecord, IXLSummary, BillingRecord, Conference, Message,
     Event, EventRSVP, Document, DocumentSignature, Product, Order,
@@ -11,11 +12,75 @@ from .main import (
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
     DocumentType, DocumentStatus, ProductCategory, OrderStatus,
     PhotoAlbumStatus, IncidentType, IncidentSeverity,
-    FundingSource, PaymentSource, BillingCategory
+    FundingSource, PaymentSource, BillingCategory,
+    UserRole, AuditAction
 )
 
 def generate_all_demo_data():
     """Generate all demo data and return as dictionaries"""
+    
+    organizations_db = []
+    campuses_db = []
+    users_db = []
+    audit_logs_db = []
+    
+    org = Organization(
+        organization_id="org_1",
+        name="Epic Prep Academy",
+        created_date=date(2020, 1, 1)
+    )
+    organizations_db.append(org)
+    
+    campus_data = [
+        {"name": "Pace Campus", "location": "Pace, FL", "address": "123 School St, Pace, FL 32571", "phone": "850-555-0100"},
+        {"name": "Crestview Campus", "location": "Crestview, FL", "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200"},
+        {"name": "Navarre Campus", "location": "Navarre, FL", "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300"}
+    ]
+    
+    for i, campus_info in enumerate(campus_data):
+        campus = Campus(
+            campus_id=f"campus_{i+1}",
+            organization_id=org.organization_id,
+            name=campus_info["name"],
+            location=campus_info["location"],
+            address=campus_info["address"],
+            phone=campus_info["phone"],
+            email=f"{campus_info['location'].split(',')[0].lower()}@epicprepacademy.com",
+            active=True
+        )
+        campuses_db.append(campus)
+    
+    users_db.append(User(
+        user_id="user_1",
+        email="admin@epicprepacademy.com",
+        password_hash="demo_password_hash",
+        first_name="Sarah",
+        last_name="Mitchell",
+        role=UserRole.SUPER_ADMIN,
+        campus_ids=[c.campus_id for c in campuses_db],
+        active=True,
+        created_date=date(2024, 1, 1),
+        last_login=datetime.now()
+    ))
+    
+    campus_admin_names = [
+        ("Jennifer", "Kilgore"),
+        ("Brittany", "Kilcrease"),
+        ("Pam", "Riffle")
+    ]
+    for i, (first, last) in enumerate(campus_admin_names):
+        users_db.append(User(
+            user_id=f"user_{i+2}",
+            email=f"{first.lower()}.{last.lower()}@epicprepacademy.com",
+            password_hash="demo_password_hash",
+            first_name=first,
+            last_name=last,
+            role=UserRole.CAMPUS_ADMIN,
+            campus_ids=[campuses_db[i].campus_id],
+            active=True,
+            created_date=date(2024, 1, 1),
+            last_login=datetime.now() - timedelta(days=random.randint(0, 7))
+        ))
     
     students_db = []
     families_db = []
@@ -40,18 +105,21 @@ def generate_all_demo_data():
                   "Lee", "Perez", "Thompson", "White", "Harris"]
     
     staff_data = [
-        {"first_name": "Sarah", "last_name": "Mitchell", "role": StaffRole.OWNER, "rooms": []},
-        {"first_name": "Jennifer", "last_name": "Kilgore", "role": StaffRole.ASSISTANT, "rooms": ["Room 1 - Morning"]},
-        {"first_name": "Brittany", "last_name": "Kilcrease", "role": StaffRole.ADMIN, "rooms": []},
-        {"first_name": "Pam", "last_name": "Riffle", "role": StaffRole.TEACHER, "rooms": ["Room 2 - Morning", "Room 2 - Afternoon"]},
-        {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.TEACHER, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"]},
-        {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.TEACHER, "rooms": ["Room 1 - Morning"]},
-        {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.TEACHER, "rooms": ["Room 4 - Afternoon"]},
+        {"first_name": "Sarah", "last_name": "Mitchell", "role": StaffRole.OWNER, "rooms": [], "campus_idx": None},
+        {"first_name": "Jennifer", "last_name": "Kilgore", "role": StaffRole.ASSISTANT, "rooms": ["Room 1 - Morning"], "campus_idx": 0},
+        {"first_name": "Brittany", "last_name": "Kilcrease", "role": StaffRole.ADMIN, "rooms": [], "campus_idx": 1},
+        {"first_name": "Pam", "last_name": "Riffle", "role": StaffRole.TEACHER, "rooms": ["Room 2 - Morning", "Room 2 - Afternoon"], "campus_idx": 0},
+        {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.TEACHER, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"], "campus_idx": 1},
+        {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.TEACHER, "rooms": ["Room 1 - Morning"], "campus_idx": 2},
+        {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.TEACHER, "rooms": ["Room 4 - Afternoon"], "campus_idx": 2},
     ]
     
     for i, staff_info in enumerate(staff_data):
+        campus_ids = [c.campus_id for c in campuses_db] if staff_info["campus_idx"] is None else [campuses_db[staff_info["campus_idx"]].campus_id]
+        
         staff = Staff(
             staff_id=f"staff_{i+1}",
+            campus_ids=campus_ids,
             first_name=staff_info["first_name"],
             last_name=staff_info["last_name"],
             role=staff_info["role"],
@@ -68,6 +136,7 @@ def generate_all_demo_data():
     for fam_idx in range(num_families):
         family_id = f"family_{fam_idx + 1}"
         family_last_name = random.choice(last_names)
+        family_campus = random.choice(campuses_db)
         
         num_children = random.choices([1, 2, 3], weights=[0.4, 0.45, 0.15])[0]
         
@@ -171,6 +240,7 @@ def generate_all_demo_data():
             
             student = Student(
                 student_id=student_id,
+                campus_id=family_campus.campus_id,
                 first_name=random.choice(first_names),
                 last_name=family_last_name,
                 date_of_birth=date(birth_year, random.randint(1, 12), random.randint(1, 28)),
@@ -203,6 +273,7 @@ def generate_all_demo_data():
                 
                 grade_record = GradeRecord(
                     grade_record_id=f"grade_{len(grade_records_db) + 1}",
+                    campus_id=family_campus.campus_id,
                     student_id=student_id,
                     subject=subject,
                     term="Current Term",
@@ -235,6 +306,7 @@ def generate_all_demo_data():
                 
                 behavior_note = BehaviorNote(
                     behavior_note_id=f"behavior_{len(behavior_notes_db) + 1}",
+                    campus_id=family_campus.campus_id,
                     student_id=student_id,
                     date=date.today() - timedelta(days=random.randint(1, 30)),
                     type=note_type,
@@ -253,6 +325,7 @@ def generate_all_demo_data():
                     
                     attendance_record = AttendanceRecord(
                         attendance_id=f"attendance_{len(attendance_records_db) + 1}",
+                        campus_id=family_campus.campus_id,
                         student_id=student_id,
                         date=att_date,
                         status=att_status,
@@ -277,6 +350,7 @@ def generate_all_demo_data():
             
             ixl_summary = IXLSummary(
                 ixl_summary_id=f"ixl_{student_id}",
+                campus_id=family_campus.campus_id,
                 student_id=student_id,
                 week_start_date=date.today() - timedelta(days=date.today().weekday()),
                 weekly_hours=round(random.uniform(0.0, 5.0), 1),
@@ -317,6 +391,7 @@ def generate_all_demo_data():
                 
                 billing_record = BillingRecord(
                     billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                    campus_id=family_campus.campus_id,
                     family_id=family_id,
                     date=charge_date,
                     type="Charge",
@@ -338,6 +413,7 @@ def generate_all_demo_data():
                     if step_up_amount > 0:
                         step_up_payment = BillingRecord(
                             billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                            campus_id=family_campus.campus_id,
                             family_id=family_id,
                             date=payment_date,
                             type="Payment",
@@ -353,6 +429,7 @@ def generate_all_demo_data():
                     if out_of_pocket_amount > 0:
                         out_of_pocket_payment = BillingRecord(
                             billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                            campus_id=family_campus.campus_id,
                             family_id=family_id,
                             date=payment_date,
                             type="Payment",
@@ -375,6 +452,7 @@ def generate_all_demo_data():
         
         conference = Conference(
             conference_id=f"conf_{i + 1}",
+            campus_id=student.campus_id,
             student_id=student.student_id,
             parent_id=family.primary_parent_id,
             staff_id=teacher.staff_id,
@@ -409,6 +487,7 @@ def generate_all_demo_data():
         
         message = Message(
             message_id=f"msg_{i + 1}",
+            campus_id=student.campus_id,
             sender_type=MessageSenderType.PARENT if is_parent_sender else MessageSenderType.STAFF,
             sender_id=family.primary_parent_id if is_parent_sender else teacher.staff_id,
             recipient_type=MessageSenderType.STAFF if is_parent_sender else MessageSenderType.PARENT,
@@ -436,9 +515,11 @@ def generate_all_demo_data():
     for i, (title, event_type, description) in enumerate(event_titles):
         event_date = date.today() + timedelta(days=random.randint(-30, 60))
         requires_payment = event_type in [EventType.FIELD_TRIP, EventType.FUNDRAISER]
+        event_campus = random.choice(campuses_db)
         
         event = Event(
             event_id=f"event_{i+1}",
+            campus_id=event_campus.campus_id,
             title=title,
             description=description,
             event_type=event_type,
@@ -453,9 +534,11 @@ def generate_all_demo_data():
         )
         events_db.append(event)
         
-        for family in random.sample(families_db, random.randint(5, 12)):
+        campus_families = [f for f in families_db if any(s.campus_id == event_campus.campus_id for s in students_db if s.family_id == f.family_id)]
+        for family in random.sample(campus_families, min(random.randint(5, 12), len(campus_families))):
             rsvp = EventRSVP(
                 rsvp_id=f"rsvp_{len(event_rsvps_db)+1}",
+                campus_id=event_campus.campus_id,
                 event_id=event.event_id,
                 family_id=family.family_id,
                 parent_id=family.primary_parent_id,
@@ -479,8 +562,10 @@ def generate_all_demo_data():
     ]
     
     for i, (title, doc_type, description, required_for) in enumerate(doc_templates):
+        doc_campus = random.choice(campuses_db)
         document = Document(
             document_id=f"doc_{i+1}",
+            campus_id=doc_campus.campus_id,
             title=title,
             document_type=doc_type,
             description=description,
@@ -492,10 +577,12 @@ def generate_all_demo_data():
         )
         documents_db.append(document)
         
-        for family in random.sample(families_db, random.randint(8, 15)):
-            if random.random() > 0.3:  # 70% signed
+        campus_families = [f for f in families_db if any(s.campus_id == doc_campus.campus_id for s in students_db if s.family_id == f.family_id)]
+        for family in random.sample(campus_families, min(random.randint(8, 15), len(campus_families))):
+            if random.random() > 0.3:
                 signature = DocumentSignature(
                     signature_id=f"sig_{len(document_signatures_db)+1}",
+                    campus_id=doc_campus.campus_id,
                     document_id=document.document_id,
                     parent_id=family.primary_parent_id,
                     student_id=random.choice(family.student_ids) if family.student_ids else None,
@@ -521,6 +608,7 @@ def generate_all_demo_data():
     for i, (name, description, category, price) in enumerate(product_list):
         product = Product(
             product_id=f"prod_{i+1}",
+            campus_id=None,
             name=name,
             description=description,
             category=category,
@@ -532,6 +620,10 @@ def generate_all_demo_data():
     
     for i in range(15):
         family = random.choice(families_db)
+        family_students = [s for s in students_db if s.family_id == family.family_id]
+        if not family_students:
+            continue
+        family_campus_id = family_students[0].campus_id
         num_items = random.randint(1, 3)
         items = []
         total = 0.0
@@ -549,6 +641,7 @@ def generate_all_demo_data():
         
         order = Order(
             order_id=f"order_{i+1}",
+            campus_id=family_campus_id,
             family_id=family.family_id,
             parent_id=family.primary_parent_id,
             items=items,
@@ -572,8 +665,10 @@ def generate_all_demo_data():
     ]
     
     for i, (title, description, grades) in enumerate(album_titles):
+        album_campus = random.choice(campuses_db)
         album = PhotoAlbum(
             album_id=f"album_{i+1}",
+            campus_id=album_campus.campus_id,
             title=title,
             description=description,
             created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
@@ -602,6 +697,7 @@ def generate_all_demo_data():
         
         incident = Incident(
             incident_id=f"incident_{i+1}",
+            campus_id=student.campus_id,
             student_id=student.student_id,
             reported_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
             incident_type=incident_type,
@@ -627,6 +723,7 @@ def generate_all_demo_data():
         
         health_record = HealthRecord(
             health_record_id=f"health_{student.student_id}",
+            campus_id=student.campus_id,
             student_id=student.student_id,
             allergies=[random.choice(common_allergies)],
             medications=[random.choice(common_medications)],
@@ -641,6 +738,10 @@ def generate_all_demo_data():
         health_records_db.append(health_record)
     
     return {
+        "organizations": organizations_db,
+        "campuses": campuses_db,
+        "users": users_db,
+        "audit_logs": audit_logs_db,
         "students": students_db,
         "families": families_db,
         "parents": parents_db,
