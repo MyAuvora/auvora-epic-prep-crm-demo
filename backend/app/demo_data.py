@@ -8,6 +8,8 @@ from .main import (
     Event, EventRSVP, Document, DocumentSignature, Product, Order,
     PhotoAlbum, Incident, HealthRecord,
     Invoice, InvoiceLineItem, PaymentPlan, PaymentSchedule,
+    Lead, CampusCapacity, MessageTemplate, BroadcastMessage, AutomatedAlert,
+    AcademicStandard, StandardAssessment, ProgressReport,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
@@ -15,7 +17,9 @@ from .main import (
     PhotoAlbumStatus, IncidentType, IncidentSeverity,
     FundingSource, PaymentSource, BillingCategory,
     UserRole, AuditAction,
-    InvoiceStatus, PaymentPlanStatus
+    InvoiceStatus, PaymentPlanStatus,
+    LeadStage, LeadSource, CommunicationType, TriggerType, BroadcastStatus,
+    MasteryLevel
 )
 
 def generate_all_demo_data():
@@ -915,6 +919,275 @@ def generate_all_demo_data():
             
             payment_plan_counter += 1
     
+    leads_db = []
+    campus_capacity_db = []
+    message_templates_db = []
+    broadcast_messages_db = []
+    automated_alerts_db = []
+    academic_standards_db = []
+    standard_assessments_db = []
+    progress_reports_db = []
+    
+    today = date.today()
+    
+    lead_first_names = ["Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "William", "Mia", "James", "Charlotte", "Benjamin", "Amelia"]
+    lead_last_names = ["Anderson", "Martinez", "Taylor", "Thomas", "Moore", "Jackson", "White", "Harris", "Martin", "Thompson", "Garcia", "Robinson", "Clark", "Rodriguez", "Lewis"]
+    parent_first_names = ["Jennifer", "Michael", "Sarah", "David", "Jessica", "Christopher", "Ashley", "Matthew", "Amanda", "Joshua", "Melissa", "Daniel", "Stephanie", "Andrew", "Nicole"]
+    
+    for i in range(25):
+        campus = random.choice(campuses_db)
+        child_first = random.choice(lead_first_names)
+        child_last = random.choice(lead_last_names)
+        parent_first = random.choice(parent_first_names)
+        parent_last = child_last
+        
+        stages = [LeadStage.NEW_INQUIRY, LeadStage.CONTACTED, LeadStage.TOUR_SCHEDULED, LeadStage.TOURED, LeadStage.APPLICATION_SUBMITTED, LeadStage.ACCEPTED, LeadStage.LOST]
+        stage = random.choice(stages)
+        
+        created = today - timedelta(days=random.randint(1, 90))
+        last_contact = created + timedelta(days=random.randint(1, 7)) if stage != LeadStage.NEW_INQUIRY else None
+        tour_date_val = created + timedelta(days=random.randint(7, 21)) if stage in [LeadStage.TOUR_SCHEDULED, LeadStage.TOURED, LeadStage.APPLICATION_SUBMITTED, LeadStage.ACCEPTED] else None
+        
+        lead = Lead(
+            lead_id=f"lead_{i+1}",
+            campus_id=campus.campus_id,
+            parent_first_name=parent_first,
+            parent_last_name=parent_last,
+            email=f"{parent_first.lower()}.{parent_last.lower()}@example.com",
+            phone=f"850-555-{random.randint(1000, 9999)}",
+            child_first_name=child_first,
+            child_last_name=child_last,
+            child_dob=date(2015 + random.randint(0, 7), random.randint(1, 12), random.randint(1, 28)),
+            desired_grade=random.choice(["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]),
+            desired_start_date=date(2025, 8, 15),
+            stage=stage,
+            source=random.choice(list(LeadSource)),
+            created_date=created,
+            last_contact_date=last_contact,
+            tour_date=tour_date_val,
+            notes=f"Interested in {campus.name}. {random.choice(['Referred by current parent.', 'Found us on social media.', 'Attended open house.', 'Looking for small class sizes.', 'Needs flexible schedule.'])}",
+            assigned_to=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+        )
+        leads_db.append(lead)
+    
+    for campus in campuses_db:
+        grades = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+        for grade in grades:
+            for session in [Session.MORNING, Session.AFTERNOON]:
+                current_enrolled = len([s for s in students_db if s.campus_id == campus.campus_id and s.grade == grade and s.session == session])
+                waitlisted = len([s for s in students_db if s.campus_id == campus.campus_id and s.grade == grade and s.session == session and s.status == StudentStatus.WAITLISTED])
+                
+                capacity = CampusCapacity(
+                    campus_id=campus.campus_id,
+                    grade=grade,
+                    session=session,
+                    total_capacity=random.randint(8, 15),
+                    current_enrollment=current_enrolled,
+                    waitlist_count=waitlisted
+                )
+                campus_capacity_db.append(capacity)
+    
+    template_data = [
+        {"name": "Attendance Alert", "trigger": TriggerType.ATTENDANCE_ALERT, "type": CommunicationType.EMAIL, "subject": "Attendance Alert for {student_name}", "body": "Your child {student_name} has been absent {absence_count} times this month. Please contact us if you need assistance."},
+        {"name": "Grade Alert", "trigger": TriggerType.GRADE_ALERT, "type": CommunicationType.EMAIL, "subject": "Grade Update for {student_name}", "body": "We wanted to inform you that {student_name} is currently showing {grade_status} in {subject}. Let's schedule a conference to discuss."},
+        {"name": "Balance Alert", "trigger": TriggerType.BALANCE_ALERT, "type": CommunicationType.EMAIL, "subject": "Account Balance Reminder", "body": "Your account has an outstanding balance of ${balance}. Please contact our office to arrange payment."},
+        {"name": "Behavior Alert", "trigger": TriggerType.BEHAVIOR_ALERT, "type": CommunicationType.SMS, "subject": "Behavior Notice", "body": "{student_name} had a behavior incident today. Please check your email for details."},
+        {"name": "IXL Alert", "trigger": TriggerType.IXL_ALERT, "type": CommunicationType.APP_NOTIFICATION, "subject": "IXL Progress Update", "body": "{student_name} has not logged into IXL in {days} days. Please encourage daily practice."}
+    ]
+    
+    for i, template_info in enumerate(template_data):
+        template = MessageTemplate(
+            template_id=f"template_{i+1}",
+            name=template_info["name"],
+            trigger_type=template_info["trigger"],
+            communication_type=template_info["type"],
+            subject=template_info["subject"],
+            body=template_info["body"],
+            active=True,
+            created_date=date(2024, 1, 1)
+        )
+        message_templates_db.append(template)
+    
+    for i in range(12):
+        campus = random.choice(campuses_db) if i % 3 == 0 else None
+        sender = random.choice([s for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+        
+        recipient_types = ["All Parents", "Grade K", "Grade 1-3", "Grade 4-6", "Grade 7-9", "Grade 10-12", "Session Morning", "Session Afternoon"]
+        recipient_type = random.choice(recipient_types)
+        
+        statuses = [BroadcastStatus.SENT, BroadcastStatus.SENT, BroadcastStatus.SENT, BroadcastStatus.SCHEDULED, BroadcastStatus.DRAFT]
+        status = random.choice(statuses)
+        
+        subjects = [
+            "Important: School Closure Tomorrow",
+            "Reminder: Parent-Teacher Conferences Next Week",
+            "New After-School Program Starting",
+            "Field Trip Permission Slips Due Friday",
+            "Holiday Schedule Update",
+            "Welcome Back! New Semester Information",
+            "Yearbook Orders Now Open",
+            "Spring Break Camp Registration",
+            "Standardized Testing Schedule",
+            "End of Year Celebration Details"
+        ]
+        
+        sent_date_val = datetime.now() - timedelta(days=random.randint(1, 30)) if status == BroadcastStatus.SENT else None
+        scheduled_date_val = datetime.now() + timedelta(days=random.randint(1, 7)) if status == BroadcastStatus.SCHEDULED else None
+        
+        broadcast = BroadcastMessage(
+            broadcast_id=f"broadcast_{i+1}",
+            campus_id=campus.campus_id if campus else None,
+            sender_id=sender.staff_id,
+            communication_type=random.choice([CommunicationType.EMAIL, CommunicationType.SMS, CommunicationType.ALL]),
+            subject=subjects[i % len(subjects)],
+            body=f"Dear Epic Prep Families,\n\n{subjects[i % len(subjects)]}.\n\nPlease contact the office if you have any questions.\n\nThank you,\nEpic Prep Academy",
+            recipient_type=recipient_type,
+            recipient_count=random.randint(15, 50),
+            status=status,
+            scheduled_date=scheduled_date_val,
+            sent_date=sent_date_val,
+            created_date=today - timedelta(days=random.randint(1, 45))
+        )
+        broadcast_messages_db.append(broadcast)
+    
+    alert_counter = 0
+    for student in students_db[:10]:
+        family = next((f for f in families_db if f.family_id == student.family_id), None)
+        if not family:
+            continue
+        
+        if student.attendance_absent_count > 3:
+            alert = AutomatedAlert(
+                alert_id=f"alert_{alert_counter+1}",
+                trigger_type=TriggerType.ATTENDANCE_ALERT,
+                student_id=student.student_id,
+                family_id=student.family_id,
+                triggered_date=datetime.now() - timedelta(days=random.randint(1, 7)),
+                message_sent=True,
+                message_content=f"{student.first_name} has been absent {student.attendance_absent_count} times this month.",
+                communication_type=CommunicationType.EMAIL
+            )
+            automated_alerts_db.append(alert)
+            alert_counter += 1
+        
+        if student.overall_grade_flag == GradeFlag.FAILING:
+            alert = AutomatedAlert(
+                alert_id=f"alert_{alert_counter+1}",
+                trigger_type=TriggerType.GRADE_ALERT,
+                student_id=student.student_id,
+                family_id=student.family_id,
+                triggered_date=datetime.now() - timedelta(days=random.randint(1, 7)),
+                message_sent=True,
+                message_content=f"{student.first_name} is showing failing grades in one or more subjects.",
+                communication_type=CommunicationType.EMAIL
+            )
+            automated_alerts_db.append(alert)
+            alert_counter += 1
+        
+        if family.billing_status == BillingStatus.RED:
+            alert = AutomatedAlert(
+                alert_id=f"alert_{alert_counter+1}",
+                trigger_type=TriggerType.BALANCE_ALERT,
+                student_id=student.student_id,
+                family_id=student.family_id,
+                triggered_date=datetime.now() - timedelta(days=random.randint(1, 7)),
+                message_sent=True,
+                message_content=f"Outstanding balance of ${family.current_balance:.2f}.",
+                communication_type=CommunicationType.EMAIL
+            )
+            automated_alerts_db.append(alert)
+            alert_counter += 1
+    
+    standards_data = [
+        {"subject": "Math", "grade": "K", "code": "CCSS.MATH.K.CC.A.1", "description": "Count to 100 by ones and tens", "category": "Counting & Cardinality"},
+        {"subject": "Math", "grade": "1", "code": "CCSS.MATH.1.OA.A.1", "description": "Add and subtract within 20", "category": "Operations & Algebraic Thinking"},
+        {"subject": "Math", "grade": "2", "code": "CCSS.MATH.2.NBT.A.1", "description": "Understand place value", "category": "Number & Operations in Base Ten"},
+        {"subject": "Math", "grade": "3", "code": "CCSS.MATH.3.OA.A.1", "description": "Multiply and divide within 100", "category": "Operations & Algebraic Thinking"},
+        {"subject": "Math", "grade": "4", "code": "CCSS.MATH.4.NF.A.1", "description": "Understand fraction equivalence", "category": "Number & Operations - Fractions"},
+        {"subject": "Math", "grade": "5", "code": "CCSS.MATH.5.NBT.A.1", "description": "Understand the place value system", "category": "Number & Operations in Base Ten"},
+        {"subject": "ELA", "grade": "K", "code": "CCSS.ELA.RF.K.1", "description": "Demonstrate understanding of print concepts", "category": "Reading Foundational Skills"},
+        {"subject": "ELA", "grade": "1", "code": "CCSS.ELA.RF.1.3", "description": "Know and apply phonics and word analysis", "category": "Reading Foundational Skills"},
+        {"subject": "ELA", "grade": "2", "code": "CCSS.ELA.RL.2.1", "description": "Ask and answer questions about key details", "category": "Reading Literature"},
+        {"subject": "ELA", "grade": "3", "code": "CCSS.ELA.RL.3.2", "description": "Recount stories and determine central message", "category": "Reading Literature"},
+        {"subject": "ELA", "grade": "4", "code": "CCSS.ELA.W.4.1", "description": "Write opinion pieces on topics", "category": "Writing"},
+        {"subject": "ELA", "grade": "5", "code": "CCSS.ELA.W.5.2", "description": "Write informative/explanatory texts", "category": "Writing"},
+        {"subject": "Science", "grade": "K", "code": "NGSS.K-PS2-1", "description": "Plan and conduct investigation of pushes and pulls", "category": "Physical Science"},
+        {"subject": "Science", "grade": "1", "code": "NGSS.1-LS1-1", "description": "Use materials to design solutions for young plants and animals", "category": "Life Science"},
+        {"subject": "Science", "grade": "2", "code": "NGSS.2-PS1-1", "description": "Plan and conduct investigation of different materials", "category": "Physical Science"},
+        {"subject": "Science", "grade": "3", "code": "NGSS.3-LS1-1", "description": "Develop models to describe organisms' life cycles", "category": "Life Science"},
+        {"subject": "Science", "grade": "4", "code": "NGSS.4-PS3-1", "description": "Use evidence to construct explanation of energy transfer", "category": "Physical Science"},
+        {"subject": "Science", "grade": "5", "code": "NGSS.5-ESS2-1", "description": "Develop model using example to describe water cycle", "category": "Earth Science"}
+    ]
+    
+    for i, std_data in enumerate(standards_data):
+        standard = AcademicStandard(
+            standard_id=f"standard_{i+1}",
+            subject=std_data["subject"],
+            grade=std_data["grade"],
+            code=std_data["code"],
+            description=std_data["description"],
+            category=std_data["category"]
+        )
+        academic_standards_db.append(standard)
+    
+    assessment_counter = 0
+    for student in students_db:
+        relevant_standards = [s for s in academic_standards_db if s.grade == student.grade]
+        
+        if len(relevant_standards) == 0:
+            continue
+        
+        num_assessments = random.randint(1, min(8, len(relevant_standards)))
+        assessed_standards = random.sample(relevant_standards, num_assessments)
+        
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        
+        for standard in assessed_standards:
+            mastery_weights = [MasteryLevel.PROFICIENT, MasteryLevel.PROFICIENT, MasteryLevel.DEVELOPING, MasteryLevel.ADVANCED, MasteryLevel.BEGINNING]
+            mastery = random.choice(mastery_weights)
+            
+            assessment = StandardAssessment(
+                assessment_id=f"assessment_{assessment_counter+1}",
+                student_id=student.student_id,
+                standard_id=standard.standard_id,
+                mastery_level=mastery,
+                assessment_date=today - timedelta(days=random.randint(1, 60)),
+                notes=random.choice(["Excellent progress", "Needs more practice", "Shows understanding", "Requires intervention", "Mastered concept", ""]),
+                teacher_id=teacher.staff_id
+            )
+            standard_assessments_db.append(assessment)
+            assessment_counter += 1
+    
+    for student in students_db:
+        student_assessments = [a for a in standard_assessments_db if a.student_id == student.student_id]
+        
+        if len(student_assessments) > 0:
+            proficient_count = len([a for a in student_assessments if a.mastery_level in [MasteryLevel.PROFICIENT, MasteryLevel.ADVANCED]])
+            developing_count = len([a for a in student_assessments if a.mastery_level == MasteryLevel.DEVELOPING])
+            beginning_count = len([a for a in student_assessments if a.mastery_level == MasteryLevel.BEGINNING])
+            
+            proficiency_rate = proficient_count / len(student_assessments) if len(student_assessments) > 0 else 0
+            
+            if proficiency_rate >= 0.8:
+                overall = "Excelling"
+            elif proficiency_rate >= 0.6:
+                overall = "On Track"
+            else:
+                overall = "Needs Support"
+            
+            report = ProgressReport(
+                report_id=f"report_{student.student_id}",
+                student_id=student.student_id,
+                term="Fall 2024",
+                generated_date=today,
+                standards_assessed=len(student_assessments),
+                proficient_count=proficient_count,
+                developing_count=developing_count,
+                beginning_count=beginning_count,
+                overall_progress=overall
+            )
+            progress_reports_db.append(report)
+    
     return {
         "organizations": organizations_db,
         "campuses": campuses_db,
@@ -943,5 +1216,13 @@ def generate_all_demo_data():
         "invoices": invoices_db,
         "invoice_line_items": invoice_line_items_db,
         "payment_plans": payment_plans_db,
-        "payment_schedules": payment_schedules_db
+        "payment_schedules": payment_schedules_db,
+        "leads": leads_db,
+        "campus_capacity": campus_capacity_db,
+        "message_templates": message_templates_db,
+        "broadcast_messages": broadcast_messages_db,
+        "automated_alerts": automated_alerts_db,
+        "academic_standards": academic_standards_db,
+        "standard_assessments": standard_assessments_db,
+        "progress_reports": progress_reports_db
     }

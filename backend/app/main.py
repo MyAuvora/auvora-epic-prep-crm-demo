@@ -491,6 +491,140 @@ class PaymentSchedule(BaseModel):
     paid_date: Optional[date] = None
     paid_amount: float
 
+class LeadStage(str, Enum):
+    NEW_INQUIRY = "New Inquiry"
+    CONTACTED = "Contacted"
+    TOUR_SCHEDULED = "Tour Scheduled"
+    TOURED = "Toured"
+    APPLICATION_SUBMITTED = "Application Submitted"
+    ACCEPTED = "Accepted"
+    ENROLLED = "Enrolled"
+    LOST = "Lost"
+
+class LeadSource(str, Enum):
+    WEBSITE = "Website"
+    REFERRAL = "Referral"
+    SOCIAL_MEDIA = "Social Media"
+    WALK_IN = "Walk-in"
+    EVENT = "Event"
+    OTHER = "Other"
+
+class Lead(BaseModel):
+    lead_id: str
+    campus_id: str
+    parent_first_name: str
+    parent_last_name: str
+    email: str
+    phone: str
+    child_first_name: str
+    child_last_name: str
+    child_dob: date
+    desired_grade: str
+    desired_start_date: date
+    stage: LeadStage
+    source: LeadSource
+    created_date: date
+    last_contact_date: Optional[date] = None
+    tour_date: Optional[date] = None
+    notes: str
+    assigned_to: Optional[str] = None  # staff_id
+
+class CampusCapacity(BaseModel):
+    campus_id: str
+    grade: str
+    session: Session
+    total_capacity: int
+    current_enrollment: int
+    waitlist_count: int
+
+class CommunicationType(str, Enum):
+    EMAIL = "Email"
+    SMS = "SMS"
+    APP_NOTIFICATION = "App Notification"
+    ALL = "All"
+
+class TriggerType(str, Enum):
+    ATTENDANCE_ALERT = "Attendance Alert"
+    GRADE_ALERT = "Grade Alert"
+    BALANCE_ALERT = "Balance Alert"
+    BEHAVIOR_ALERT = "Behavior Alert"
+    IXL_ALERT = "IXL Alert"
+
+class BroadcastStatus(str, Enum):
+    DRAFT = "Draft"
+    SCHEDULED = "Scheduled"
+    SENT = "Sent"
+    FAILED = "Failed"
+
+class MessageTemplate(BaseModel):
+    template_id: str
+    name: str
+    trigger_type: TriggerType
+    communication_type: CommunicationType
+    subject: str
+    body: str
+    active: bool
+    created_date: date
+
+class BroadcastMessage(BaseModel):
+    broadcast_id: str
+    campus_id: Optional[str] = None
+    sender_id: str  # staff_id
+    communication_type: CommunicationType
+    subject: str
+    body: str
+    recipient_type: str  # "All Parents", "Grade K", "Session Morning", etc.
+    recipient_count: int
+    status: BroadcastStatus
+    scheduled_date: Optional[datetime] = None
+    sent_date: Optional[datetime] = None
+    created_date: date
+
+class AutomatedAlert(BaseModel):
+    alert_id: str
+    trigger_type: TriggerType
+    student_id: str
+    family_id: str
+    triggered_date: datetime
+    message_sent: bool
+    message_content: str
+    communication_type: CommunicationType
+
+class MasteryLevel(str, Enum):
+    NOT_ASSESSED = "Not Assessed"
+    BEGINNING = "Beginning"
+    DEVELOPING = "Developing"
+    PROFICIENT = "Proficient"
+    ADVANCED = "Advanced"
+
+class AcademicStandard(BaseModel):
+    standard_id: str
+    subject: str
+    grade: str
+    code: str  # e.g., "CCSS.MATH.3.OA.A.1"
+    description: str
+    category: str  # e.g., "Operations & Algebraic Thinking"
+
+class StandardAssessment(BaseModel):
+    assessment_id: str
+    student_id: str
+    standard_id: str
+    mastery_level: MasteryLevel
+    assessment_date: date
+    notes: str
+    teacher_id: str
+
+class ProgressReport(BaseModel):
+    report_id: str
+    student_id: str
+    term: str
+    generated_date: date
+    standards_assessed: int
+    proficient_count: int
+    developing_count: int
+    beginning_count: int
+    overall_progress: str  # "On Track", "Needs Support", "Excelling"
+
 organizations_db: List[Organization] = []
 campuses_db: List[Campus] = []
 users_db: List[User] = []
@@ -519,6 +653,14 @@ invoices_db: List[Invoice] = []
 invoice_line_items_db: List[InvoiceLineItem] = []
 payment_plans_db: List[PaymentPlan] = []
 payment_schedules_db: List[PaymentSchedule] = []
+leads_db: List[Lead] = []
+campus_capacity_db: List[CampusCapacity] = []
+message_templates_db: List[MessageTemplate] = []
+broadcast_messages_db: List[BroadcastMessage] = []
+automated_alerts_db: List[AutomatedAlert] = []
+academic_standards_db: List[AcademicStandard] = []
+standard_assessments_db: List[StandardAssessment] = []
+progress_reports_db: List[ProgressReport] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
@@ -529,6 +671,8 @@ def generate_demo_data():
     global events_db, event_rsvps_db, documents_db, document_signatures_db
     global products_db, orders_db, photo_albums_db, incidents_db, health_records_db
     global invoices_db, invoice_line_items_db, payment_plans_db, payment_schedules_db
+    global leads_db, campus_capacity_db, message_templates_db, broadcast_messages_db
+    global automated_alerts_db, academic_standards_db, standard_assessments_db, progress_reports_db
     
     from .demo_data import generate_all_demo_data
     
@@ -561,6 +705,14 @@ def generate_demo_data():
     invoice_line_items_db = data.get("invoice_line_items", [])
     payment_plans_db = data.get("payment_plans", [])
     payment_schedules_db = data.get("payment_schedules", [])
+    leads_db = data.get("leads", [])
+    campus_capacity_db = data.get("campus_capacity", [])
+    message_templates_db = data.get("message_templates", [])
+    broadcast_messages_db = data.get("broadcast_messages", [])
+    automated_alerts_db = data.get("automated_alerts", [])
+    academic_standards_db = data.get("academic_standards", [])
+    standard_assessments_db = data.get("standard_assessments", [])
+    progress_reports_db = data.get("progress_reports", [])
 
 @app.on_event("startup")
 async def startup_event():
@@ -1739,4 +1891,245 @@ async def get_step_up_reconciliation(month: str, campus_id: Optional[str] = None
             'variance_percentage': round((total_variance / total_expected * 100) if total_expected > 0 else 0, 2)
         },
         'details': sorted(reconciliation_details, key=lambda x: abs(x['variance']), reverse=True)
+    }
+
+@app.get("/api/admissions/leads")
+async def get_leads(campus_id: Optional[str] = None, stage: Optional[str] = None):
+    """Get all leads with optional filtering"""
+    filtered_leads = leads_db
+    
+    if campus_id:
+        filtered_leads = [l for l in filtered_leads if l.campus_id == campus_id]
+    
+    if stage:
+        filtered_leads = [l for l in filtered_leads if l.stage.value == stage]
+    
+    return filtered_leads
+
+@app.get("/api/admissions/leads/{lead_id}")
+async def get_lead(lead_id: str):
+    """Get a specific lead by ID"""
+    lead = next((l for l in leads_db if l.lead_id == lead_id), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return lead
+
+@app.post("/api/admissions/leads")
+async def create_lead(lead: Lead):
+    """Create a new lead"""
+    if any(l.lead_id == lead.lead_id for l in leads_db):
+        raise HTTPException(status_code=400, detail="Lead ID already exists")
+    leads_db.append(lead)
+    return lead
+
+@app.put("/api/admissions/leads/{lead_id}")
+async def update_lead(lead_id: str, lead: Lead):
+    """Update an existing lead"""
+    index = next((i for i, l in enumerate(leads_db) if l.lead_id == lead_id), None)
+    if index is None:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    leads_db[index] = lead
+    return lead
+
+@app.get("/api/admissions/capacity")
+async def get_campus_capacity(campus_id: Optional[str] = None):
+    """Get campus capacity information"""
+    filtered_capacity = campus_capacity_db
+    
+    if campus_id:
+        filtered_capacity = [c for c in filtered_capacity if c.campus_id == campus_id]
+    
+    return filtered_capacity
+
+@app.get("/api/admissions/pipeline-summary")
+async def get_pipeline_summary(campus_id: Optional[str] = None):
+    """Get admissions pipeline summary with stage counts"""
+    filtered_leads = leads_db if not campus_id else [l for l in leads_db if l.campus_id == campus_id]
+    
+    stage_counts = {}
+    for stage in LeadStage:
+        stage_counts[stage.value] = len([l for l in filtered_leads if l.stage == stage])
+    
+    return {
+        'total_leads': len(filtered_leads),
+        'stage_counts': stage_counts,
+        'conversion_rate': round((stage_counts.get('Enrolled', 0) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
+    }
+
+@app.get("/api/communications/templates")
+async def get_message_templates():
+    """Get all message templates"""
+    return message_templates_db
+
+@app.get("/api/communications/templates/{template_id}")
+async def get_message_template(template_id: str):
+    """Get a specific message template"""
+    template = next((t for t in message_templates_db if t.template_id == template_id), None)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@app.post("/api/communications/templates")
+async def create_message_template(template: MessageTemplate):
+    """Create a new message template"""
+    if any(t.template_id == template.template_id for t in message_templates_db):
+        raise HTTPException(status_code=400, detail="Template ID already exists")
+    message_templates_db.append(template)
+    return template
+
+@app.put("/api/communications/templates/{template_id}")
+async def update_message_template(template_id: str, template: MessageTemplate):
+    """Update an existing message template"""
+    index = next((i for i, t in enumerate(message_templates_db) if t.template_id == template_id), None)
+    if index is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    message_templates_db[index] = template
+    return template
+
+@app.get("/api/communications/broadcasts")
+async def get_broadcast_messages(campus_id: Optional[str] = None, status: Optional[str] = None):
+    """Get all broadcast messages with optional filtering"""
+    filtered_broadcasts = broadcast_messages_db
+    
+    if campus_id:
+        filtered_broadcasts = [b for b in filtered_broadcasts if b.campus_id == campus_id or b.campus_id is None]
+    
+    if status:
+        filtered_broadcasts = [b for b in filtered_broadcasts if b.status.value == status]
+    
+    return sorted(filtered_broadcasts, key=lambda x: x.created_date, reverse=True)
+
+@app.get("/api/communications/broadcasts/{broadcast_id}")
+async def get_broadcast_message(broadcast_id: str):
+    """Get a specific broadcast message"""
+    broadcast = next((b for b in broadcast_messages_db if b.broadcast_id == broadcast_id), None)
+    if not broadcast:
+        raise HTTPException(status_code=404, detail="Broadcast not found")
+    return broadcast
+
+@app.post("/api/communications/broadcasts")
+async def create_broadcast_message(broadcast: BroadcastMessage):
+    """Create a new broadcast message"""
+    if any(b.broadcast_id == broadcast.broadcast_id for b in broadcast_messages_db):
+        raise HTTPException(status_code=400, detail="Broadcast ID already exists")
+    broadcast_messages_db.append(broadcast)
+    return broadcast
+
+@app.put("/api/communications/broadcasts/{broadcast_id}")
+async def update_broadcast_message(broadcast_id: str, broadcast: BroadcastMessage):
+    """Update an existing broadcast message"""
+    index = next((i for i, b in enumerate(broadcast_messages_db) if b.broadcast_id == broadcast_id), None)
+    if index is None:
+        raise HTTPException(status_code=404, detail="Broadcast not found")
+    broadcast_messages_db[index] = broadcast
+    return broadcast
+
+@app.get("/api/communications/alerts")
+async def get_automated_alerts(student_id: Optional[str] = None, family_id: Optional[str] = None):
+    """Get automated alerts with optional filtering"""
+    filtered_alerts = automated_alerts_db
+    
+    if student_id:
+        filtered_alerts = [a for a in filtered_alerts if a.student_id == student_id]
+    
+    if family_id:
+        filtered_alerts = [a for a in filtered_alerts if a.family_id == family_id]
+    
+    return sorted(filtered_alerts, key=lambda x: x.triggered_date, reverse=True)
+
+@app.get("/api/academics/standards")
+async def get_academic_standards(subject: Optional[str] = None, grade: Optional[str] = None):
+    """Get academic standards with optional filtering"""
+    filtered_standards = academic_standards_db
+    
+    if subject:
+        filtered_standards = [s for s in filtered_standards if s.subject == subject]
+    
+    if grade:
+        filtered_standards = [s for s in filtered_standards if s.grade == grade]
+    
+    return filtered_standards
+
+@app.get("/api/academics/standards/{standard_id}")
+async def get_academic_standard(standard_id: str):
+    """Get a specific academic standard"""
+    standard = next((s for s in academic_standards_db if s.standard_id == standard_id), None)
+    if not standard:
+        raise HTTPException(status_code=404, detail="Standard not found")
+    return standard
+
+@app.get("/api/academics/assessments")
+async def get_standard_assessments(student_id: Optional[str] = None, standard_id: Optional[str] = None):
+    """Get standard assessments with optional filtering"""
+    filtered_assessments = standard_assessments_db
+    
+    if student_id:
+        filtered_assessments = [a for a in filtered_assessments if a.student_id == student_id]
+    
+    if standard_id:
+        filtered_assessments = [a for a in filtered_assessments if a.standard_id == standard_id]
+    
+    return sorted(filtered_assessments, key=lambda x: x.assessment_date, reverse=True)
+
+@app.post("/api/academics/assessments")
+async def create_standard_assessment(assessment: StandardAssessment):
+    """Create a new standard assessment"""
+    if any(a.assessment_id == assessment.assessment_id for a in standard_assessments_db):
+        raise HTTPException(status_code=400, detail="Assessment ID already exists")
+    standard_assessments_db.append(assessment)
+    return assessment
+
+@app.put("/api/academics/assessments/{assessment_id}")
+async def update_standard_assessment(assessment_id: str, assessment: StandardAssessment):
+    """Update an existing standard assessment"""
+    index = next((i for i, a in enumerate(standard_assessments_db) if a.assessment_id == assessment_id), None)
+    if index is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    standard_assessments_db[index] = assessment
+    return assessment
+
+@app.get("/api/academics/progress-reports")
+async def get_progress_reports(student_id: Optional[str] = None):
+    """Get progress reports with optional filtering"""
+    filtered_reports = progress_reports_db
+    
+    if student_id:
+        filtered_reports = [r for r in filtered_reports if r.student_id == student_id]
+    
+    return filtered_reports
+
+@app.get("/api/academics/progress-reports/{report_id}")
+async def get_progress_report(report_id: str):
+    """Get a specific progress report"""
+    report = next((r for r in progress_reports_db if r.report_id == report_id), None)
+    if not report:
+        raise HTTPException(status_code=404, detail="Progress report not found")
+    return report
+
+@app.get("/api/academics/student-progress/{student_id}")
+async def get_student_progress(student_id: str):
+    """Get comprehensive progress data for a student"""
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    assessments = [a for a in standard_assessments_db if a.student_id == student_id]
+    report = next((r for r in progress_reports_db if r.student_id == student_id), None)
+    
+    standards_by_subject = {}
+    for assessment in assessments:
+        standard = next((s for s in academic_standards_db if s.standard_id == assessment.standard_id), None)
+        if standard:
+            if standard.subject not in standards_by_subject:
+                standards_by_subject[standard.subject] = []
+            standards_by_subject[standard.subject].append({
+                'standard': standard,
+                'assessment': assessment
+            })
+    
+    return {
+        'student': student,
+        'progress_report': report,
+        'assessments_by_subject': standards_by_subject,
+        'total_assessments': len(assessments)
     }

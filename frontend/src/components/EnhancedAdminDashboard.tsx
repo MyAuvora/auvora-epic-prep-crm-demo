@@ -15,6 +15,9 @@ import { AdminRevenueReports } from './AdminRevenueReports'
 import { CampusSwitcher } from './CampusSwitcher'
 import { AddStudentModal } from './AddStudentModal'
 import FinancialManagement from './FinancialManagement'
+import AdmissionsPipeline from './AdmissionsPipeline'
+import CommunicationAutomation from './CommunicationAutomation'
+import StandardsGradebook from './StandardsGradebook'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -68,7 +71,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health' | 'financial'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health' | 'financial' | 'admissions' | 'communications' | 'standards'>('dashboard')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
@@ -337,6 +340,36 @@ export function EnhancedAdminDashboard() {
               }`}
             >
               Financial
+            </button>
+            <button
+              onClick={() => setView('admissions')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'admissions'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Admissions
+            </button>
+            <button
+              onClick={() => setView('communications')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'communications'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Communications
+            </button>
+            <button
+              onClick={() => setView('standards')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'standards'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Standards
             </button>
           </nav>
         </div>
@@ -719,6 +752,18 @@ export function EnhancedAdminDashboard() {
 
         {view === 'financial' && (
           <FinancialManagement selectedCampusId={selectedCampusId} />
+        )}
+
+        {view === 'admissions' && (
+          <AdmissionsPipeline selectedCampusId={selectedCampusId} />
+        )}
+
+        {view === 'communications' && (
+          <CommunicationAutomation selectedCampusId={selectedCampusId} />
+        )}
+
+        {view === 'standards' && (
+          <StandardsGradebook selectedCampusId={selectedCampusId} />
         )}
       </div>
 
