@@ -9,6 +9,7 @@ import { StoreComponent } from './StoreComponent'
 import { PhotoGallery } from './PhotoGallery'
 import { MessagingPlatform } from './MessagingPlatform'
 import { HealthRecords } from './HealthRecords'
+import { ParentTuitionHistory } from './ParentTuitionHistory'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -53,7 +54,7 @@ interface EnhancedParentDashboardProps {
 }
 
 export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardProps) {
-  const [view, setView] = useState<'home' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
+  const [view, setView] = useState<'home' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
   const [parentData, setParentData] = useState<ParentData | null>(null)
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
   const [childGrades, setChildGrades] = useState<any[]>([])
@@ -130,6 +131,16 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               }`}
             >
               Home
+            </button>
+            <button
+              onClick={() => setView('billing')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'billing'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Billing
             </button>
             <button
               onClick={() => setView('conferences')}
@@ -473,6 +484,10 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               </div>
             )}
           </>
+        )}
+
+        {view === 'billing' && (
+          <ParentTuitionHistory familyId={parentData.family.family_id} />
         )}
 
         {view === 'conferences' && (

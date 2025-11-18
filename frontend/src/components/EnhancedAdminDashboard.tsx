@@ -10,6 +10,7 @@ import { PhotoGallery } from './PhotoGallery'
 import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
+import { AdminRevenueReports } from './AdminRevenueReports'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -63,7 +64,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health'>('dashboard')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
@@ -216,6 +217,16 @@ export function EnhancedAdminDashboard() {
               }`}
             >
               Families & Billing
+            </button>
+            <button
+              onClick={() => setView('revenue')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'revenue'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Revenue
             </button>
             <button
               onClick={() => setView('events')}
@@ -606,6 +617,10 @@ export function EnhancedAdminDashboard() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {view === 'revenue' && (
+          <AdminRevenueReports role="admin" />
         )}
 
         {view === 'events' && (

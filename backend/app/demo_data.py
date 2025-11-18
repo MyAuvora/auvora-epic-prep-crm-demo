@@ -10,7 +10,8 @@ from .main import (
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
     DocumentType, DocumentStatus, ProductCategory, OrderStatus,
-    PhotoAlbumStatus, IncidentType, IncidentSeverity
+    PhotoAlbumStatus, IncidentType, IncidentSeverity,
+    FundingSource, PaymentSource, BillingCategory
 )
 
 def generate_all_demo_data():
@@ -160,6 +161,14 @@ def generate_all_demo_data():
             else:
                 birth_year = 2024 - int(grade) - 5
             
+            step_up_pct = random.choice([0, 50, 100])
+            if step_up_pct == 0:
+                funding_source = FundingSource.OUT_OF_POCKET
+            elif step_up_pct == 100:
+                funding_source = FundingSource.STEP_UP
+            else:
+                funding_source = FundingSource.MIXED
+            
             student = Student(
                 student_id=student_id,
                 first_name=random.choice(first_names),
@@ -177,7 +186,9 @@ def generate_all_demo_data():
                 attendance_tardy_count=attendance_tardy,
                 overall_grade_flag=grade_flag_choice,
                 ixl_status_flag=ixl_status,
-                overall_risk_flag=risk_flag
+                overall_risk_flag=risk_flag,
+                funding_source=funding_source,
+                step_up_percentage=step_up_pct
             )
             
             family_student_ids.append(student_id)
@@ -296,29 +307,63 @@ def generate_all_demo_data():
         )
         families_db.append(family)
         
-        for month_offset in range(3):
+        for month_offset in range(6):
             charge_date = date.today() - timedelta(days=30 * month_offset)
-            billing_record = BillingRecord(
-                billing_record_id=f"billing_{len(billing_records_db) + 1}",
-                family_id=family_id,
-                date=charge_date,
-                type="Charge",
-                description=f"{charge_date.strftime('%B')} Tuition",
-                amount=monthly_tuition
-            )
-            billing_records_db.append(billing_record)
+            period_month = charge_date.strftime('%Y-%m')
             
-            if billing_status_choice != BillingStatus.RED or month_offset > 0:
-                payment_date = charge_date + timedelta(days=random.randint(1, 10))
-                payment_record = BillingRecord(
+            for student_id in family_student_ids:
+                student = next(s for s in students_db if s.student_id == student_id)
+                student_tuition = monthly_tuition / len(family_student_ids)
+                
+                billing_record = BillingRecord(
                     billing_record_id=f"billing_{len(billing_records_db) + 1}",
                     family_id=family_id,
-                    date=payment_date,
-                    type="Payment",
-                    description="Card payment",
-                    amount=-monthly_tuition
+                    date=charge_date,
+                    type="Charge",
+                    description=f"{charge_date.strftime('%B')} Tuition - {student.first_name}",
+                    amount=round(student_tuition, 2),
+                    source=None,
+                    period_month=period_month,
+                    category=BillingCategory.TUITION,
+                    student_id=student_id
                 )
-                billing_records_db.append(payment_record)
+                billing_records_db.append(billing_record)
+                
+                if billing_status_choice != BillingStatus.RED or month_offset > 0:
+                    payment_date = charge_date + timedelta(days=random.randint(1, 10))
+                    
+                    step_up_amount = round(student_tuition * (student.step_up_percentage / 100), 2)
+                    out_of_pocket_amount = round(student_tuition - step_up_amount, 2)
+                    
+                    if step_up_amount > 0:
+                        step_up_payment = BillingRecord(
+                            billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                            family_id=family_id,
+                            date=payment_date,
+                            type="Payment",
+                            description=f"Step-Up Payment - {student.first_name}",
+                            amount=-step_up_amount,
+                            source=PaymentSource.STEP_UP,
+                            period_month=period_month,
+                            category=BillingCategory.TUITION,
+                            student_id=student_id
+                        )
+                        billing_records_db.append(step_up_payment)
+                    
+                    if out_of_pocket_amount > 0:
+                        out_of_pocket_payment = BillingRecord(
+                            billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                            family_id=family_id,
+                            date=payment_date,
+                            type="Payment",
+                            description=f"Card Payment - {student.first_name}",
+                            amount=-out_of_pocket_amount,
+                            source=PaymentSource.OUT_OF_POCKET,
+                            period_month=period_month,
+                            category=BillingCategory.TUITION,
+                            student_id=student_id
+                        )
+                        billing_records_db.append(out_of_pocket_payment)
     
     for i in range(10):
         student = random.choice(students_db)

@@ -128,6 +128,21 @@ class IncidentType(str, Enum):
     ACADEMIC = "Academic"
     OTHER = "Other"
 
+class FundingSource(str, Enum):
+    STEP_UP = "Step-Up"
+    OUT_OF_POCKET = "Out-of-Pocket"
+    MIXED = "Mixed"
+
+class PaymentSource(str, Enum):
+    STEP_UP = "Step-Up"
+    OUT_OF_POCKET = "Out-of-Pocket"
+
+class BillingCategory(str, Enum):
+    TUITION = "Tuition"
+    FEE = "Fee"
+    STORE = "Store"
+    OTHER = "Other"
+
 class Student(BaseModel):
     student_id: str
     first_name: str
@@ -146,6 +161,8 @@ class Student(BaseModel):
     overall_grade_flag: GradeFlag
     ixl_status_flag: IXLStatus
     overall_risk_flag: RiskFlag
+    funding_source: FundingSource = FundingSource.OUT_OF_POCKET
+    step_up_percentage: int = 0  # 0-100
 
 class Family(BaseModel):
     family_id: str
@@ -218,9 +235,13 @@ class BillingRecord(BaseModel):
     billing_record_id: str
     family_id: str
     date: date
-    type: str
+    type: str  # "Charge" or "Payment"
     description: str
     amount: float
+    source: Optional[PaymentSource] = None  # Required for Payment, null for Charge
+    period_month: Optional[str] = None  # "YYYY-MM" for tuition charges/payments
+    category: Optional[BillingCategory] = None  # Tuition, Fee, Store, Other
+    student_id: Optional[str] = None  # Optional per-student tracking
 
 class Conference(BaseModel):
     conference_id: str
@@ -852,3 +873,168 @@ async def update_health_record(health_record_id: str, health_record: HealthRecor
     health_records_db.remove(existing)
     health_records_db.append(health_record)
     return health_record
+
+
+@app.get("/api/revenue/monthly")
+async def get_monthly_revenue(month: Optional[str] = None):
+    """Get revenue breakdown for a specific month (YYYY-MM format) or all months"""
+    from collections import defaultdict
+    
+    payments = [b for b in billing_records_db if b.type == "Payment"]
+    
+    if month:
+        payments = [p for p in payments if p.period_month == month]
+    
+    monthly_data = defaultdict(lambda: {
+        'tuition_step_up': 0.0,
+        'tuition_out_of_pocket': 0.0,
+        'fee_step_up': 0.0,
+        'fee_out_of_pocket': 0.0,
+        'store_step_up': 0.0,
+        'store_out_of_pocket': 0.0,
+        'other_step_up': 0.0,
+        'other_out_of_pocket': 0.0
+    })
+    
+    for payment in payments:
+        if not payment.period_month:
+            continue
+            
+        month_key = payment.period_month
+        category = payment.category.value if payment.category else 'Other'
+        source = payment.source.value if payment.source else 'Out-of-Pocket'
+        
+        amount = abs(payment.amount)
+        
+        key = f"{category.lower()}_{source.lower().replace('-', '_')}"
+        if key in monthly_data[month_key]:
+            monthly_data[month_key][key] += amount
+    
+    result = []
+    for month_key, data in sorted(monthly_data.items()):
+        tuition_total = data['tuition_step_up'] + data['tuition_out_of_pocket']
+        fee_total = data['fee_step_up'] + data['fee_out_of_pocket']
+        store_total = data['store_step_up'] + data['store_out_of_pocket']
+        other_total = data['other_step_up'] + data['other_out_of_pocket']
+        
+        step_up_total = data['tuition_step_up'] + data['fee_step_up'] + data['store_step_up'] + data['other_step_up']
+        out_of_pocket_total = data['tuition_out_of_pocket'] + data['fee_out_of_pocket'] + data['store_out_of_pocket'] + data['other_out_of_pocket']
+        grand_total = step_up_total + out_of_pocket_total
+        
+        result.append({
+            'month': month_key,
+            'tuition_step_up': round(data['tuition_step_up'], 2),
+            'tuition_out_of_pocket': round(data['tuition_out_of_pocket'], 2),
+            'tuition_total': round(tuition_total, 2),
+            'fee_step_up': round(data['fee_step_up'], 2),
+            'fee_out_of_pocket': round(data['fee_out_of_pocket'], 2),
+            'fee_total': round(fee_total, 2),
+            'store_step_up': round(data['store_step_up'], 2),
+            'store_out_of_pocket': round(data['store_out_of_pocket'], 2),
+            'store_total': round(store_total, 2),
+            'other_step_up': round(data['other_step_up'], 2),
+            'other_out_of_pocket': round(data['other_out_of_pocket'], 2),
+            'other_total': round(other_total, 2),
+            'step_up_total': round(step_up_total, 2),
+            'out_of_pocket_total': round(out_of_pocket_total, 2),
+            'grand_total': round(grand_total, 2)
+        })
+    
+    if month and result:
+        return result[0]
+    return result
+
+@app.get("/api/revenue/series")
+async def get_revenue_series(start: Optional[str] = None, end: Optional[str] = None):
+    """Get revenue time series for charts (start and end in YYYY-MM format)"""
+    monthly_revenue = await get_monthly_revenue()
+    
+    if start:
+        monthly_revenue = [m for m in monthly_revenue if m['month'] >= start]
+    if end:
+        monthly_revenue = [m for m in monthly_revenue if m['month'] <= end]
+    
+    return monthly_revenue
+
+@app.get("/api/families/{family_id}/tuition-history")
+async def get_family_tuition_history(family_id: str):
+    """Get detailed tuition history for a family with month-by-month breakdown"""
+    from collections import defaultdict
+    
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    family_records = [b for b in billing_records_db if b.family_id == family_id]
+    
+    monthly_data = defaultdict(lambda: {
+        'charges': [],
+        'payments': [],
+        'tuition_charge': 0.0,
+        'step_up_paid': 0.0,
+        'out_of_pocket_paid': 0.0
+    })
+    
+    for record in family_records:
+        if not record.period_month:
+            continue
+            
+        month_key = record.period_month
+        
+        if record.type == "Charge" and record.category == BillingCategory.TUITION:
+            monthly_data[month_key]['tuition_charge'] += record.amount
+            monthly_data[month_key]['charges'].append({
+                'billing_record_id': record.billing_record_id,
+                'date': record.date.isoformat(),
+                'description': record.description,
+                'amount': record.amount,
+                'category': record.category.value if record.category else None,
+                'student_id': record.student_id
+            })
+        elif record.type == "Payment":
+            amount = abs(record.amount)
+            if record.source == PaymentSource.STEP_UP:
+                monthly_data[month_key]['step_up_paid'] += amount
+            else:
+                monthly_data[month_key]['out_of_pocket_paid'] += amount
+            
+            monthly_data[month_key]['payments'].append({
+                'billing_record_id': record.billing_record_id,
+                'date': record.date.isoformat(),
+                'description': record.description,
+                'amount': record.amount,
+                'source': record.source.value if record.source else None,
+                'category': record.category.value if record.category else None,
+                'student_id': record.student_id
+            })
+    
+    result = []
+    running_balance = 0.0
+    
+    for month_key in sorted(monthly_data.keys()):
+        data = monthly_data[month_key]
+        tuition_charge = data['tuition_charge']
+        step_up_paid = data['step_up_paid']
+        out_of_pocket_paid = data['out_of_pocket_paid']
+        total_paid = step_up_paid + out_of_pocket_paid
+        
+        running_balance += tuition_charge - total_paid
+        
+        result.append({
+            'month': month_key,
+            'tuition_charge': round(tuition_charge, 2),
+            'step_up_paid': round(step_up_paid, 2),
+            'out_of_pocket_paid': round(out_of_pocket_paid, 2),
+            'total_paid': round(total_paid, 2),
+            'remaining_balance': round(running_balance, 2),
+            'charges': data['charges'],
+            'payments': data['payments']
+        })
+    
+    return {
+        'family_id': family_id,
+        'family_name': family.family_name,
+        'current_balance': family.current_balance,
+        'monthly_tuition_amount': family.monthly_tuition_amount,
+        'history': result
+    }
