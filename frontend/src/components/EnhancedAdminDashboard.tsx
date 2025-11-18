@@ -14,6 +14,7 @@ import { HealthRecords } from './HealthRecords'
 import { AdminRevenueReports } from './AdminRevenueReports'
 import { CampusSwitcher } from './CampusSwitcher'
 import { AddStudentModal } from './AddStudentModal'
+import FinancialManagement from './FinancialManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -67,7 +68,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health' | 'financial'>('dashboard')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
@@ -85,7 +86,7 @@ export function EnhancedAdminDashboard() {
     } else if (view === 'families') {
       fetchFamilies()
     }
-  }, [view])
+  }, [view, selectedCampusId])
 
   useEffect(() => {
     if (view === 'students') {
@@ -95,7 +96,10 @@ export function EnhancedAdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/dashboard/admin`)
+      const url = selectedCampusId 
+        ? `${API_URL}/api/dashboard/admin?campus_id=${selectedCampusId}`
+        : `${API_URL}/api/dashboard/admin`
+      const response = await fetch(url)
       const data = await response.json()
       setDashboardData(data)
     } catch (error) {
@@ -324,6 +328,16 @@ export function EnhancedAdminDashboard() {
             >
               Health Records
             </button>
+            <button
+              onClick={() => setView('financial')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'financial'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Financial
+            </button>
           </nav>
         </div>
       </div>
@@ -331,7 +345,10 @@ export function EnhancedAdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'dashboard' && dashboardData && (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="hover:shadow-lg transition-shadow">
@@ -698,6 +715,10 @@ export function EnhancedAdminDashboard() {
 
         {view === 'health' && (
           <HealthRecords role="admin" />
+        )}
+
+        {view === 'financial' && (
+          <FinancialManagement selectedCampusId={selectedCampusId} />
         )}
       </div>
 

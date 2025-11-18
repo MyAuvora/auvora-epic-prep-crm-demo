@@ -426,6 +426,71 @@ class HealthRecord(BaseModel):
     physician_phone: Optional[str]
     last_updated: date
 
+class InvoiceStatus(str, Enum):
+    DRAFT = "Draft"
+    SENT = "Sent"
+    PAID = "Paid"
+    OVERDUE = "Overdue"
+    CANCELLED = "Cancelled"
+
+class PaymentPlanStatus(str, Enum):
+    ACTIVE = "Active"
+    COMPLETED = "Completed"
+    DEFAULTED = "Defaulted"
+    CANCELLED = "Cancelled"
+
+class Invoice(BaseModel):
+    invoice_id: str
+    campus_id: str
+    family_id: str
+    invoice_number: str
+    invoice_date: date
+    due_date: date
+    status: InvoiceStatus
+    subtotal: float
+    tax: float
+    total: float
+    amount_paid: float
+    balance: float
+    notes: Optional[str] = None
+    created_date: datetime
+    last_updated: datetime
+
+class InvoiceLineItem(BaseModel):
+    line_item_id: str
+    invoice_id: str
+    description: str
+    category: BillingCategory
+    student_id: Optional[str] = None
+    quantity: int
+    unit_price: float
+    total: float
+    funding_source: Optional[PaymentSource] = None
+
+class PaymentPlan(BaseModel):
+    payment_plan_id: str
+    campus_id: str
+    family_id: str
+    plan_name: str
+    total_amount: float
+    amount_paid: float
+    balance: float
+    start_date: date
+    end_date: date
+    status: PaymentPlanStatus
+    created_date: datetime
+    last_updated: datetime
+
+class PaymentSchedule(BaseModel):
+    schedule_id: str
+    payment_plan_id: str
+    installment_number: int
+    due_date: date
+    amount: float
+    paid: bool
+    paid_date: Optional[date] = None
+    paid_amount: float
+
 organizations_db: List[Organization] = []
 campuses_db: List[Campus] = []
 users_db: List[User] = []
@@ -450,6 +515,10 @@ orders_db: List[Order] = []
 photo_albums_db: List[PhotoAlbum] = []
 incidents_db: List[Incident] = []
 health_records_db: List[HealthRecord] = []
+invoices_db: List[Invoice] = []
+invoice_line_items_db: List[InvoiceLineItem] = []
+payment_plans_db: List[PaymentPlan] = []
+payment_schedules_db: List[PaymentSchedule] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
@@ -459,6 +528,7 @@ def generate_demo_data():
     global billing_records_db, conferences_db, messages_db
     global events_db, event_rsvps_db, documents_db, document_signatures_db
     global products_db, orders_db, photo_albums_db, incidents_db, health_records_db
+    global invoices_db, invoice_line_items_db, payment_plans_db, payment_schedules_db
     
     from .demo_data import generate_all_demo_data
     
@@ -487,6 +557,10 @@ def generate_demo_data():
     photo_albums_db = data["photo_albums"]
     incidents_db = data["incidents"]
     health_records_db = data["health_records"]
+    invoices_db = data.get("invoices", [])
+    invoice_line_items_db = data.get("invoice_line_items", [])
+    payment_plans_db = data.get("payment_plans", [])
+    payment_schedules_db = data.get("payment_schedules", [])
 
 @app.on_event("startup")
 async def startup_event():
@@ -707,25 +781,31 @@ async def get_messages(parent_id: Optional[str] = None, staff_id: Optional[str] 
     return messages
 
 @app.get("/api/dashboard/admin")
-async def get_admin_dashboard():
-    total_students = len(students_db)
-    morning_count = len([s for s in students_db if s.session == Session.MORNING])
-    afternoon_count = len([s for s in students_db if s.session == Session.AFTERNOON])
+async def get_admin_dashboard(campus_id: Optional[str] = None):
+    filtered_students = students_db if not campus_id else [s for s in students_db if s.campus_id == campus_id]
     
-    billing_green = len([f for f in families_db if f.billing_status == BillingStatus.GREEN])
-    billing_yellow = len([f for f in families_db if f.billing_status == BillingStatus.YELLOW])
-    billing_red = len([f for f in families_db if f.billing_status == BillingStatus.RED])
-    total_balance = sum(f.current_balance for f in families_db)
+    total_students = len(filtered_students)
+    morning_count = len([s for s in filtered_students if s.session == Session.MORNING])
+    afternoon_count = len([s for s in filtered_students if s.session == Session.AFTERNOON])
+    
+    student_family_ids = set(s.family_id for s in filtered_students)
+    filtered_families = families_db if not campus_id else [f for f in families_db if f.family_id in student_family_ids]
+    
+    billing_green = len([f for f in filtered_families if f.billing_status == BillingStatus.GREEN])
+    billing_yellow = len([f for f in filtered_families if f.billing_status == BillingStatus.YELLOW])
+    billing_red = len([f for f in filtered_families if f.billing_status == BillingStatus.RED])
+    total_balance = sum(f.current_balance for f in filtered_families)
     
     today = date.today()
-    today_attendance = [a for a in attendance_records_db if a.date == today]
+    student_ids = set(s.student_id for s in filtered_students)
+    today_attendance = [a for a in attendance_records_db if a.date == today and (not campus_id or a.student_id in student_ids)]
     present_today = len([a for a in today_attendance if a.status == AttendanceStatus.PRESENT])
     absent_today = len([a for a in today_attendance if a.status == AttendanceStatus.ABSENT])
     tardy_today = len([a for a in today_attendance if a.status == AttendanceStatus.TARDY])
     
-    at_risk_students = [s for s in students_db if s.overall_risk_flag == RiskFlag.AT_RISK]
-    ixl_behind = [s for s in students_db if s.ixl_status_flag == IXLStatus.NEEDS_ATTENTION]
-    overdue_families = [f for f in families_db if f.billing_status == BillingStatus.RED]
+    at_risk_students = [s for s in filtered_students if s.overall_risk_flag == RiskFlag.AT_RISK]
+    ixl_behind = [s for s in filtered_students if s.ixl_status_flag == IXLStatus.NEEDS_ATTENTION]
+    overdue_families = [f for f in filtered_families if f.billing_status == BillingStatus.RED]
     
     return {
         "total_students": total_students,
@@ -1207,4 +1287,456 @@ async def get_family_tuition_history(family_id: str):
         'current_balance': family.current_balance,
         'monthly_tuition_amount': family.monthly_tuition_amount,
         'history': result
+    }
+
+@app.get("/api/invoices")
+async def get_invoices(campus_id: Optional[str] = None, family_id: Optional[str] = None, status: Optional[str] = None):
+    """Get all invoices with optional filters"""
+    result = invoices_db
+    
+    if campus_id:
+        result = [i for i in result if i.campus_id == campus_id]
+    if family_id:
+        result = [i for i in result if i.family_id == family_id]
+    if status:
+        result = [i for i in result if i.status.value == status]
+    
+    return sorted(result, key=lambda x: x.invoice_date, reverse=True)
+
+@app.get("/api/invoices/{invoice_id}")
+async def get_invoice(invoice_id: str):
+    """Get a specific invoice with line items"""
+    invoice = next((i for i in invoices_db if i.invoice_id == invoice_id), None)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    line_items = [li for li in invoice_line_items_db if li.invoice_id == invoice_id]
+    
+    return {
+        **invoice.dict(),
+        'line_items': line_items
+    }
+
+@app.post("/api/invoices")
+async def create_invoice(invoice: Invoice):
+    """Create a new invoice"""
+    invoices_db.append(invoice)
+    return invoice
+
+@app.post("/api/invoices/generate-monthly")
+async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None):
+    """Generate monthly invoices for all families (or specific campus)"""
+    from datetime import datetime
+    
+    try:
+        invoice_date = datetime.strptime(month, "%Y-%m").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM")
+    
+    due_date = invoice_date.replace(day=15)
+    families = families_db
+    
+    if campus_id:
+        student_ids = [s.student_id for s in students_db if s.campus_id == campus_id]
+        families = [f for f in families if any(s.student_id in student_ids for s in students_db if s.family_id == f.family_id)]
+    
+    generated_invoices = []
+    invoice_counter = len(invoices_db) + 1
+    
+    for family in families:
+        campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
+        family_students = [s for s in students_db if s.family_id == family.family_id]
+        
+        invoice_id = f"inv_{invoice_counter}"
+        invoice_number = f"INV-{invoice_date.year}-{invoice_date.month:02d}-{invoice_counter:04d}"
+        
+        subtotal = 0.0
+        line_items = []
+        
+        for student in family_students:
+            monthly_tuition = family.monthly_tuition_amount / len(family_students)
+            line_item = InvoiceLineItem(
+                line_item_id=f"line_{invoice_counter}_{student.student_id}",
+                invoice_id=invoice_id,
+                description=f"Monthly Tuition - {student.first_name} {student.last_name}",
+                category=BillingCategory.TUITION,
+                student_id=student.student_id,
+                quantity=1,
+                unit_price=monthly_tuition,
+                total=monthly_tuition,
+                funding_source=student.funding_source
+            )
+            line_items.append(line_item)
+            subtotal += monthly_tuition
+        
+        tax = 0.0
+        total = subtotal + tax
+        
+        invoice = Invoice(
+            invoice_id=invoice_id,
+            campus_id=campus.campus_id,
+            family_id=family.family_id,
+            invoice_number=invoice_number,
+            invoice_date=invoice_date,
+            due_date=due_date,
+            status=InvoiceStatus.DRAFT,
+            subtotal=subtotal,
+            tax=tax,
+            total=total,
+            amount_paid=0.0,
+            balance=total,
+            notes=None,
+            created_date=datetime.now(),
+            last_updated=datetime.now()
+        )
+        
+        invoices_db.append(invoice)
+        invoice_line_items_db.extend(line_items)
+        generated_invoices.append(invoice)
+        invoice_counter += 1
+    
+    return {
+        'count': len(generated_invoices),
+        'invoices': generated_invoices
+    }
+
+@app.get("/api/payment-plans")
+async def get_payment_plans(campus_id: Optional[str] = None, family_id: Optional[str] = None, status: Optional[str] = None):
+    """Get all payment plans with optional filters"""
+    result = payment_plans_db
+    
+    if campus_id:
+        result = [p for p in result if p.campus_id == campus_id]
+    if family_id:
+        result = [p for p in result if p.family_id == family_id]
+    if status:
+        result = [p for p in result if p.status.value == status]
+    
+    return sorted(result, key=lambda x: x.created_date, reverse=True)
+
+@app.get("/api/payment-plans/{payment_plan_id}")
+async def get_payment_plan(payment_plan_id: str):
+    """Get a specific payment plan with schedules"""
+    plan = next((p for p in payment_plans_db if p.payment_plan_id == payment_plan_id), None)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Payment plan not found")
+    
+    schedules = [s for s in payment_schedules_db if s.payment_plan_id == payment_plan_id]
+    
+    return {
+        **plan.dict(),
+        'schedules': sorted(schedules, key=lambda x: x.installment_number)
+    }
+
+@app.post("/api/payment-plans")
+async def create_payment_plan(plan: PaymentPlan):
+    """Create a new payment plan"""
+    payment_plans_db.append(plan)
+    return plan
+
+@app.put("/api/payment-plans/{payment_plan_id}")
+async def update_payment_plan(payment_plan_id: str, plan: PaymentPlan):
+    """Update an existing payment plan"""
+    existing = next((p for p in payment_plans_db if p.payment_plan_id == payment_plan_id), None)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Payment plan not found")
+    
+    payment_plans_db.remove(existing)
+    payment_plans_db.append(plan)
+    return plan
+
+@app.get("/api/reports/ar-aging")
+async def get_ar_aging_report(campus_id: Optional[str] = None):
+    """Get AR Aging Report (0-30, 31-60, 61-90, 90+ days overdue)"""
+    from datetime import date, timedelta
+    
+    today = date.today()
+    overdue_invoices = [i for i in invoices_db if i.balance > 0 and i.due_date < today]
+    
+    if campus_id:
+        overdue_invoices = [i for i in overdue_invoices if i.campus_id == campus_id]
+    
+    aging_buckets = {
+        '0-30': [],
+        '31-60': [],
+        '61-90': [],
+        '90+': []
+    }
+    
+    for invoice in overdue_invoices:
+        days_overdue = (today - invoice.due_date).days
+        family = next((f for f in families_db if f.family_id == invoice.family_id), None)
+        
+        invoice_data = {
+            'invoice_id': invoice.invoice_id,
+            'invoice_number': invoice.invoice_number,
+            'family_id': invoice.family_id,
+            'family_name': family.family_name if family else 'Unknown',
+            'invoice_date': invoice.invoice_date.isoformat(),
+            'due_date': invoice.due_date.isoformat(),
+            'days_overdue': days_overdue,
+            'total': invoice.total,
+            'amount_paid': invoice.amount_paid,
+            'balance': invoice.balance
+        }
+        
+        if days_overdue <= 30:
+            aging_buckets['0-30'].append(invoice_data)
+        elif days_overdue <= 60:
+            aging_buckets['31-60'].append(invoice_data)
+        elif days_overdue <= 90:
+            aging_buckets['61-90'].append(invoice_data)
+        else:
+            aging_buckets['90+'].append(invoice_data)
+    
+    summary = {
+        '0-30': {
+            'count': len(aging_buckets['0-30']),
+            'total': sum(i['balance'] for i in aging_buckets['0-30'])
+        },
+        '31-60': {
+            'count': len(aging_buckets['31-60']),
+            'total': sum(i['balance'] for i in aging_buckets['31-60'])
+        },
+        '61-90': {
+            'count': len(aging_buckets['61-90']),
+            'total': sum(i['balance'] for i in aging_buckets['61-90'])
+        },
+        '90+': {
+            'count': len(aging_buckets['90+']),
+            'total': sum(i['balance'] for i in aging_buckets['90+'])
+        }
+    }
+    
+    return {
+        'summary': summary,
+        'details': aging_buckets
+    }
+
+@app.get("/api/families/{family_id}/statement")
+async def get_family_statement(family_id: str, format: str = "json"):
+    """Get family statement (downloadable as JSON or CSV)"""
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    family_invoices = [i for i in invoices_db if i.family_id == family_id]
+    family_students = [s for s in students_db if s.family_id == family_id]
+    
+    statement_data = {
+        'family_id': family_id,
+        'family_name': family.family_name,
+        'statement_date': date.today().isoformat(),
+        'current_balance': family.current_balance,
+        'monthly_tuition_amount': family.monthly_tuition_amount,
+        'billing_status': family.billing_status.value,
+        'students': [
+            {
+                'student_id': s.student_id,
+                'name': f"{s.first_name} {s.last_name}",
+                'grade': s.grade,
+                'funding_source': s.funding_source.value if s.funding_source else None
+            }
+            for s in family_students
+        ],
+        'invoices': [
+            {
+                'invoice_number': i.invoice_number,
+                'invoice_date': i.invoice_date.isoformat(),
+                'due_date': i.due_date.isoformat(),
+                'status': i.status.value,
+                'total': i.total,
+                'amount_paid': i.amount_paid,
+                'balance': i.balance
+            }
+            for i in sorted(family_invoices, key=lambda x: x.invoice_date, reverse=True)
+        ],
+        'total_invoiced': sum(i.total for i in family_invoices),
+        'total_paid': sum(i.amount_paid for i in family_invoices),
+        'total_outstanding': sum(i.balance for i in family_invoices)
+    }
+    
+    if format == "csv":
+        from fastapi.responses import StreamingResponse
+        import io
+        import csv
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        writer.writerow(['Family Statement'])
+        writer.writerow(['Family Name:', family.family_name])
+        writer.writerow(['Statement Date:', date.today().isoformat()])
+        writer.writerow(['Current Balance:', f"${family.current_balance:.2f}"])
+        writer.writerow([])
+        writer.writerow(['Invoice Number', 'Invoice Date', 'Due Date', 'Status', 'Total', 'Paid', 'Balance'])
+        
+        for invoice in statement_data['invoices']:
+            writer.writerow([
+                invoice['invoice_number'],
+                invoice['invoice_date'],
+                invoice['due_date'],
+                invoice['status'],
+                f"${invoice['total']:.2f}",
+                f"${invoice['amount_paid']:.2f}",
+                f"${invoice['balance']:.2f}"
+            ])
+        
+        writer.writerow([])
+        writer.writerow(['Total Invoiced:', f"${statement_data['total_invoiced']:.2f}"])
+        writer.writerow(['Total Paid:', f"${statement_data['total_paid']:.2f}"])
+        writer.writerow(['Total Outstanding:', f"${statement_data['total_outstanding']:.2f}"])
+        
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=family_statement_{family_id}.csv"}
+        )
+    
+    return statement_data
+
+@app.get("/api/reports/quickbooks-export")
+async def get_quickbooks_export(start_date: str, end_date: str, campus_id: Optional[str] = None):
+    """Export transactions for QuickBooks (CSV format)"""
+    from fastapi.responses import StreamingResponse
+    from datetime import datetime
+    import io
+    import csv
+    
+    try:
+        start = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    invoices = [i for i in invoices_db if start <= i.invoice_date <= end]
+    
+    if campus_id:
+        invoices = [i for i in invoices if i.campus_id == campus_id]
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow(['Date', 'Transaction Type', 'Invoice Number', 'Customer', 'Account', 'Amount', 'Description', 'Campus'])
+    
+    for invoice in sorted(invoices, key=lambda x: x.invoice_date):
+        family = next((f for f in families_db if f.family_id == invoice.family_id), None)
+        campus = next((c for c in campuses_db if c.campus_id == invoice.campus_id), None)
+        line_items = [li for li in invoice_line_items_db if li.invoice_id == invoice.invoice_id]
+        
+        for line_item in line_items:
+            account = f"Revenue - {line_item.category.value}" if line_item.category else "Revenue - Other"
+            writer.writerow([
+                invoice.invoice_date.isoformat(),
+                'Invoice',
+                invoice.invoice_number,
+                family.family_name if family else 'Unknown',
+                account,
+                f"{line_item.total:.2f}",
+                line_item.description,
+                campus.name if campus else 'Unknown'
+            ])
+        
+        if invoice.amount_paid > 0:
+            writer.writerow([
+                invoice.invoice_date.isoformat(),
+                'Payment',
+                invoice.invoice_number,
+                family.family_name if family else 'Unknown',
+                'Accounts Receivable',
+                f"-{invoice.amount_paid:.2f}",
+                f"Payment for {invoice.invoice_number}",
+                campus.name if campus else 'Unknown'
+            ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=quickbooks_export_{start_date}_{end_date}.csv"}
+    )
+
+@app.get("/api/reports/step-up-reconciliation")
+async def get_step_up_reconciliation(month: str, campus_id: Optional[str] = None):
+    """Get Step-Up reconciliation report (expected vs received, variance tracking)"""
+    from datetime import datetime
+    from collections import defaultdict
+    
+    try:
+        report_date = datetime.strptime(month, "%Y-%m").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM")
+    
+    invoices = [i for i in invoices_db if i.invoice_date.year == report_date.year and i.invoice_date.month == report_date.month]
+    
+    if campus_id:
+        invoices = [i for i in invoices if i.campus_id == campus_id]
+    
+    step_up_data = defaultdict(lambda: {
+        'expected': 0.0,
+        'received': 0.0,
+        'variance': 0.0,
+        'students': []
+    })
+    
+    for invoice in invoices:
+        line_items = [li for li in invoice_line_items_db if li.invoice_id == invoice.invoice_id]
+        
+        for line_item in line_items:
+            if line_item.funding_source == FundingSource.STEP_UP and line_item.student_id:
+                student = next((s for s in students_db if s.student_id == line_item.student_id), None)
+                if not student:
+                    continue
+                
+                expected_amount = line_item.total * (student.step_up_percentage / 100.0)
+                
+                received_amount = 0.0
+                if invoice.status == InvoiceStatus.PAID:
+                    received_amount = expected_amount
+                elif invoice.amount_paid > 0:
+                    received_amount = (invoice.amount_paid / invoice.total) * expected_amount
+                
+                variance = received_amount - expected_amount
+                
+                student_key = student.student_id
+                step_up_data[student_key]['expected'] += expected_amount
+                step_up_data[student_key]['received'] += received_amount
+                step_up_data[student_key]['variance'] += variance
+                
+                if not step_up_data[student_key]['students']:
+                    step_up_data[student_key]['students'] = {
+                        'student_id': student.student_id,
+                        'name': f"{student.first_name} {student.last_name}",
+                        'grade': student.grade,
+                        'step_up_percentage': student.step_up_percentage
+                    }
+    
+    reconciliation_details = []
+    total_expected = 0.0
+    total_received = 0.0
+    total_variance = 0.0
+    
+    for student_id, data in step_up_data.items():
+        reconciliation_details.append({
+            **data['students'],
+            'expected': round(data['expected'], 2),
+            'received': round(data['received'], 2),
+            'variance': round(data['variance'], 2),
+            'variance_percentage': round((data['variance'] / data['expected'] * 100) if data['expected'] > 0 else 0, 2)
+        })
+        
+        total_expected += data['expected']
+        total_received += data['received']
+        total_variance += data['variance']
+    
+    return {
+        'month': month,
+        'summary': {
+            'total_expected': round(total_expected, 2),
+            'total_received': round(total_received, 2),
+            'total_variance': round(total_variance, 2),
+            'variance_percentage': round((total_variance / total_expected * 100) if total_expected > 0 else 0, 2)
+        },
+        'details': sorted(reconciliation_details, key=lambda x: abs(x['variance']), reverse=True)
     }

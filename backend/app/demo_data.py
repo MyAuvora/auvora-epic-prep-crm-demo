@@ -7,13 +7,15 @@ from .main import (
     AttendanceRecord, IXLSummary, BillingRecord, Conference, Message,
     Event, EventRSVP, Document, DocumentSignature, Product, Order,
     PhotoAlbum, Incident, HealthRecord,
+    Invoice, InvoiceLineItem, PaymentPlan, PaymentSchedule,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
     DocumentType, DocumentStatus, ProductCategory, OrderStatus,
     PhotoAlbumStatus, IncidentType, IncidentSeverity,
     FundingSource, PaymentSource, BillingCategory,
-    UserRole, AuditAction
+    UserRole, AuditAction,
+    InvoiceStatus, PaymentPlanStatus
 )
 
 def generate_all_demo_data():
@@ -737,6 +739,182 @@ def generate_all_demo_data():
         )
         health_records_db.append(health_record)
     
+    invoices_db = []
+    invoice_line_items_db = []
+    payment_plans_db = []
+    payment_schedules_db = []
+    
+    invoice_counter = 1
+    
+    for family in families_db:
+        campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
+        family_students = [s for s in students_db if s.family_id == family.family_id]
+        
+        for month_offset in range(6):
+            invoice_date = date.today().replace(day=1) - timedelta(days=30 * month_offset)
+            due_date = invoice_date + timedelta(days=15)
+            
+            if month_offset == 0:
+                if family.billing_status == BillingStatus.GREEN:
+                    status = InvoiceStatus.PAID
+                elif family.billing_status == BillingStatus.YELLOW:
+                    status = InvoiceStatus.SENT
+                else:
+                    status = InvoiceStatus.OVERDUE
+            elif month_offset <= 2:
+                if family.billing_status == BillingStatus.GREEN:
+                    status = InvoiceStatus.PAID
+                elif family.billing_status == BillingStatus.RED:
+                    status = random.choice([InvoiceStatus.OVERDUE, InvoiceStatus.SENT])
+                else:
+                    status = InvoiceStatus.PAID if random.random() > 0.3 else InvoiceStatus.SENT
+            else:
+                status = InvoiceStatus.PAID if random.random() > 0.1 else InvoiceStatus.OVERDUE
+            
+            invoice_id = f"inv_{invoice_counter}"
+            invoice_number = f"INV-{invoice_date.year}-{invoice_date.month:02d}-{invoice_counter:04d}"
+            
+            subtotal = 0.0
+            line_items = []
+            
+            for student in family_students:
+                monthly_tuition = family.monthly_tuition_amount / len(family_students)
+                
+                payment_source = None
+                if student.funding_source == FundingSource.STEP_UP:
+                    payment_source = PaymentSource.STEP_UP
+                elif student.funding_source == FundingSource.OUT_OF_POCKET:
+                    payment_source = PaymentSource.OUT_OF_POCKET
+                elif student.funding_source == FundingSource.MIXED:
+                    payment_source = None
+                
+                line_item = InvoiceLineItem(
+                    line_item_id=f"line_{invoice_counter}_{student.student_id}",
+                    invoice_id=invoice_id,
+                    description=f"Monthly Tuition - {student.first_name} {student.last_name}",
+                    category=BillingCategory.TUITION,
+                    student_id=student.student_id,
+                    quantity=1,
+                    unit_price=monthly_tuition,
+                    total=monthly_tuition,
+                    funding_source=payment_source
+                )
+                line_items.append(line_item)
+                subtotal += monthly_tuition
+            
+            if random.random() < 0.2:
+                fee_amount = random.choice([25.0, 50.0, 75.0])
+                fee_description = random.choice(["Late Fee", "Materials Fee", "Field Trip Fee"])
+                line_item = InvoiceLineItem(
+                    line_item_id=f"line_{invoice_counter}_fee",
+                    invoice_id=invoice_id,
+                    description=fee_description,
+                    category=BillingCategory.FEE,
+                    student_id=None,
+                    quantity=1,
+                    unit_price=fee_amount,
+                    total=fee_amount,
+                    funding_source=None
+                )
+                line_items.append(line_item)
+                subtotal += fee_amount
+            
+            tax = 0.0  # No tax on tuition in FL
+            total = subtotal + tax
+            
+            if status == InvoiceStatus.PAID:
+                amount_paid = total
+                balance = 0.0
+            elif status == InvoiceStatus.OVERDUE:
+                amount_paid = random.uniform(0, total * 0.5)
+                balance = total - amount_paid
+            elif status == InvoiceStatus.SENT:
+                amount_paid = random.uniform(0, total * 0.3) if random.random() < 0.3 else 0.0
+                balance = total - amount_paid
+            else:
+                amount_paid = 0.0
+                balance = total
+            
+            invoice = Invoice(
+                invoice_id=invoice_id,
+                campus_id=campus.campus_id,
+                family_id=family.family_id,
+                invoice_number=invoice_number,
+                invoice_date=invoice_date,
+                due_date=due_date,
+                status=status,
+                subtotal=subtotal,
+                tax=tax,
+                total=total,
+                amount_paid=amount_paid,
+                balance=balance,
+                notes=None,
+                created_date=datetime.combine(invoice_date, datetime.min.time()),
+                last_updated=datetime.now()
+            )
+            invoices_db.append(invoice)
+            invoice_line_items_db.extend(line_items)
+            invoice_counter += 1
+    
+    payment_plan_counter = 1
+    for family in families_db:
+        if family.billing_status == BillingStatus.RED and family.current_balance > 200:
+            campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
+            
+            plan_amount = family.current_balance
+            num_installments = random.choice([3, 6, 12])
+            installment_amount = plan_amount / num_installments
+            
+            start_date = date.today()
+            end_date = start_date + timedelta(days=30 * num_installments)
+            
+            paid_installments = random.randint(0, min(2, num_installments))
+            amount_paid = paid_installments * installment_amount
+            balance = plan_amount - amount_paid
+            
+            if paid_installments == num_installments:
+                status = PaymentPlanStatus.COMPLETED
+            elif paid_installments > 0 and date.today() < end_date:
+                status = PaymentPlanStatus.ACTIVE
+            elif date.today() > end_date and balance > 0:
+                status = PaymentPlanStatus.DEFAULTED
+            else:
+                status = PaymentPlanStatus.ACTIVE
+            
+            payment_plan = PaymentPlan(
+                payment_plan_id=f"plan_{payment_plan_counter}",
+                campus_id=campus.campus_id,
+                family_id=family.family_id,
+                plan_name=f"Payment Plan - {family.family_name}",
+                total_amount=plan_amount,
+                amount_paid=amount_paid,
+                balance=balance,
+                start_date=start_date,
+                end_date=end_date,
+                status=status,
+                created_date=datetime.combine(start_date, datetime.min.time()),
+                last_updated=datetime.now()
+            )
+            payment_plans_db.append(payment_plan)
+            
+            for i in range(num_installments):
+                installment_due_date = start_date + timedelta(days=30 * i)
+                paid = i < paid_installments
+                
+                schedule = PaymentSchedule(
+                    schedule_id=f"schedule_{payment_plan_counter}_{i+1}",
+                    payment_plan_id=payment_plan.payment_plan_id,
+                    installment_number=i + 1,
+                    due_date=installment_due_date,
+                    amount=installment_amount,
+                    paid=paid,
+                    paid_date=installment_due_date if paid else None,
+                    paid_amount=installment_amount if paid else 0.0
+                )
+                payment_schedules_db.append(schedule)
+            
+            payment_plan_counter += 1
+    
     return {
         "organizations": organizations_db,
         "campuses": campuses_db,
@@ -761,5 +939,9 @@ def generate_all_demo_data():
         "orders": orders_db,
         "photo_albums": photo_albums_db,
         "incidents": incidents_db,
-        "health_records": health_records_db
+        "health_records": health_records_db,
+        "invoices": invoices_db,
+        "invoice_line_items": invoice_line_items_db,
+        "payment_plans": payment_plans_db,
+        "payment_schedules": payment_schedules_db
     }
