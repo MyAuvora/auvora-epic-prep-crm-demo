@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { StudentDetailsModal } from './StudentDetailsModal'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
@@ -11,6 +12,8 @@ import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
 import { AdminRevenueReports } from './AdminRevenueReports'
+import { CampusSwitcher } from './CampusSwitcher'
+import { AddStudentModal } from './AddStudentModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -71,6 +74,8 @@ export function EnhancedAdminDashboard() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
+  const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false)
 
   useEffect(() => {
     if (view === 'dashboard') {
@@ -81,6 +86,12 @@ export function EnhancedAdminDashboard() {
       fetchFamilies()
     }
   }, [view])
+
+  useEffect(() => {
+    if (view === 'students') {
+      fetchStudents()
+    }
+  }, [selectedCampusId])
 
   const fetchDashboardData = async () => {
     try {
@@ -94,7 +105,22 @@ export function EnhancedAdminDashboard() {
 
   const fetchStudents = async (filter?: string) => {
     try {
-      const url = filter ? `${API_URL}/api/students?${filter}` : `${API_URL}/api/students`
+      let url = `${API_URL}/api/students`
+      const params = new URLSearchParams()
+      
+      if (selectedCampusId) {
+        params.append('campus_id', selectedCampusId)
+      }
+      
+      if (filter) {
+        const filterParams = new URLSearchParams(filter)
+        filterParams.forEach((value, key) => params.append(key, value))
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`
+      }
+      
       const response = await fetch(url)
       const data = await response.json()
       setStudents(data)
@@ -456,18 +482,41 @@ export function EnhancedAdminDashboard() {
                   </p>
                 )}
               </div>
-              {(drillDownView || askAuvoraResults) && (
-                <button
-                  onClick={() => {
-                    setDrillDownView(null)
-                    setAskAuvoraResults(null)
-                    fetchStudents()
-                  }}
-                  className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+              <div className="flex items-center gap-4">
+                <CampusSwitcher 
+                  selectedCampusId={selectedCampusId}
+                  onCampusChange={setSelectedCampusId}
+                />
+                <Button
+                  onClick={() => setShowAddStudentModal(true)}
+                  className="bg-amber-600 hover:bg-amber-700"
                 >
-                  Show All Students
-                </button>
-              )}
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Student
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const campusParam = selectedCampusId ? `?campus_id=${selectedCampusId}` : '';
+                    window.open(`${API_URL}/api/students/export/csv${campusParam}`, '_blank');
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                {(drillDownView || askAuvoraResults) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDrillDownView(null)
+                      setAskAuvoraResults(null)
+                      fetchStudents()
+                    }}
+                  >
+                    Show All Students
+                  </Button>
+                )}
+              </div>
             </div>
             
             <Card>
@@ -659,6 +708,17 @@ export function EnhancedAdminDashboard() {
           onClose={() => setSelectedStudentId(null)}
         />
       )}
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        open={showAddStudentModal}
+        onClose={() => setShowAddStudentModal(false)}
+        onStudentAdded={() => {
+          setShowAddStudentModal(false)
+          fetchStudents()
+        }}
+        selectedCampusId={selectedCampusId}
+      />
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget onSearch={handleAskAuvora} />
