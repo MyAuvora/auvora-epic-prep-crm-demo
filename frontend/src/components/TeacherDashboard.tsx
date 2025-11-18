@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Users, Calendar, BookOpen } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AskAuvoraWidget } from './AskAuvoraWidget'
+import { EventsCalendar } from './EventsCalendar'
+import { DocumentManagement } from './DocumentManagement'
+import { PhotoGallery } from './PhotoGallery'
+import { MessagingPlatform } from './MessagingPlatform'
+import { IncidentReporting } from './IncidentReporting'
+import { HealthRecords } from './HealthRecords'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -42,6 +49,7 @@ interface TeacherDashboardProps {
 }
 
 export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
+  const [view, setView] = useState<'rooms' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
 
@@ -71,21 +79,104 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
     }
   }
 
+  const handleAskAuvora = async (query: string) => {
+    console.log('Teacher Ask Auvora query:', query)
+  }
+
   if (!teacherData) {
     return <div className="p-8">Loading...</div>
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">
-            Welcome, {teacherData.staff.first_name} {teacherData.staff.last_name}
-          </h2>
-          <p className="text-gray-600 mt-2">Teacher Dashboard</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-8 py-4">
+            <button
+              onClick={() => setView('rooms')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'rooms'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              My Rooms
+            </button>
+            <button
+              onClick={() => setView('events')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'events'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Events
+            </button>
+            <button
+              onClick={() => setView('documents')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'documents'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Documents
+            </button>
+            <button
+              onClick={() => setView('photos')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'photos'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Photos
+            </button>
+            <button
+              onClick={() => setView('messages')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'messages'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Messages
+            </button>
+            <button
+              onClick={() => setView('incidents')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'incidents'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Incidents
+            </button>
+            <button
+              onClick={() => setView('health')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'health'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Health Records
+            </button>
+          </nav>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {view === 'rooms' && (
+          <>
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900">
+                Welcome, {teacherData.staff.first_name} {teacherData.staff.last_name}
+              </h2>
+              <p className="text-gray-600 mt-2">Teacher Dashboard</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">My Rooms</CardTitle>
@@ -220,7 +311,36 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
             </CardContent>
           </Card>
         )}
+          </>
+        )}
+
+        {view === 'events' && (
+          <EventsCalendar role="teacher" userId={staffId} />
+        )}
+
+        {view === 'documents' && (
+          <DocumentManagement role="teacher" userId={staffId} />
+        )}
+
+        {view === 'photos' && (
+          <PhotoGallery role="teacher" userId={staffId} />
+        )}
+
+        {view === 'messages' && (
+          <MessagingPlatform role="teacher" userId={staffId} userType="Staff" />
+        )}
+
+        {view === 'incidents' && (
+          <IncidentReporting role="teacher" userId={staffId} />
+        )}
+
+        {view === 'health' && (
+          <HealthRecords role="teacher" userId={staffId} />
+        )}
       </div>
+
+      {/* Ask Auvora Widget */}
+      <AskAuvoraWidget onSearch={handleAskAuvora} />
     </div>
   )
 }

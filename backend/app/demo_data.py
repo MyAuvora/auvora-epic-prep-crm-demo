@@ -4,9 +4,13 @@ from typing import List
 from .main import (
     Student, Family, Parent, Staff, GradeRecord, BehaviorNote,
     AttendanceRecord, IXLSummary, BillingRecord, Conference, Message,
+    Event, EventRSVP, Document, DocumentSignature, Product, Order,
+    PhotoAlbum, Incident, HealthRecord,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
-    ConferenceStatus, MessageSenderType
+    ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
+    DocumentType, DocumentStatus, ProductCategory, OrderStatus,
+    PhotoAlbumStatus, IncidentType, IncidentSeverity
 )
 
 def generate_all_demo_data():
@@ -370,6 +374,227 @@ def generate_all_demo_data():
         )
         messages_db.append(message)
     
+    events_db = []
+    event_rsvps_db = []
+    
+    event_titles = [
+        ("Fall Festival", EventType.SCHOOL_EVENT, "Join us for our annual fall festival with games, food, and fun!"),
+        ("Science Fair", EventType.SCHOOL_EVENT, "Students will present their science projects to families and judges."),
+        ("Field Trip to Museum", EventType.FIELD_TRIP, "Visit the Natural History Museum for a day of learning and exploration."),
+        ("Spring Concert", EventType.PERFORMANCE, "Students will perform songs they've been practicing all semester."),
+        ("Parent-Teacher Night", EventType.PARENT_NIGHT, "Meet with teachers to discuss your child's progress."),
+        ("Book Fair Fundraiser", EventType.FUNDRAISER, "Support our library by purchasing books at our annual book fair."),
+        ("Holiday Performance", EventType.PERFORMANCE, "Join us for a festive holiday show featuring all grade levels."),
+        ("Field Trip to Zoo", EventType.FIELD_TRIP, "Explore the local zoo and learn about animal habitats.")
+    ]
+    
+    for i, (title, event_type, description) in enumerate(event_titles):
+        event_date = date.today() + timedelta(days=random.randint(-30, 60))
+        requires_payment = event_type in [EventType.FIELD_TRIP, EventType.FUNDRAISER]
+        
+        event = Event(
+            event_id=f"event_{i+1}",
+            title=title,
+            description=description,
+            event_type=event_type,
+            date=event_date,
+            time=random.choice(["9:00 AM", "10:00 AM", "2:00 PM", "6:00 PM"]),
+            location=random.choice(["School Auditorium", "Gymnasium", "Cafeteria", "Off-site"]),
+            requires_rsvp=True,
+            requires_permission_slip=(event_type == EventType.FIELD_TRIP),
+            requires_payment=requires_payment,
+            payment_amount=random.choice([15.0, 25.0, 35.0]) if requires_payment else None,
+            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+        )
+        events_db.append(event)
+        
+        for family in random.sample(families_db, random.randint(5, 12)):
+            rsvp = EventRSVP(
+                rsvp_id=f"rsvp_{len(event_rsvps_db)+1}",
+                event_id=event.event_id,
+                family_id=family.family_id,
+                parent_id=family.primary_parent_id,
+                student_ids=family.student_ids,
+                status=random.choice([RSVPStatus.ATTENDING, RSVPStatus.NOT_ATTENDING, RSVPStatus.PENDING]),
+                response_date=datetime.now() - timedelta(days=random.randint(0, 10)) if random.random() > 0.3 else None
+            )
+            event_rsvps_db.append(rsvp)
+    
+    documents_db = []
+    document_signatures_db = []
+    
+    doc_templates = [
+        ("2024-2025 Enrollment Contract", DocumentType.ENROLLMENT_CONTRACT, "Annual enrollment agreement for the school year", "All Students"),
+        ("Emergency Contact Form", DocumentType.EMERGENCY_CONTACT, "Required emergency contact information", "All Students"),
+        ("Medical Information Form", DocumentType.MEDICAL_FORM, "Student health and allergy information", "All Students"),
+        ("Field Trip Permission - Museum", DocumentType.PERMISSION_SLIP, "Permission for Natural History Museum field trip", "Grade 3-5"),
+        ("Field Trip Permission - Zoo", DocumentType.PERMISSION_SLIP, "Permission for zoo field trip", "Grade K-2"),
+        ("Photo Release Form", DocumentType.POLICY_ACKNOWLEDGMENT, "Permission to use student photos in school materials", "All Students"),
+        ("Technology Use Policy", DocumentType.POLICY_ACKNOWLEDGMENT, "Agreement to follow school technology policies", "Grade 6-12")
+    ]
+    
+    for i, (title, doc_type, description, required_for) in enumerate(doc_templates):
+        document = Document(
+            document_id=f"doc_{i+1}",
+            title=title,
+            document_type=doc_type,
+            description=description,
+            required_for=required_for,
+            status=DocumentStatus.PENDING,
+            created_date=date.today() - timedelta(days=random.randint(30, 90)),
+            expiration_date=date.today() + timedelta(days=365) if doc_type in [DocumentType.ENROLLMENT_CONTRACT, DocumentType.MEDICAL_FORM] else None,
+            file_url=f"/documents/{title.lower().replace(' ', '_')}.pdf"
+        )
+        documents_db.append(document)
+        
+        for family in random.sample(families_db, random.randint(8, 15)):
+            if random.random() > 0.3:  # 70% signed
+                signature = DocumentSignature(
+                    signature_id=f"sig_{len(document_signatures_db)+1}",
+                    document_id=document.document_id,
+                    parent_id=family.primary_parent_id,
+                    student_id=random.choice(family.student_ids) if family.student_ids else None,
+                    signed_date=datetime.now() - timedelta(days=random.randint(1, 60)),
+                    signature_data="Electronic Signature"
+                )
+                document_signatures_db.append(signature)
+    
+    products_db = []
+    orders_db = []
+    
+    product_list = [
+        ("School T-Shirt (Youth)", "Epic Prep Academy logo t-shirt in youth sizes", ProductCategory.APPAREL, 15.00),
+        ("School T-Shirt (Adult)", "Epic Prep Academy logo t-shirt in adult sizes", ProductCategory.APPAREL, 20.00),
+        ("School Hoodie", "Comfortable hoodie with school logo", ProductCategory.APPAREL, 35.00),
+        ("Water Bottle", "Reusable water bottle with school branding", ProductCategory.SUPPLIES, 12.00),
+        ("Backpack", "Durable backpack with Epic Prep logo", ProductCategory.SUPPLIES, 25.00),
+        ("Yearbook 2024-2025", "Full-color yearbook with photos from the school year", ProductCategory.SUPPLIES, 30.00),
+        ("Fall Festival Ticket", "Admission to Fall Festival event", ProductCategory.EVENT_FEE, 10.00),
+        ("Field Trip Fee - Museum", "Transportation and admission to museum", ProductCategory.EVENT_FEE, 25.00)
+    ]
+    
+    for i, (name, description, category, price) in enumerate(product_list):
+        product = Product(
+            product_id=f"prod_{i+1}",
+            name=name,
+            description=description,
+            category=category,
+            price=price,
+            image_url=f"/images/products/{name.lower().replace(' ', '_')}.jpg",
+            available=True
+        )
+        products_db.append(product)
+    
+    for i in range(15):
+        family = random.choice(families_db)
+        num_items = random.randint(1, 3)
+        items = []
+        total = 0.0
+        
+        for _ in range(num_items):
+            product = random.choice(products_db)
+            quantity = random.randint(1, 2)
+            items.append({
+                "product_id": product.product_id,
+                "product_name": product.name,
+                "quantity": quantity,
+                "price": product.price
+            })
+            total += product.price * quantity
+        
+        order = Order(
+            order_id=f"order_{i+1}",
+            family_id=family.family_id,
+            parent_id=family.primary_parent_id,
+            items=items,
+            total_amount=round(total, 2),
+            status=random.choice([OrderStatus.PAID, OrderStatus.PENDING]),
+            order_date=datetime.now() - timedelta(days=random.randint(1, 30)),
+            payment_date=datetime.now() - timedelta(days=random.randint(0, 5)) if random.random() > 0.3 else None
+        )
+        orders_db.append(order)
+    
+    photo_albums_db = []
+    
+    album_titles = [
+        ("First Day of School 2024", "Photos from the exciting first day back!", ["All"]),
+        ("Fall Festival Fun", "Highlights from our annual fall festival", ["All"]),
+        ("Science Fair Projects", "Amazing student science projects", ["3", "4", "5"]),
+        ("Holiday Concert", "Our wonderful holiday performance", ["All"]),
+        ("Field Trip to Museum", "Learning and fun at the Natural History Museum", ["3", "4", "5"]),
+        ("Kindergarten Activities", "Daily activities in our K classroom", ["K"]),
+        ("Art Class Creations", "Beautiful artwork from our students", ["All"])
+    ]
+    
+    for i, (title, description, grades) in enumerate(album_titles):
+        album = PhotoAlbum(
+            album_id=f"album_{i+1}",
+            title=title,
+            description=description,
+            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
+            created_date=date.today() - timedelta(days=random.randint(1, 60)),
+            status=random.choice([PhotoAlbumStatus.PUBLISHED, PhotoAlbumStatus.DRAFT]),
+            photo_urls=[f"/photos/album_{i+1}/photo_{j+1}.jpg" for j in range(random.randint(5, 15))],
+            visible_to_grades=grades
+        )
+        photo_albums_db.append(album)
+    
+    incidents_db = []
+    
+    incident_descriptions = [
+        (IncidentType.BEHAVIORAL, IncidentSeverity.LOW, "Student was talking during quiet work time", "Verbal reminder given"),
+        (IncidentType.BEHAVIORAL, IncidentSeverity.MEDIUM, "Student refused to follow directions", "Parent contacted, behavior plan discussed"),
+        (IncidentType.MEDICAL, IncidentSeverity.LOW, "Student complained of headache", "Rested in nurse's office, parent notified"),
+        (IncidentType.MEDICAL, IncidentSeverity.MEDIUM, "Student fell on playground, minor scrape", "First aid administered, parent notified"),
+        (IncidentType.SAFETY, IncidentSeverity.MEDIUM, "Student left classroom without permission", "Safety discussion held, parent contacted"),
+        (IncidentType.ACADEMIC, IncidentSeverity.LOW, "Student did not complete homework", "Reminder sent home"),
+        (IncidentType.BEHAVIORAL, IncidentSeverity.HIGH, "Physical altercation with another student", "Both parents contacted, meeting scheduled")
+    ]
+    
+    for i in range(12):
+        student = random.choice(students_db)
+        incident_type, severity, description, action = random.choice(incident_descriptions)
+        
+        incident = Incident(
+            incident_id=f"incident_{i+1}",
+            student_id=student.student_id,
+            reported_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
+            incident_type=incident_type,
+            severity=severity,
+            date=date.today() - timedelta(days=random.randint(1, 30)),
+            time=random.choice(["9:30 AM", "11:00 AM", "1:30 PM", "3:00 PM"]),
+            description=description,
+            action_taken=action,
+            parent_notified=(severity in [IncidentSeverity.MEDIUM, IncidentSeverity.HIGH]),
+            followup_required=(severity == IncidentSeverity.HIGH)
+        )
+        incidents_db.append(incident)
+    
+    health_records_db = []
+    
+    common_allergies = ["None", "Peanuts", "Tree nuts", "Dairy", "Eggs", "Shellfish", "Bee stings"]
+    common_medications = ["None", "Albuterol inhaler", "EpiPen", "ADHD medication", "Allergy medication"]
+    common_conditions = ["None", "Asthma", "ADHD", "Diabetes", "Seasonal allergies", "Food allergies"]
+    
+    for student in students_db:
+        family = next(f for f in families_db if f.family_id == student.family_id)
+        parent = next(p for p in parents_db if p.parent_id == family.primary_parent_id)
+        
+        health_record = HealthRecord(
+            health_record_id=f"health_{student.student_id}",
+            student_id=student.student_id,
+            allergies=[random.choice(common_allergies)],
+            medications=[random.choice(common_medications)],
+            medical_conditions=[random.choice(common_conditions)],
+            emergency_contact_name=parent.first_name + " " + parent.last_name,
+            emergency_contact_phone=parent.phone,
+            emergency_contact_relationship=parent.relationship,
+            physician_name=f"Dr. {random.choice(['Smith', 'Johnson', 'Williams', 'Brown', 'Davis'])}",
+            physician_phone=f"850-{random.randint(100,999)}-{random.randint(1000,9999)}",
+            last_updated=date.today() - timedelta(days=random.randint(30, 180))
+        )
+        health_records_db.append(health_record)
+    
     return {
         "students": students_db,
         "families": families_db,
@@ -381,5 +606,14 @@ def generate_all_demo_data():
         "ixl_summaries": ixl_summaries_db,
         "billing_records": billing_records_db,
         "conferences": conferences_db,
-        "messages": messages_db
+        "messages": messages_db,
+        "events": events_db,
+        "event_rsvps": event_rsvps_db,
+        "documents": documents_db,
+        "document_signatures": document_signatures_db,
+        "products": products_db,
+        "orders": orders_db,
+        "photo_albums": photo_albums_db,
+        "incidents": incidents_db,
+        "health_records": health_records_db
     }

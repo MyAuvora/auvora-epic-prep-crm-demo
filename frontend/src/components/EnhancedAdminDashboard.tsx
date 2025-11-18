@@ -3,6 +3,13 @@ import { Users, DollarSign, Calendar, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StudentDetailsModal } from './StudentDetailsModal'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
+import { EventsCalendar } from './EventsCalendar'
+import { DocumentManagement } from './DocumentManagement'
+import { StoreComponent } from './StoreComponent'
+import { PhotoGallery } from './PhotoGallery'
+import { MessagingPlatform } from './MessagingPlatform'
+import { IncidentReporting } from './IncidentReporting'
+import { HealthRecords } from './HealthRecords'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -56,7 +63,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health'>('dashboard')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
@@ -209,6 +216,76 @@ export function EnhancedAdminDashboard() {
               }`}
             >
               Families & Billing
+            </button>
+            <button
+              onClick={() => setView('events')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'events'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Events
+            </button>
+            <button
+              onClick={() => setView('documents')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'documents'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Documents
+            </button>
+            <button
+              onClick={() => setView('store')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'store'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Store
+            </button>
+            <button
+              onClick={() => setView('photos')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'photos'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Photos
+            </button>
+            <button
+              onClick={() => setView('messages')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'messages'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Messages
+            </button>
+            <button
+              onClick={() => setView('incidents')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'incidents'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Incidents
+            </button>
+            <button
+              onClick={() => setView('health')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'health'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Health Records
             </button>
           </nav>
         </div>
@@ -529,6 +606,34 @@ export function EnhancedAdminDashboard() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {view === 'events' && (
+          <EventsCalendar role="admin" />
+        )}
+
+        {view === 'documents' && (
+          <DocumentManagement role="admin" />
+        )}
+
+        {view === 'store' && (
+          <StoreComponent role="admin" />
+        )}
+
+        {view === 'photos' && (
+          <PhotoGallery role="admin" />
+        )}
+
+        {view === 'messages' && (
+          <MessagingPlatform role="admin" userId="admin_1" userType="Staff" />
+        )}
+
+        {view === 'incidents' && (
+          <IncidentReporting role="admin" />
+        )}
+
+        {view === 'health' && (
+          <HealthRecords role="admin" />
         )}
       </div>
 
