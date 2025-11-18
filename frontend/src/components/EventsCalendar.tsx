@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, DollarSign, FileText, Users } from 'lucide-react';
+import { MapPin, Clock, DollarSign, FileText, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,9 +35,10 @@ interface EventRSVP {
 interface EventsCalendarProps {
   role: 'admin' | 'teacher' | 'parent';
   familyId?: string;
+  userId?: string;
 }
 
-export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId }) => {
+export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, userId: _userId }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [rsvps, setRsvps] = useState<EventRSVP[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);

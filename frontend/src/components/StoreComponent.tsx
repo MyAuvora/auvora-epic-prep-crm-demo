@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, DollarSign, Package, CheckCircle, Clock } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +42,10 @@ interface StoreComponentProps {
   role: 'admin' | 'teacher' | 'parent';
   familyId?: string;
   parentId?: string;
+  userId?: string;
 }
 
-export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, parentId }) => {
+export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, parentId, userId: _userId }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);

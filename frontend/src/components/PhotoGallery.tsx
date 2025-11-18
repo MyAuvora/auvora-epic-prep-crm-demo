@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Image as ImageIcon, Calendar, User } from 'lucide-react';
+import { Camera, Image as ImageIcon, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,9 +20,10 @@ interface PhotoAlbum {
 interface PhotoGalleryProps {
   role: 'admin' | 'teacher' | 'parent';
   studentGrade?: string;
+  userId?: string;
 }
 
-export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade }) => {
+export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, userId: _userId }) => {
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<PhotoAlbum | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade }
               <div className="relative h-48 bg-gray-100 flex items-center justify-center">
                 {album.photo_urls.length > 0 ? (
                   <div className="grid grid-cols-2 gap-1 w-full h-full p-2">
-                    {album.photo_urls.slice(0, 4).map((url, index) => (
+                    {album.photo_urls.slice(0, 4).map((_, index) => (
                       <div key={index} className="bg-gray-200 rounded flex items-center justify-center">
                         <ImageIcon className="w-8 h-8 text-gray-400" />
                       </div>

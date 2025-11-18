@@ -23,9 +23,10 @@ interface Incident {
 interface IncidentReportingProps {
   role: 'admin' | 'teacher' | 'parent';
   studentId?: string;
+  userId?: string;
 }
 
-export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, studentId }) => {
+export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, studentId, userId: _userId }) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,10 +152,10 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">{incident.incident_type}</CardTitle>
                     <div className="flex gap-1">
-                      <Badge className={getTypeColor(incident.incident_type)} className="text-xs">
+                      <Badge className={`${getTypeColor(incident.incident_type)} text-xs`}>
                         {incident.incident_type}
                       </Badge>
-                      <Badge className={getSeverityColor(incident.severity)} className="text-xs">
+                      <Badge className={`${getSeverityColor(incident.severity)} text-xs`}>
                         {incident.severity}
                       </Badge>
                     </div>

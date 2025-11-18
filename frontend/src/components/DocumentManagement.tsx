@@ -32,9 +32,10 @@ interface DocumentManagementProps {
   role: 'admin' | 'teacher' | 'parent';
   parentId?: string;
   studentId?: string;
+  userId?: string;
 }
 
-export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, parentId, studentId }) => {
+export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, parentId, studentId, userId: _userId }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [signatures, setSignatures] = useState<DocumentSignature[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);

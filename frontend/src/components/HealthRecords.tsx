@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Phone, User, Calendar, AlertCircle } from 'lucide-react';
+import { Heart, Phone, User, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,9 +30,10 @@ interface Student {
 interface HealthRecordsProps {
   role: 'admin' | 'teacher' | 'parent';
   studentId?: string;
+  userId?: string;
 }
 
-export const HealthRecords: React.FC<HealthRecordsProps> = ({ role, studentId }) => {
+export const HealthRecords: React.FC<HealthRecordsProps> = ({ role, studentId, userId: _userId }) => {
   const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null);
