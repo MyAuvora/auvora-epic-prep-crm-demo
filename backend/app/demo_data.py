@@ -1,0 +1,385 @@
+from datetime import date, datetime, timedelta
+import random
+from typing import List
+from .main import (
+    Student, Family, Parent, Staff, GradeRecord, BehaviorNote,
+    AttendanceRecord, IXLSummary, BillingRecord, Conference, Message,
+    Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
+    GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
+    ConferenceStatus, MessageSenderType
+)
+
+def generate_all_demo_data():
+    """Generate all demo data and return as dictionaries"""
+    
+    students_db = []
+    families_db = []
+    parents_db = []
+    staff_db = []
+    grade_records_db = []
+    behavior_notes_db = []
+    attendance_records_db = []
+    ixl_summaries_db = []
+    billing_records_db = []
+    conferences_db = []
+    messages_db = []
+    
+    first_names = ["Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "William",
+                   "Mia", "James", "Charlotte", "Benjamin", "Amelia", "Lucas", "Harper", "Henry", "Evelyn", "Alexander",
+                   "Abigail", "Michael", "Emily", "Daniel", "Elizabeth", "Matthew", "Sofia", "Jackson", "Avery", "Sebastian",
+                   "Ella", "David", "Scarlett", "Joseph", "Grace", "Samuel", "Chloe", "John", "Victoria", "Owen",
+                   "Riley", "Dylan", "Aria", "Luke", "Lily", "Gabriel", "Aubrey", "Anthony", "Zoey", "Isaac"]
+    
+    last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+                  "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin",
+                  "Lee", "Perez", "Thompson", "White", "Harris"]
+    
+    staff_data = [
+        {"first_name": "Sarah", "last_name": "Mitchell", "role": StaffRole.OWNER, "rooms": []},
+        {"first_name": "Jennifer", "last_name": "Kilgore", "role": StaffRole.ASSISTANT, "rooms": ["Room 1 - Morning"]},
+        {"first_name": "Brittany", "last_name": "Kilcrease", "role": StaffRole.ADMIN, "rooms": []},
+        {"first_name": "Pam", "last_name": "Riffle", "role": StaffRole.TEACHER, "rooms": ["Room 2 - Morning", "Room 2 - Afternoon"]},
+        {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.TEACHER, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"]},
+        {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.TEACHER, "rooms": ["Room 1 - Morning"]},
+        {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.TEACHER, "rooms": ["Room 4 - Afternoon"]},
+    ]
+    
+    for i, staff_info in enumerate(staff_data):
+        staff = Staff(
+            staff_id=f"staff_{i+1}",
+            first_name=staff_info["first_name"],
+            last_name=staff_info["last_name"],
+            role=staff_info["role"],
+            email=f"{staff_info['first_name'].lower()}.{staff_info['last_name'].lower()}@epicprepacademy.com",
+            assigned_rooms=staff_info["rooms"],
+            permissions="Admin" if staff_info["role"] in [StaffRole.OWNER, StaffRole.ADMIN] else "Teacher"
+        )
+        staff_db.append(staff)
+    
+    num_families = random.randint(18, 22)
+    student_counter = 1
+    parent_counter = 1
+    
+    for fam_idx in range(num_families):
+        family_id = f"family_{fam_idx + 1}"
+        family_last_name = random.choice(last_names)
+        
+        num_children = random.choices([1, 2, 3], weights=[0.4, 0.45, 0.15])[0]
+        
+        num_parents = random.choice([1, 2])
+        family_parent_ids = []
+        family_parents = []
+        
+        for p_idx in range(num_parents):
+            parent_id = f"parent_{parent_counter}"
+            parent_counter += 1
+            
+            parent = Parent(
+                parent_id=parent_id,
+                first_name=random.choice(first_names),
+                last_name=family_last_name,
+                email=f"{parent_id}@email.com",
+                phone=f"850-{random.randint(100,999)}-{random.randint(1000,9999)}",
+                relationship=["Mother", "Father", "Guardian"][p_idx % 3],
+                primary_guardian=(p_idx == 0),
+                preferred_contact_method=random.choice(["Text", "Email", "App"]),
+                student_ids=[]
+            )
+            family_parent_ids.append(parent_id)
+            family_parents.append(parent)
+        
+        billing_status_choice = random.choices(
+            [BillingStatus.GREEN, BillingStatus.YELLOW, BillingStatus.RED],
+            weights=[0.6, 0.15, 0.25]
+        )[0]
+        
+        if billing_status_choice == BillingStatus.GREEN:
+            current_balance = random.uniform(0, 50)
+        elif billing_status_choice == BillingStatus.YELLOW:
+            current_balance = random.uniform(50, 200)
+        else:
+            current_balance = random.uniform(200, 800)
+        
+        monthly_tuition = num_children * random.uniform(400, 600)
+        
+        family_student_ids = []
+        
+        for child_idx in range(num_children):
+            student_id = f"student_{student_counter}"
+            student_counter += 1
+            
+            if child_idx == 0:
+                grade = random.choice(["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
+            elif child_idx == 1:
+                grade = random.choice(["K", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+            else:
+                grade = random.choice(["K", "1", "2", "3", "4", "5", "6"])
+            
+            if grade in ["K", "1", "2", "3", "4", "5", "6", "7"]:
+                session = Session.MORNING
+            else:
+                session = Session.AFTERNOON
+            
+            if grade in ["K", "1", "2"]:
+                room = Room.ROOM_1
+            elif grade in ["3", "4", "5", "8", "9"]:
+                room = Room.ROOM_2
+            elif grade in ["6", "7", "10", "11"]:
+                room = Room.ROOM_3
+            else:
+                room = Room.ROOM_4
+            
+            attendance_present = random.randint(15, 20)
+            attendance_absent = random.randint(0, 5)
+            attendance_tardy = random.randint(0, 3)
+            
+            grade_flag_choice = random.choices(
+                [GradeFlag.ON_TRACK, GradeFlag.NEEDS_ATTENTION, GradeFlag.FAILING],
+                weights=[0.7, 0.2, 0.1]
+            )[0]
+            
+            ixl_status = random.choices(
+                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
+                weights=[0.75, 0.25]
+            )[0]
+            
+            if grade_flag_choice == GradeFlag.FAILING or attendance_absent > 3 or ixl_status == IXLStatus.NEEDS_ATTENTION:
+                risk_flag = random.choices(
+                    [RiskFlag.NONE, RiskFlag.WATCH, RiskFlag.AT_RISK],
+                    weights=[0.3, 0.4, 0.3]
+                )[0]
+            else:
+                risk_flag = RiskFlag.NONE
+            
+            if grade == "K":
+                birth_year = 2019
+            else:
+                birth_year = 2024 - int(grade) - 5
+            
+            student = Student(
+                student_id=student_id,
+                first_name=random.choice(first_names),
+                last_name=family_last_name,
+                date_of_birth=date(birth_year, random.randint(1, 12), random.randint(1, 28)),
+                grade=grade,
+                session=session,
+                room=room,
+                status=StudentStatus.ACTIVE,
+                family_id=family_id,
+                enrollment_start_date=date(2024, 8, 15),
+                enrollment_end_date=None,
+                attendance_present_count=attendance_present,
+                attendance_absent_count=attendance_absent,
+                attendance_tardy_count=attendance_tardy,
+                overall_grade_flag=grade_flag_choice,
+                ixl_status_flag=ixl_status,
+                overall_risk_flag=risk_flag
+            )
+            
+            family_student_ids.append(student_id)
+            students_db.append(student)
+            
+            subjects = ["Math", "ELA", "Science", "Social Studies"]
+            for subject in subjects:
+                grade_value = random.choices(
+                    ["A", "B", "C", "D", "F"],
+                    weights=[0.3, 0.35, 0.2, 0.1, 0.05]
+                )[0]
+                
+                grade_record = GradeRecord(
+                    grade_record_id=f"grade_{len(grade_records_db) + 1}",
+                    student_id=student_id,
+                    subject=subject,
+                    term="Current Term",
+                    grade_value=grade_value,
+                    is_failing=(grade_value in ["D", "F"])
+                )
+                grade_records_db.append(grade_record)
+            
+            num_notes = random.randint(1, 3)
+            for note_idx in range(num_notes):
+                note_type = random.choices(
+                    [BehaviorType.POSITIVE, BehaviorType.CONCERN],
+                    weights=[0.75, 0.25]
+                )[0]
+                
+                if note_type == BehaviorType.POSITIVE:
+                    summaries = [
+                        "Great participation in class discussion",
+                        "Helped another student with assignment",
+                        "Excellent work on project presentation",
+                        "Showed leadership during group activity"
+                    ]
+                else:
+                    summaries = [
+                        "Talking during quiet work time",
+                        "Incomplete homework assignment",
+                        "Needs reminder to stay on task",
+                        "Difficulty following directions"
+                    ]
+                
+                behavior_note = BehaviorNote(
+                    behavior_note_id=f"behavior_{len(behavior_notes_db) + 1}",
+                    student_id=student_id,
+                    date=date.today() - timedelta(days=random.randint(1, 30)),
+                    type=note_type,
+                    summary=random.choice(summaries),
+                    flag_for_followup=(note_type == BehaviorType.CONCERN and random.random() < 0.3)
+                )
+                behavior_notes_db.append(behavior_note)
+            
+            for day_offset in range(20):
+                att_date = date.today() - timedelta(days=day_offset)
+                if att_date.weekday() < 5:  # Monday-Friday
+                    att_status = random.choices(
+                        [AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.TARDY],
+                        weights=[0.85, 0.10, 0.05]
+                    )[0]
+                    
+                    attendance_record = AttendanceRecord(
+                        attendance_id=f"attendance_{len(attendance_records_db) + 1}",
+                        student_id=student_id,
+                        date=att_date,
+                        status=att_status,
+                        session=session
+                    )
+                    attendance_records_db.append(attendance_record)
+            
+            math_prof = random.choices(
+                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
+                weights=[0.75, 0.25]
+            )[0]
+            ela_prof = random.choices(
+                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
+                weights=[0.75, 0.25]
+            )[0]
+            
+            ixl_skills = [
+                "Multiplying fractions", "Main idea in nonfiction", "Dividing decimals",
+                "Context clues", "Solving equations", "Author's purpose", "Geometry basics",
+                "Vocabulary in context", "Ratios and proportions", "Literary devices"
+            ]
+            
+            ixl_summary = IXLSummary(
+                ixl_summary_id=f"ixl_{student_id}",
+                student_id=student_id,
+                week_start_date=date.today() - timedelta(days=date.today().weekday()),
+                weekly_hours=round(random.uniform(0.0, 5.0), 1),
+                skills_practiced_this_week=random.randint(5, 20),
+                skills_mastered_total=random.randint(20, 150),
+                math_proficiency=math_prof,
+                ela_proficiency=ela_prof,
+                last_active_date=date.today() - timedelta(days=random.randint(0, 14)),
+                recent_skills=random.sample(ixl_skills, 3)
+            )
+            ixl_summaries_db.append(ixl_summary)
+        
+        for parent in family_parents:
+            parent.student_ids = family_student_ids
+            parents_db.append(parent)
+        
+        family = Family(
+            family_id=family_id,
+            family_name=f"{family_last_name} Family",
+            primary_parent_id=family_parent_ids[0],
+            parent_ids=family_parent_ids,
+            student_ids=family_student_ids,
+            monthly_tuition_amount=round(monthly_tuition, 2),
+            current_balance=round(current_balance, 2),
+            billing_status=billing_status_choice,
+            last_payment_date=date.today() - timedelta(days=random.randint(5, 45)),
+            last_payment_amount=round(monthly_tuition, 2)
+        )
+        families_db.append(family)
+        
+        for month_offset in range(3):
+            charge_date = date.today() - timedelta(days=30 * month_offset)
+            billing_record = BillingRecord(
+                billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                family_id=family_id,
+                date=charge_date,
+                type="Charge",
+                description=f"{charge_date.strftime('%B')} Tuition",
+                amount=monthly_tuition
+            )
+            billing_records_db.append(billing_record)
+            
+            if billing_status_choice != BillingStatus.RED or month_offset > 0:
+                payment_date = charge_date + timedelta(days=random.randint(1, 10))
+                payment_record = BillingRecord(
+                    billing_record_id=f"billing_{len(billing_records_db) + 1}",
+                    family_id=family_id,
+                    date=payment_date,
+                    type="Payment",
+                    description="Card payment",
+                    amount=-monthly_tuition
+                )
+                billing_records_db.append(payment_record)
+    
+    for i in range(10):
+        student = random.choice(students_db)
+        family = next(f for f in families_db if f.family_id == student.family_id)
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        
+        conf_status = random.choice([ConferenceStatus.SCHEDULED, ConferenceStatus.COMPLETED])
+        conf_date = datetime.now() + timedelta(days=random.randint(-30, 30))
+        
+        conference = Conference(
+            conference_id=f"conf_{i + 1}",
+            student_id=student.student_id,
+            parent_id=family.primary_parent_id,
+            staff_id=teacher.staff_id,
+            date_time=conf_date,
+            location=random.choice(["In-person", "Zoom", "Phone"]),
+            status=conf_status,
+            notes="Discussed progress and goals" if conf_status == ConferenceStatus.COMPLETED else None
+        )
+        conferences_db.append(conference)
+    
+    for i in range(15):
+        student = random.choice(students_db)
+        family = next(f for f in families_db if f.family_id == student.family_id)
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        
+        is_parent_sender = random.choice([True, False])
+        
+        if is_parent_sender:
+            message_contents = [
+                f"{student.first_name} will be absent tomorrow",
+                "Question about homework assignment",
+                "Thank you for the update on progress",
+                "Can we schedule a conference?"
+            ]
+        else:
+            message_contents = [
+                f"{student.first_name} had a great day today!",
+                "Reminder: Field trip permission slip due Friday",
+                f"{student.first_name} needs to complete missing assignment",
+                "Progress report available in portal"
+            ]
+        
+        message = Message(
+            message_id=f"msg_{i + 1}",
+            sender_type=MessageSenderType.PARENT if is_parent_sender else MessageSenderType.STAFF,
+            sender_id=family.primary_parent_id if is_parent_sender else teacher.staff_id,
+            recipient_type=MessageSenderType.STAFF if is_parent_sender else MessageSenderType.PARENT,
+            recipient_id=teacher.staff_id if is_parent_sender else family.primary_parent_id,
+            student_id=student.student_id,
+            date_time=datetime.now() - timedelta(days=random.randint(0, 14)),
+            content_preview=random.choice(message_contents)
+        )
+        messages_db.append(message)
+    
+    return {
+        "students": students_db,
+        "families": families_db,
+        "parents": parents_db,
+        "staff": staff_db,
+        "grade_records": grade_records_db,
+        "behavior_notes": behavior_notes_db,
+        "attendance_records": attendance_records_db,
+        "ixl_summaries": ixl_summaries_db,
+        "billing_records": billing_records_db,
+        "conferences": conferences_db,
+        "messages": messages_db
+    }
