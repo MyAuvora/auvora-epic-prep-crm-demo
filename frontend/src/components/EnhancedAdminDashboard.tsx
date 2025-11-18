@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StudentDetailsModal } from './StudentDetailsModal'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
@@ -71,7 +72,8 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families' | 'revenue' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'incidents' | 'health' | 'financial' | 'admissions' | 'communications' | 'standards'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics'>('dashboard')
+  const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
@@ -86,7 +88,7 @@ export function EnhancedAdminDashboard() {
       fetchDashboardData()
     } else if (view === 'students') {
       fetchStudents()
-    } else if (view === 'families') {
+    } else if (view === 'families-finance') {
       fetchFamilies()
     }
   }, [view, selectedCampusId])
@@ -156,13 +158,13 @@ export function EnhancedAdminDashboard() {
     } else if (type === 'ixl-behind') {
       fetchStudents('ixl_status=Needs attention')
     } else if (type === 'overdue') {
-      setView('families')
+      setView('families-finance')
       fetchFamilies('billing_status=Red')
     }
   }
 
   const handleOutstandingBalanceClick = () => {
-    setView('families')
+    setView('families-finance')
     fetchFamilies('billing_status=Red')
   }
 
@@ -176,7 +178,7 @@ export function EnhancedAdminDashboard() {
         setView('students')
         setStudents(data.results)
       } else if (data.result_type === 'families') {
-        setView('families')
+        setView('families-finance')
         setFamilies(data.results)
       }
     } catch (error) {
@@ -210,6 +212,7 @@ export function EnhancedAdminDashboard() {
             <button
               onClick={() => {
                 setView('dashboard')
+                setSubView('main')
                 setDrillDownView(null)
                 setAskAuvoraResults(null)
               }}
@@ -224,6 +227,7 @@ export function EnhancedAdminDashboard() {
             <button
               onClick={() => {
                 setView('students')
+                setSubView('main')
                 setDrillDownView(null)
                 setAskAuvoraResults(null)
                 fetchStudents()
@@ -238,111 +242,25 @@ export function EnhancedAdminDashboard() {
             </button>
             <button
               onClick={() => {
-                setView('families')
+                setView('families-finance')
+                setSubView('families')
                 setDrillDownView(null)
                 setAskAuvoraResults(null)
                 fetchFamilies()
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'families'
+                view === 'families-finance'
                   ? 'bg-amber-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Families & Billing
+              Families & Finance
             </button>
             <button
-              onClick={() => setView('revenue')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'revenue'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Revenue
-            </button>
-            <button
-              onClick={() => setView('events')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'events'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Events
-            </button>
-            <button
-              onClick={() => setView('documents')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'documents'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => setView('store')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'store'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Store
-            </button>
-            <button
-              onClick={() => setView('photos')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'photos'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Photos
-            </button>
-            <button
-              onClick={() => setView('messages')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'messages'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Messages
-            </button>
-            <button
-              onClick={() => setView('incidents')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'incidents'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Incidents
-            </button>
-            <button
-              onClick={() => setView('health')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'health'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Health Records
-            </button>
-            <button
-              onClick={() => setView('financial')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'financial'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Financial
-            </button>
-            <button
-              onClick={() => setView('admissions')}
+              onClick={() => {
+                setView('admissions')
+                setSubView('main')
+              }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'admissions'
                   ? 'bg-amber-600 text-white'
@@ -352,7 +270,36 @@ export function EnhancedAdminDashboard() {
               Admissions
             </button>
             <button
-              onClick={() => setView('communications')}
+              onClick={() => {
+                setView('academics')
+                setSubView('standards')
+              }}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'academics'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Academics
+            </button>
+            <button
+              onClick={() => {
+                setView('student-support')
+                setSubView('iep')
+              }}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'student-support'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Student Support
+            </button>
+            <button
+              onClick={() => {
+                setView('communications')
+                setSubView('messages')
+              }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'communications'
                   ? 'bg-amber-600 text-white'
@@ -362,14 +309,43 @@ export function EnhancedAdminDashboard() {
               Communications
             </button>
             <button
-              onClick={() => setView('standards')}
+              onClick={() => {
+                setView('operations')
+                setSubView('events')
+              }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'standards'
+                view === 'operations'
                   ? 'bg-amber-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Standards
+              Operations
+            </button>
+            <button
+              onClick={() => {
+                setView('documents')
+                setSubView('library')
+              }}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'documents'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Documents & Forms
+            </button>
+            <button
+              onClick={() => {
+                setView('analytics')
+                setSubView('at-risk')
+              }}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'analytics'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Analytics
             </button>
           </nav>
         </div>
@@ -641,7 +617,7 @@ export function EnhancedAdminDashboard() {
           </div>
         )}
 
-        {view === 'families' && (
+        {view === 'families-finance' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
@@ -718,52 +694,267 @@ export function EnhancedAdminDashboard() {
           </div>
         )}
 
-        {view === 'revenue' && (
-          <AdminRevenueReports role="admin" />
-        )}
-
-        {view === 'events' && (
-          <EventsCalendar role="admin" />
-        )}
-
-        {view === 'documents' && (
-          <DocumentManagement role="admin" />
-        )}
-
-        {view === 'store' && (
-          <StoreComponent role="admin" />
-        )}
-
-        {view === 'photos' && (
-          <PhotoGallery role="admin" />
-        )}
-
-        {view === 'messages' && (
-          <MessagingPlatform role="admin" userId="admin_1" userType="Staff" />
-        )}
-
-        {view === 'incidents' && (
-          <IncidentReporting role="admin" />
-        )}
-
-        {view === 'health' && (
-          <HealthRecords role="admin" />
-        )}
-
-        {view === 'financial' && (
-          <FinancialManagement selectedCampusId={selectedCampusId} />
+        {view === 'families-finance' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Families & Finance</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="families">Families</TabsTrigger>
+                <TabsTrigger value="billing">Billing & Invoicing</TabsTrigger>
+                <TabsTrigger value="revenue">Revenue & Reconciliation</TabsTrigger>
+                <TabsTrigger value="store">Store / POS</TabsTrigger>
+              </TabsList>
+              <TabsContent value="families" className="mt-6">
+                {families.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>All Families</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Family Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Students</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly Tuition</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Balance</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Payment</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {families.map((family) => (
+                              <tr key={family.family_id} className="hover:bg-amber-50 cursor-pointer transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">{family.family_name}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {family.student_ids.length} student{family.student_ids.length !== 1 ? 's' : ''}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  ${family.monthly_tuition_amount.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  ${family.current_balance.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getBillingStatusColor(family.billing_status)}`}>
+                                    {family.billing_status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {family.last_payment_date ? new Date(family.last_payment_date).toLocaleDateString() : 'N/A'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+              <TabsContent value="billing" className="mt-6">
+                <FinancialManagement selectedCampusId={selectedCampusId} />
+              </TabsContent>
+              <TabsContent value="revenue" className="mt-6">
+                <AdminRevenueReports role="admin" />
+              </TabsContent>
+              <TabsContent value="store" className="mt-6">
+                <StoreComponent role="admin" />
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
         {view === 'admissions' && (
-          <AdmissionsPipeline selectedCampusId={selectedCampusId} />
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Admissions</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <AdmissionsPipeline selectedCampusId={selectedCampusId} />
+          </div>
+        )}
+
+        {view === 'academics' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Academics</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="standards">Standards & Gradebook</TabsTrigger>
+                <TabsTrigger value="assessments">Assessments & Progress</TabsTrigger>
+              </TabsList>
+              <TabsContent value="standards" className="mt-6">
+                <StandardsGradebook selectedCampusId={selectedCampusId} />
+              </TabsContent>
+              <TabsContent value="assessments" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Assessments & Progress Reports</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">Assessment tracking and progress reports coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+
+        {view === 'student-support' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Student Support</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="iep">IEP / 504 Plans</TabsTrigger>
+                <TabsTrigger value="interventions">Interventions</TabsTrigger>
+              </TabsList>
+              <TabsContent value="iep" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>IEP / 504 Plans</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">IEP and 504 plan tracking coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="interventions" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Intervention Plans</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">RTI intervention tracking coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
         {view === 'communications' && (
-          <CommunicationAutomation selectedCampusId={selectedCampusId} />
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Communications</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="messages">Direct Messages</TabsTrigger>
+                <TabsTrigger value="broadcasts">Broadcasts & Automation</TabsTrigger>
+              </TabsList>
+              <TabsContent value="messages" className="mt-6">
+                <MessagingPlatform role="admin" userId="admin_1" userType="Staff" />
+              </TabsContent>
+              <TabsContent value="broadcasts" className="mt-6">
+                <CommunicationAutomation selectedCampusId={selectedCampusId} />
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
-        {view === 'standards' && (
-          <StandardsGradebook selectedCampusId={selectedCampusId} />
+        {view === 'operations' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Operations</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="events">Events Calendar</TabsTrigger>
+                <TabsTrigger value="incidents">Incidents</TabsTrigger>
+                <TabsTrigger value="health">Health Records</TabsTrigger>
+              </TabsList>
+              <TabsContent value="events" className="mt-6">
+                <EventsCalendar role="admin" />
+              </TabsContent>
+              <TabsContent value="incidents" className="mt-6">
+                <IncidentReporting role="admin" />
+              </TabsContent>
+              <TabsContent value="health" className="mt-6">
+                <HealthRecords role="admin" />
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+
+        {view === 'documents' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Documents & Forms</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="library">Document Library</TabsTrigger>
+                <TabsTrigger value="photos">Photos</TabsTrigger>
+              </TabsList>
+              <TabsContent value="library" className="mt-6">
+                <DocumentManagement role="admin" />
+              </TabsContent>
+              <TabsContent value="photos" className="mt-6">
+                <PhotoGallery role="admin" />
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+
+        {view === 'analytics' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-gray-900">Analytics</h2>
+              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+            </div>
+            <Tabs value={subView} onValueChange={setSubView} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="at-risk">At-Risk Dashboard</TabsTrigger>
+                <TabsTrigger value="retention">Retention & Forecasting</TabsTrigger>
+                <TabsTrigger value="kpis">Cross-Campus KPIs</TabsTrigger>
+              </TabsList>
+              <TabsContent value="at-risk" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>At-Risk Student Dashboard</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">At-risk scoring and analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="retention" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Retention Prediction & Enrollment Forecasting</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">Retention and forecasting analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="kpis" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cross-Campus KPIs</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-500">Cross-campus analytics coming soon...</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
       </div>
 

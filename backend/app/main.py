@@ -625,6 +625,149 @@ class ProgressReport(BaseModel):
     beginning_count: int
     overall_progress: str  # "On Track", "Needs Support", "Excelling"
 
+
+class PlanType(str, Enum):
+    IEP = "IEP"
+    SECTION_504 = "Section 504"
+
+class PlanStatus(str, Enum):
+    ACTIVE = "Active"
+    UNDER_REVIEW = "Under Review"
+    EXPIRED = "Expired"
+    DRAFT = "Draft"
+
+class AccommodationType(str, Enum):
+    INSTRUCTIONAL = "Instructional"
+    ENVIRONMENTAL = "Environmental"
+    BEHAVIORAL = "Behavioral"
+    ASSESSMENT = "Assessment"
+    TECHNOLOGY = "Technology"
+
+class GoalStatus(str, Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    ACHIEVED = "Achieved"
+    DISCONTINUED = "Discontinued"
+
+class IEP504Plan(BaseModel):
+    plan_id: str
+    student_id: str
+    campus_id: str
+    plan_type: PlanType
+    status: PlanStatus
+    start_date: date
+    end_date: date
+    case_manager: str
+    disability_category: Optional[str] = None
+    meeting_date: date
+    next_review_date: date
+    parent_consent_date: Optional[date] = None
+    notes: str
+
+class Accommodation(BaseModel):
+    accommodation_id: str
+    plan_id: str
+    type: AccommodationType
+    description: str
+    frequency: str  # "Daily", "As Needed", "During Tests"
+    responsible_staff: str
+    implementation_notes: str
+
+class IEPGoal(BaseModel):
+    goal_id: str
+    plan_id: str
+    area: str  # "Reading", "Math", "Behavior", "Social Skills"
+    goal_description: str
+    baseline: str
+    target: str
+    target_date: date
+    status: GoalStatus
+    progress_percentage: int
+    last_updated: date
+
+class RTITier(str, Enum):
+    TIER_1 = "Tier 1"
+    TIER_2 = "Tier 2"
+    TIER_3 = "Tier 3"
+
+class InterventionStatus(str, Enum):
+    ACTIVE = "Active"
+    COMPLETED = "Completed"
+    DISCONTINUED = "Discontinued"
+
+class InterventionPlan(BaseModel):
+    intervention_id: str
+    student_id: str
+    campus_id: str
+    tier: RTITier
+    area_of_concern: str  # "Reading", "Math", "Behavior", "Attendance"
+    intervention_strategy: str
+    start_date: date
+    end_date: Optional[date] = None
+    frequency: str  # "Daily", "3x per week", "Weekly"
+    duration_minutes: int
+    staff_responsible: str
+    status: InterventionStatus
+    baseline_data: str
+    target_goal: str
+
+class InterventionProgress(BaseModel):
+    progress_id: str
+    intervention_id: str
+    date: date
+    data_point: float
+    notes: str
+    staff_id: str
+
+class RiskCategory(str, Enum):
+    ACADEMIC = "Academic"
+    ATTENDANCE = "Attendance"
+    BEHAVIOR = "Behavior"
+    ENGAGEMENT = "Engagement"
+
+class RiskLevel(str, Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    CRITICAL = "Critical"
+
+class AtRiskAssessment(BaseModel):
+    assessment_id: str
+    student_id: str
+    campus_id: str
+    assessment_date: date
+    overall_risk_score: int  # 0-100
+    overall_risk_level: RiskLevel
+    academic_score: int
+    attendance_score: int
+    behavior_score: int
+    engagement_score: int
+    risk_factors: List[str]
+    recommended_interventions: List[str]
+    assessed_by: str
+
+class RetentionPrediction(BaseModel):
+    prediction_id: str
+    student_id: str
+    campus_id: str
+    school_year: str
+    retention_probability: float  # 0.0-1.0
+    risk_level: RiskLevel
+    key_factors: List[str]
+    recommended_actions: List[str]
+    last_updated: date
+
+class EnrollmentForecast(BaseModel):
+    forecast_id: str
+    campus_id: str
+    school_year: str
+    grade_level: str
+    forecasted_enrollment: int
+    confidence_interval_low: int
+    confidence_interval_high: int
+    based_on_factors: List[str]
+    generated_date: date
+
 organizations_db: List[Organization] = []
 campuses_db: List[Campus] = []
 users_db: List[User] = []
@@ -661,6 +804,14 @@ automated_alerts_db: List[AutomatedAlert] = []
 academic_standards_db: List[AcademicStandard] = []
 standard_assessments_db: List[StandardAssessment] = []
 progress_reports_db: List[ProgressReport] = []
+iep_504_plans_db: List[IEP504Plan] = []
+accommodations_db: List[Accommodation] = []
+iep_goals_db: List[IEPGoal] = []
+intervention_plans_db: List[InterventionPlan] = []
+intervention_progress_db: List[InterventionProgress] = []
+at_risk_assessments_db: List[AtRiskAssessment] = []
+retention_predictions_db: List[RetentionPrediction] = []
+enrollment_forecasts_db: List[EnrollmentForecast] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
