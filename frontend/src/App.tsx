@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { AdminDashboard } from './components/AdminDashboard'
+import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
 import { TeacherDashboard } from './components/TeacherDashboard'
-import { ParentDashboard } from './components/ParentDashboard'
+import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
 import { Header } from './components/Header'
 
 type Role = 'admin' | 'teacher' | 'parent'
@@ -29,9 +29,9 @@ function App() {
       />
       
       <main>
-        {currentRole === 'admin' && <AdminDashboard />}
+        {currentRole === 'admin' && <EnhancedAdminDashboard />}
         {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} />}
-        {currentRole === 'parent' && <ParentDashboard parentId={selectedUserId} />}
+        {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
       </main>
     </div>
   )
