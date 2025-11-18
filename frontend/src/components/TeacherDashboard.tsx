@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Users, Calendar, BookOpen } from 'lucide-react'
+import { Users, Calendar, BookOpen, ClipboardCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
 import { DocumentManagement } from './DocumentManagement'
@@ -8,6 +9,7 @@ import { PhotoGallery } from './PhotoGallery'
 import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
+import { AttendanceTakingModal } from './AttendanceTakingModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -52,6 +54,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
   const [view, setView] = useState<'rooms' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
 
   useEffect(() => {
     fetchTeacherData()
@@ -81,6 +84,10 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
 
   const handleAskAuvora = async (query: string) => {
     console.log('Teacher Ask Auvora query:', query)
+  }
+
+  const handleAttendanceSuccess = () => {
+    fetchTeacherData()
   }
 
   if (!teacherData) {
@@ -249,10 +256,21 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
         {selectedRoom && (
           <Card>
             <CardHeader>
-              <CardTitle>
-                {selectedRoom.room} - {selectedRoom.session}
-              </CardTitle>
-              <p className="text-sm text-gray-500">{selectedRoom.student_count} students</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>
+                    {selectedRoom.room} - {selectedRoom.session}
+                  </CardTitle>
+                  <p className="text-sm text-gray-500">{selectedRoom.student_count} students</p>
+                </div>
+                <Button 
+                  onClick={() => setIsAttendanceModalOpen(true)}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  Take Attendance
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -341,6 +359,18 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget onSearch={handleAskAuvora} />
+
+      {/* Attendance Taking Modal */}
+      {selectedRoom && (
+        <AttendanceTakingModal
+          isOpen={isAttendanceModalOpen}
+          onClose={() => setIsAttendanceModalOpen(false)}
+          students={selectedRoom.students}
+          roomName={selectedRoom.room}
+          session={selectedRoom.session}
+          onSuccess={handleAttendanceSuccess}
+        />
+      )}
     </div>
   )
 }

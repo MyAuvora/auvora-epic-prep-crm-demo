@@ -1050,6 +1050,54 @@ async def get_behavior_notes(student_id: str):
 async def get_attendance(student_id: str):
     return [a for a in attendance_records_db if a.student_id == student_id]
 
+class AttendanceSubmission(BaseModel):
+    student_id: str
+    status: AttendanceStatus
+    session: Session
+
+@app.post("/api/attendance/take")
+async def take_attendance(attendance_list: List[AttendanceSubmission]):
+    """
+    Take attendance for multiple students at once.
+    Creates attendance records for today's date.
+    """
+    today = date.today()
+    created_records = []
+    
+    for submission in attendance_list:
+        student = next((s for s in students_db if s.student_id == submission.student_id), None)
+        if not student:
+            raise HTTPException(status_code=404, detail=f"Student {submission.student_id} not found")
+        
+        existing = next((a for a in attendance_records_db 
+                        if a.student_id == submission.student_id 
+                        and a.date == today 
+                        and a.session == submission.session), None)
+        
+        if existing:
+            existing.status = submission.status
+            created_records.append(existing)
+        else:
+            attendance_id = f"att_{len(attendance_records_db) + 1}"
+            new_record = AttendanceRecord(
+                attendance_id=attendance_id,
+                student_id=submission.student_id,
+                date=today,
+                status=submission.status,
+                session=submission.session
+            )
+            attendance_records_db.append(new_record)
+            created_records.append(new_record)
+            
+            if submission.status == AttendanceStatus.PRESENT:
+                student.attendance_present_count += 1
+            elif submission.status == AttendanceStatus.ABSENT:
+                student.attendance_absent_count += 1
+            elif submission.status == AttendanceStatus.TARDY:
+                student.attendance_tardy_count += 1
+    
+    return {"message": f"Attendance recorded for {len(created_records)} students", "records": created_records}
+
 @app.get("/api/ixl/{student_id}", response_model=IXLSummary)
 async def get_ixl_summary(student_id: str):
     ixl = next((i for i in ixl_summaries_db if i.student_id == student_id), None)
