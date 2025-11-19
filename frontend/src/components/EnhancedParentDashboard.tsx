@@ -10,6 +10,7 @@ import { PhotoGallery } from './PhotoGallery'
 import { MessagingPlatform } from './MessagingPlatform'
 import { HealthRecords } from './HealthRecords'
 import { ParentTuitionHistory } from './ParentTuitionHistory'
+import { ParentAnnouncementFeed } from './ParentAnnouncementFeed'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -20,6 +21,7 @@ interface Student {
   grade: string
   session: string
   room: string
+  campus_id?: string
   attendance_present_count: number
   attendance_absent_count: number
   attendance_tardy_count: number
@@ -54,7 +56,7 @@ interface EnhancedParentDashboardProps {
 }
 
 export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardProps) {
-  const [view, setView] = useState<'home' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
+  const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
   const [parentData, setParentData] = useState<ParentData | null>(null)
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
   const [childGrades, setChildGrades] = useState<any[]>([])
@@ -131,6 +133,16 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               }`}
             >
               Home
+            </button>
+            <button
+              onClick={() => setView('announcements')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'announcements'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Announcements
             </button>
             <button
               onClick={() => setView('billing')}
@@ -484,6 +496,13 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               </div>
             )}
           </>
+        )}
+
+        {view === 'announcements' && selectedChild && (
+          <ParentAnnouncementFeed 
+            userId={parentId} 
+            campusId={selectedChild.campus_id || ''} 
+          />
         )}
 
         {view === 'billing' && (

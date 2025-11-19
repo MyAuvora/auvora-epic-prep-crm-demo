@@ -1,4 +1,4 @@
-import { School, User } from 'lucide-react'
+import { User } from 'lucide-react'
 
 interface HeaderProps {
   currentRole: 'admin' | 'teacher' | 'parent'
@@ -11,9 +11,11 @@ export function Header({ currentRole, onRoleChange }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center justify-center w-12 h-12 bg-amber-600 rounded-lg">
-              <School className="w-8 h-8 text-white" />
-            </div>
+            <img 
+              src="/epic-prep-logo.jpg" 
+              alt="Epic Prep Academy Logo" 
+              className="h-16 w-auto object-contain"
+            />
             <div>
               <h1 className="text-2xl font-bold text-white">Epic Prep Academy</h1>
               <p className="text-sm text-amber-400">Auvora CRM</p>

@@ -61,6 +61,8 @@ class RiskFlag(str, Enum):
 
 class StaffRole(str, Enum):
     OWNER = "Owner"
+    DIRECTOR = "Director"
+    MANAGER = "Manager"
     ADMIN = "Admin"
     TEACHER = "Teacher"
     ASSISTANT = "Assistant"
@@ -768,6 +770,107 @@ class EnrollmentForecast(BaseModel):
     based_on_factors: List[str]
     generated_date: date
 
+class AssignmentType(str, Enum):
+    PROJECT = "Project"
+    QUIZ = "Quiz"
+    HOMEWORK = "Homework"
+    TEST = "Test"
+    OTHER = "Other"
+
+class AssignmentStatus(str, Enum):
+    DRAFT = "Draft"
+    PUBLISHED = "Published"
+    ARCHIVED = "Archived"
+
+class GradeEntryStatus(str, Enum):
+    COMPLETE = "Complete"
+    MISSING = "Missing"
+    LATE = "Late"
+    EXCUSED = "Excused"
+
+class Assignment(BaseModel):
+    assignment_id: str
+    campus_id: str
+    teacher_id: str
+    room: Room
+    subject: str
+    assignment_type: AssignmentType
+    title: str
+    description: str
+    max_points: int
+    due_date: date
+    status: AssignmentStatus
+    created_date: date
+
+class GradeEntry(BaseModel):
+    entry_id: str
+    assignment_id: str
+    student_id: str
+    campus_id: str
+    points_earned: Optional[int]
+    letter_grade: Optional[str]
+    percentage: Optional[float]
+    status: GradeEntryStatus
+    comment: Optional[str]
+    submitted_date: Optional[date]
+    graded_date: Optional[date]
+    graded_by: str
+
+class AnnouncementCategory(str, Enum):
+    GENERAL = "General"
+    ACADEMIC = "Academic"
+    EVENTS = "Events"
+    EMERGENCY = "Emergency"
+
+class AnnouncementStatus(str, Enum):
+    DRAFT = "Draft"
+    PENDING_APPROVAL = "Pending Approval"
+    PUBLISHED = "Published"
+    ARCHIVED = "Archived"
+
+class Announcement(BaseModel):
+    announcement_id: str
+    campus_id: str
+    title: str
+    content: str
+    category: AnnouncementCategory
+    status: AnnouncementStatus
+    created_by: str
+    created_by_role: StaffRole
+    approved_by: Optional[str]
+    approved_date: Optional[date]
+    published_date: Optional[date]
+    expires_date: Optional[date]
+    is_pinned: bool
+    target_roles: List[str]  # ["Parent", "Teacher", "Admin"]
+
+class AnnouncementRead(BaseModel):
+    read_id: str
+    announcement_id: str
+    user_id: str
+    read_date: date
+
+class WorkflowStatus(str, Enum):
+    PENDING = "Pending"
+    PERMISSION_SLIP_SIGNED = "Permission Slip Signed"
+    PAYMENT_COMPLETE = "Payment Complete"
+    REGISTERED = "Registered"
+    CANCELLED = "Cancelled"
+
+class EventWorkflow(BaseModel):
+    workflow_id: str
+    event_id: str
+    rsvp_id: str
+    family_id: str
+    student_id: str
+    status: WorkflowStatus
+    permission_slip_signed: bool
+    permission_slip_signature_id: Optional[str]
+    payment_complete: bool
+    payment_order_id: Optional[str]
+    created_date: date
+    completed_date: Optional[date]
+
 organizations_db: List[Organization] = []
 campuses_db: List[Campus] = []
 users_db: List[User] = []
@@ -812,6 +915,11 @@ intervention_progress_db: List[InterventionProgress] = []
 at_risk_assessments_db: List[AtRiskAssessment] = []
 retention_predictions_db: List[RetentionPrediction] = []
 enrollment_forecasts_db: List[EnrollmentForecast] = []
+assignments_db: List[Assignment] = []
+grade_entries_db: List[GradeEntry] = []
+announcements_db: List[Announcement] = []
+announcement_reads_db: List[AnnouncementRead] = []
+event_workflows_db: List[EventWorkflow] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
@@ -827,6 +935,7 @@ def generate_demo_data():
     global iep_504_plans_db, accommodations_db, iep_goals_db
     global intervention_plans_db, intervention_progress_db
     global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
+    global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
     
     from .demo_data import generate_all_demo_data
     
@@ -875,6 +984,11 @@ def generate_demo_data():
     at_risk_assessments_db = data.get("at_risk_assessments", [])
     retention_predictions_db = data.get("retention_predictions", [])
     enrollment_forecasts_db = data.get("enrollment_forecasts", [])
+    assignments_db = data.get("assignments", [])
+    grade_entries_db = data.get("grade_entries", [])
+    announcements_db = data.get("announcements", [])
+    announcement_reads_db = data.get("announcement_reads", [])
+    event_workflows_db = data.get("event_workflows", [])
 
 @app.on_event("startup")
 async def startup_event():
@@ -2571,3 +2685,174 @@ async def get_analytics_dashboard(campus_id: Optional[str] = None):
             'total': len(iep_plans)
         }
     }
+
+@app.get("/api/assignments")
+async def get_assignments(campus_id: Optional[str] = None, teacher_id: Optional[str] = None, room: Optional[str] = None):
+    filtered = assignments_db
+    if campus_id:
+        filtered = [a for a in filtered if a.campus_id == campus_id]
+    if teacher_id:
+        filtered = [a for a in filtered if a.teacher_id == teacher_id]
+    if room:
+        filtered = [a for a in filtered if a.room.value == room]
+    return filtered
+
+@app.get("/api/assignments/{assignment_id}")
+async def get_assignment(assignment_id: str):
+    assignment = next((a for a in assignments_db if a.assignment_id == assignment_id), None)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    return assignment
+
+@app.post("/api/assignments")
+async def create_assignment(assignment: Assignment):
+    assignments_db.append(assignment)
+    return assignment
+
+@app.put("/api/assignments/{assignment_id}")
+async def update_assignment(assignment_id: str, assignment: Assignment):
+    for i, a in enumerate(assignments_db):
+        if a.assignment_id == assignment_id:
+            assignments_db[i] = assignment
+            return assignment
+    raise HTTPException(status_code=404, detail="Assignment not found")
+
+@app.get("/api/grade-entries")
+async def get_grade_entries(assignment_id: Optional[str] = None, student_id: Optional[str] = None, campus_id: Optional[str] = None):
+    filtered = grade_entries_db
+    if assignment_id:
+        filtered = [g for g in filtered if g.assignment_id == assignment_id]
+    if student_id:
+        filtered = [g for g in filtered if g.student_id == student_id]
+    if campus_id:
+        filtered = [g for g in filtered if g.campus_id == campus_id]
+    return filtered
+
+@app.post("/api/grade-entries")
+async def create_grade_entry(entry: GradeEntry):
+    grade_entries_db.append(entry)
+    return entry
+
+@app.put("/api/grade-entries/{entry_id}")
+async def update_grade_entry(entry_id: str, entry: GradeEntry):
+    for i, g in enumerate(grade_entries_db):
+        if g.entry_id == entry_id:
+            grade_entries_db[i] = entry
+            return entry
+    raise HTTPException(status_code=404, detail="Grade entry not found")
+
+@app.post("/api/grade-entries/bulk")
+async def bulk_create_grade_entries(entries: List[GradeEntry]):
+    grade_entries_db.extend(entries)
+    return {"created": len(entries), "entries": entries}
+
+@app.get("/api/announcements")
+async def get_announcements(campus_id: Optional[str] = None, status: Optional[str] = None, category: Optional[str] = None):
+    filtered = announcements_db
+    if campus_id:
+        filtered = [a for a in filtered if a.campus_id == campus_id]
+    if status:
+        filtered = [a for a in filtered if a.status.value == status]
+    if category:
+        filtered = [a for a in filtered if a.category.value == category]
+    filtered = sorted(filtered, key=lambda x: (not x.is_pinned, x.published_date or date.today()), reverse=True)
+    return filtered
+
+@app.get("/api/announcements/{announcement_id}")
+async def get_announcement(announcement_id: str):
+    announcement = next((a for a in announcements_db if a.announcement_id == announcement_id), None)
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    return announcement
+
+@app.post("/api/announcements")
+async def create_announcement(announcement: Announcement):
+    announcements_db.append(announcement)
+    return announcement
+
+@app.put("/api/announcements/{announcement_id}")
+async def update_announcement(announcement_id: str, announcement: Announcement):
+    for i, a in enumerate(announcements_db):
+        if a.announcement_id == announcement_id:
+            announcements_db[i] = announcement
+            return announcement
+    raise HTTPException(status_code=404, detail="Announcement not found")
+
+@app.post("/api/announcements/{announcement_id}/approve")
+async def approve_announcement(announcement_id: str, approved_by: str):
+    for i, a in enumerate(announcements_db):
+        if a.announcement_id == announcement_id:
+            announcements_db[i].status = AnnouncementStatus.PUBLISHED
+            announcements_db[i].approved_by = approved_by
+            announcements_db[i].approved_date = date.today()
+            announcements_db[i].published_date = date.today()
+            return announcements_db[i]
+    raise HTTPException(status_code=404, detail="Announcement not found")
+
+@app.post("/api/announcements/{announcement_id}/read")
+async def mark_announcement_read(announcement_id: str, user_id: str):
+    read_record = AnnouncementRead(
+        read_id=f"read_{len(announcement_reads_db) + 1}",
+        announcement_id=announcement_id,
+        user_id=user_id,
+        read_date=date.today()
+    )
+    announcement_reads_db.append(read_record)
+    return read_record
+
+@app.get("/api/announcements/{announcement_id}/reads")
+async def get_announcement_reads(announcement_id: str):
+    return [r for r in announcement_reads_db if r.announcement_id == announcement_id]
+
+@app.get("/api/event-workflows")
+async def get_event_workflows(event_id: Optional[str] = None, family_id: Optional[str] = None, student_id: Optional[str] = None):
+    filtered = event_workflows_db
+    if event_id:
+        filtered = [w for w in filtered if w.event_id == event_id]
+    if family_id:
+        filtered = [w for w in filtered if w.family_id == family_id]
+    if student_id:
+        filtered = [w for w in filtered if w.student_id == student_id]
+    return filtered
+
+@app.get("/api/event-workflows/{workflow_id}")
+async def get_event_workflow(workflow_id: str):
+    workflow = next((w for w in event_workflows_db if w.workflow_id == workflow_id), None)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return workflow
+
+@app.post("/api/event-workflows")
+async def create_event_workflow(workflow: EventWorkflow):
+    event_workflows_db.append(workflow)
+    return workflow
+
+@app.put("/api/event-workflows/{workflow_id}")
+async def update_event_workflow(workflow_id: str, workflow: EventWorkflow):
+    for i, w in enumerate(event_workflows_db):
+        if w.workflow_id == workflow_id:
+            event_workflows_db[i] = workflow
+            return workflow
+    raise HTTPException(status_code=404, detail="Workflow not found")
+
+@app.post("/api/event-workflows/{workflow_id}/sign-permission-slip")
+async def sign_permission_slip(workflow_id: str, signature_id: str):
+    for i, w in enumerate(event_workflows_db):
+        if w.workflow_id == workflow_id:
+            event_workflows_db[i].permission_slip_signed = True
+            event_workflows_db[i].permission_slip_signature_id = signature_id
+            if event_workflows_db[i].status == WorkflowStatus.PENDING:
+                event_workflows_db[i].status = WorkflowStatus.PERMISSION_SLIP_SIGNED
+            return event_workflows_db[i]
+    raise HTTPException(status_code=404, detail="Workflow not found")
+
+@app.post("/api/event-workflows/{workflow_id}/complete-payment")
+async def complete_payment(workflow_id: str, order_id: str):
+    for i, w in enumerate(event_workflows_db):
+        if w.workflow_id == workflow_id:
+            event_workflows_db[i].payment_complete = True
+            event_workflows_db[i].payment_order_id = order_id
+            event_workflows_db[i].status = WorkflowStatus.REGISTERED
+            event_workflows_db[i].completed_date = date.today()
+            return event_workflows_db[i]
+    raise HTTPException(status_code=404, detail="Workflow not found")

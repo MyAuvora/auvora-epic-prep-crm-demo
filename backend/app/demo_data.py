@@ -13,6 +13,7 @@ from .main import (
     IEP504Plan, Accommodation, IEPGoal,
     InterventionPlan, InterventionProgress,
     AtRiskAssessment, RetentionPrediction, EnrollmentForecast,
+    Assignment, GradeEntry, Announcement, AnnouncementRead, EventWorkflow,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
@@ -25,7 +26,9 @@ from .main import (
     MasteryLevel,
     PlanType, PlanStatus, AccommodationType, GoalStatus,
     RTITier, InterventionStatus,
-    RiskCategory, RiskLevel
+    RiskCategory, RiskLevel,
+    AssignmentType, AssignmentStatus, GradeEntryStatus,
+    AnnouncementCategory, AnnouncementStatus, WorkflowStatus
 )
 
 def generate_all_demo_data():
@@ -1469,6 +1472,157 @@ def generate_all_demo_data():
             )
             enrollment_forecasts_db.append(forecast)
     
+    assignments_db = []
+    grade_entries_db = []
+    announcements_db = []
+    announcement_reads_db = []
+    event_workflows_db = []
+    
+    for staff_member in staff_db:
+        if staff_member.role == StaffRole.DIRECTOR:
+            staff_member.role = StaffRole.DIRECTOR
+        elif staff_member.role == StaffRole.MANAGER:
+            staff_member.role = StaffRole.MANAGER
+    
+    director_count = sum(1 for s in staff_db if s.role == StaffRole.DIRECTOR)
+    manager_count = sum(1 for s in staff_db if s.role == StaffRole.MANAGER)
+    
+    if director_count == 0:
+        for i, campus in enumerate(campuses_db):
+            director = Staff(
+                staff_id=f"staff_director_{i+1}",
+                campus_ids=[campus.campus_id],
+                first_name=["Sarah", "Michael", "Jennifer"][i],
+                last_name=["Thompson", "Rodriguez", "Chen"][i],
+                role=StaffRole.DIRECTOR,
+                email=f"director{i+1}@epicprepacademy.com",
+                assigned_rooms=[],
+                permissions="Admin"
+            )
+            staff_db.append(director)
+    
+    if manager_count == 0:
+        for i, campus in enumerate(campuses_db):
+            manager = Staff(
+                staff_id=f"staff_manager_{i+1}",
+                campus_ids=[campus.campus_id],
+                first_name=["David", "Lisa", "Robert"][i],
+                last_name=["Martinez", "Anderson", "Taylor"][i],
+                role=StaffRole.MANAGER,
+                email=f"manager{i+1}@epicprepacademy.com",
+                assigned_rooms=[],
+                permissions="Admin"
+            )
+            staff_db.append(manager)
+    
+    teachers = [s for s in staff_db if s.role == StaffRole.TEACHER]
+    assignment_titles = {
+        "Math": ["Fractions Quiz", "Multiplication Test", "Word Problems Homework", "Geometry Project", "Algebra Quiz"],
+        "ELA": ["Book Report", "Grammar Quiz", "Creative Writing", "Reading Comprehension Test", "Vocabulary Homework"],
+        "Science": ["Solar System Project", "Lab Report", "Science Fair Proposal", "Biology Quiz", "Chemistry Test"],
+        "Social Studies": ["History Essay", "Geography Quiz", "Current Events Report", "Map Project", "Civics Test"]
+    }
+    
+    assignment_id = 1
+    for teacher in teachers[:5]:
+        for subject in ["Math", "ELA", "Science", "Social Studies"]:
+            for i, title in enumerate(assignment_titles[subject][:3]):
+                assignment = Assignment(
+                    assignment_id=f"assign_{assignment_id}",
+                    campus_id=teacher.campus_ids[0],
+                    teacher_id=teacher.staff_id,
+                    room=Room.ROOM_1 if "Room 1" in teacher.assigned_rooms else Room.ROOM_2,
+                    subject=subject,
+                    assignment_type=[AssignmentType.QUIZ, AssignmentType.TEST, AssignmentType.HOMEWORK, AssignmentType.PROJECT][i % 4],
+                    title=title,
+                    description=f"{title} for {subject}",
+                    max_points=100,
+                    due_date=today + timedelta(days=random.randint(1, 14)),
+                    status=AssignmentStatus.PUBLISHED,
+                    created_date=today - timedelta(days=random.randint(1, 7))
+                )
+                assignments_db.append(assignment)
+                
+                campus_students = [s for s in students_db if s.campus_id == teacher.campus_ids[0]][:8]
+                for student in campus_students:
+                    points = random.randint(60, 100)
+                    letter = "A" if points >= 90 else "B" if points >= 80 else "C" if points >= 70 else "D" if points >= 60 else "F"
+                    status_choice = random.choices(
+                        [GradeEntryStatus.COMPLETE, GradeEntryStatus.MISSING, GradeEntryStatus.LATE],
+                        weights=[85, 10, 5]
+                    )[0]
+                    
+                    entry = GradeEntry(
+                        entry_id=f"entry_{assignment_id}_{student.student_id}",
+                        assignment_id=assignment.assignment_id,
+                        student_id=student.student_id,
+                        campus_id=teacher.campus_ids[0],
+                        points_earned=points if status_choice == GradeEntryStatus.COMPLETE else None,
+                        letter_grade=letter if status_choice == GradeEntryStatus.COMPLETE else None,
+                        percentage=float(points) if status_choice == GradeEntryStatus.COMPLETE else None,
+                        status=status_choice,
+                        comment="Great work!" if points >= 90 else "Good effort" if points >= 80 else "Needs improvement" if status_choice == GradeEntryStatus.COMPLETE else None,
+                        submitted_date=today - timedelta(days=random.randint(0, 3)) if status_choice != GradeEntryStatus.MISSING else None,
+                        graded_date=today if status_choice == GradeEntryStatus.COMPLETE else None,
+                        graded_by=teacher.staff_id
+                    )
+                    grade_entries_db.append(entry)
+                
+                assignment_id += 1
+    
+    announcement_data = [
+        {"title": "Welcome Back to School!", "content": "We're excited to start the new school year! Please review the updated handbook.", "category": AnnouncementCategory.GENERAL, "pinned": True},
+        {"title": "Parent-Teacher Conferences Next Week", "content": "Sign up for your conference slot through the portal.", "category": AnnouncementCategory.EVENTS, "pinned": True},
+        {"title": "Math Competition Results", "content": "Congratulations to our students who placed in the regional math competition!", "category": AnnouncementCategory.ACADEMIC, "pinned": False},
+        {"title": "Early Dismissal Friday", "content": "School will dismiss at 12:00 PM this Friday for staff development.", "category": AnnouncementCategory.GENERAL, "pinned": False},
+        {"title": "Science Fair Registration Open", "content": "Register for the annual science fair by next Friday.", "category": AnnouncementCategory.ACADEMIC, "pinned": False},
+        {"title": "Weather Alert", "content": "Due to severe weather, school will open 2 hours late tomorrow.", "category": AnnouncementCategory.EMERGENCY, "pinned": True},
+        {"title": "Field Trip Permission Slips Due", "content": "Please return signed permission slips for the museum field trip.", "category": AnnouncementCategory.EVENTS, "pinned": False},
+        {"title": "New Lunch Menu", "content": "Check out our updated lunch menu with healthier options!", "category": AnnouncementCategory.GENERAL, "pinned": False}
+    ]
+    
+    for i, campus in enumerate(campuses_db):
+        for j, ann_data in enumerate(announcement_data):
+            announcement = Announcement(
+                announcement_id=f"ann_{campus.campus_id}_{j+1}",
+                campus_id=campus.campus_id,
+                title=ann_data["title"],
+                content=ann_data["content"],
+                category=ann_data["category"],
+                status=AnnouncementStatus.PUBLISHED,
+                created_by=f"staff_director_{i+1}",
+                created_by_role=StaffRole.DIRECTOR,
+                approved_by=f"staff_director_{i+1}",
+                approved_date=today - timedelta(days=random.randint(0, 5)),
+                published_date=today - timedelta(days=random.randint(0, 5)),
+                expires_date=today + timedelta(days=30) if not ann_data["pinned"] else None,
+                is_pinned=ann_data["pinned"],
+                target_roles=["Parent", "Teacher"]
+            )
+            announcements_db.append(announcement)
+    
+    for event in events_db:
+        if event.requires_rsvp:
+            attending_families = random.sample(families_db, min(5, len(families_db)))
+            for family in attending_families:
+                family_students = [s for s in students_db if s.student_id in family.student_ids]
+                for student in family_students[:2]:
+                    workflow = EventWorkflow(
+                        workflow_id=f"workflow_{event.event_id}_{student.student_id}",
+                        event_id=event.event_id,
+                        rsvp_id=f"rsvp_{event.event_id}_{family.family_id}",
+                        family_id=family.family_id,
+                        student_id=student.student_id,
+                        status=WorkflowStatus.PENDING if event.requires_permission_slip or event.requires_payment else WorkflowStatus.REGISTERED,
+                        permission_slip_signed=not event.requires_permission_slip,
+                        permission_slip_signature_id=f"sig_{event.event_id}_{student.student_id}" if not event.requires_permission_slip else None,
+                        payment_complete=not event.requires_payment,
+                        payment_order_id=f"order_{event.event_id}_{student.student_id}" if not event.requires_payment else None,
+                        created_date=today - timedelta(days=random.randint(1, 10)),
+                        completed_date=today - timedelta(days=random.randint(0, 5)) if not (event.requires_permission_slip or event.requires_payment) else None
+                    )
+                    event_workflows_db.append(workflow)
+    
     return {
         "organizations": organizations_db,
         "campuses": campuses_db,
@@ -1513,5 +1667,10 @@ def generate_all_demo_data():
         "intervention_progress": intervention_progress_db,
         "at_risk_assessments": at_risk_assessments_db,
         "retention_predictions": retention_predictions_db,
-        "enrollment_forecasts": enrollment_forecasts_db
+        "enrollment_forecasts": enrollment_forecasts_db,
+        "assignments": assignments_db,
+        "grade_entries": grade_entries_db,
+        "announcements": announcements_db,
+        "announcement_reads": announcement_reads_db,
+        "event_workflows": event_workflows_db
     }

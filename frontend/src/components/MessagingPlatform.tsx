@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -19,6 +20,15 @@ interface Message {
   content_preview: string;
 }
 
+interface StaffMember {
+  staff_id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  campus_ids: string[];
+  email: string;
+}
+
 interface MessagingPlatformProps {
   role: 'admin' | 'teacher' | 'parent';
   userId: string;
@@ -31,9 +41,14 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
   const [showCompose, setShowCompose] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [selectedRecipient, setSelectedRecipient] = useState<string>('');
+  const [userCampusId, setUserCampusId] = useState<string>('');
 
   useEffect(() => {
     fetchMessages();
+    fetchStaffMembers();
+    fetchUserCampus();
   }, [userId]);
 
   const fetchMessages = async () => {
@@ -55,8 +70,34 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
     }
   };
 
+  const fetchStaffMembers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/staff`);
+      const data = await response.json();
+      setStaffMembers(data);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    }
+  };
+
+  const fetchUserCampus = async () => {
+    try {
+      if (role === 'parent') {
+        const response = await fetch(`${API_URL}/api/parents/${userId}`);
+        const data = await response.json();
+        if (data.student_ids && data.student_ids.length > 0) {
+          const studentResponse = await fetch(`${API_URL}/api/students/${data.student_ids[0]}`);
+          const studentData = await studentResponse.json();
+          setUserCampusId(studentData.campus_id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user campus:', error);
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedRecipient) return;
 
     try {
       const recipientType = role === 'parent' ? 'Staff' : 'Parent';
@@ -69,7 +110,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
           sender_type: userType,
           sender_id: userId,
           recipient_type: recipientType,
-          recipient_id: 'recipient_1',
+          recipient_id: selectedRecipient,
           student_id: null,
           date_time: new Date().toISOString(),
           content_preview: newMessage.substring(0, 100)
@@ -77,6 +118,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
       });
 
       setNewMessage('');
+      setSelectedRecipient('');
       setShowCompose(false);
       fetchMessages();
     } catch (error) {
@@ -240,17 +282,32 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
           <DialogHeader>
             <DialogTitle>New Message</DialogTitle>
             <DialogDescription>
-              Send a message to {role === 'parent' ? 'teachers' : 'parents'}
+              Send a message to {role === 'parent' ? 'staff members' : 'parents'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">To:</label>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  {role === 'parent' ? 'Teachers' : 'Parents'}
-                </p>
-              </div>
+              {role === 'parent' ? (
+                <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a staff member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffMembers
+                      .filter(staff => staff.campus_ids.includes(userCampusId))
+                      .map(staff => (
+                        <SelectItem key={staff.staff_id} value={staff.staff_id}>
+                          {staff.first_name} {staff.last_name} - {staff.role}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">Parents</p>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Message:</label>
@@ -264,10 +321,10 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCompose(false); setNewMessage(''); }}>
+            <Button variant="outline" onClick={() => { setShowCompose(false); setNewMessage(''); setSelectedRecipient(''); }}>
               Cancel
             </Button>
-            <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+            <Button onClick={handleSendMessage} disabled={!newMessage.trim() || (role === 'parent' && !selectedRecipient)}>
               <Send className="w-4 h-4 mr-2" />
               Send Message
             </Button>

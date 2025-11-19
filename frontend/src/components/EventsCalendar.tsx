@@ -4,17 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EventCommitmentWorkflow } from './EventCommitmentWorkflow';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface Event {
   event_id: string;
+  campus_id: string;
   title: string;
   description: string;
   event_type: string;
   date: string;
   time: string;
   location: string;
+  capacity?: number;
+  registered_count?: number;
+  permission_slip_content?: string | null;
+  payment_description?: string | null;
   requires_rsvp: boolean;
   requires_permission_slip: boolean;
   requires_payment: boolean;
@@ -43,6 +49,8 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
   const [rsvps, setRsvps] = useState<EventRSVP[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
+  const [workflowEvent, setWorkflowEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -76,6 +84,16 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
   const handleRSVP = async (eventId: string, status: string) => {
     if (!familyId) return;
 
+    if (status === 'Attending') {
+      const event = events.find(e => e.event_id === eventId);
+      if (event && (event.requires_permission_slip || event.requires_payment)) {
+        setWorkflowEvent(event);
+        setShowWorkflowModal(true);
+        setSelectedEvent(null); // Close the event details modal
+        return;
+      }
+    }
+
     try {
       const existingRSVP = rsvps.find(r => r.event_id === eventId);
       
@@ -103,6 +121,12 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
     } catch (error) {
       console.error('Error updating RSVP:', error);
     }
+  };
+
+  const handleWorkflowComplete = () => {
+    setShowWorkflowModal(false);
+    setWorkflowEvent(null);
+    fetchRSVPs(); // Refresh RSVPs after workflow completion
   };
 
   const getEventTypeColor = (type: string) => {
@@ -307,6 +331,21 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Event Commitment Workflow Modal */}
+      {workflowEvent && familyId && (
+        <EventCommitmentWorkflow
+          isOpen={showWorkflowModal}
+          onClose={() => {
+            setShowWorkflowModal(false);
+            setWorkflowEvent(null);
+          }}
+          onComplete={handleWorkflowComplete}
+          event={workflowEvent}
+          familyId={familyId}
+          parentId={_userId || 'parent_1'}
+        />
+      )}
     </div>
   );
 };

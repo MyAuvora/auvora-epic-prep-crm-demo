@@ -10,6 +10,7 @@ import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
 import { AttendanceTakingModal } from './AttendanceTakingModal'
+import { TeacherGradebook } from './TeacherGradebook'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -51,10 +52,11 @@ interface TeacherDashboardProps {
 }
 
 export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
-  const [view, setView] = useState<'rooms' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
+  const [campusId, setCampusId] = useState<string>('')
 
   useEffect(() => {
     fetchTeacherData()
@@ -67,6 +69,12 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
       setTeacherData(data)
       if (data.rooms.length > 0) {
         setSelectedRoom(data.rooms[0])
+      }
+      
+      const staffResponse = await fetch(`${API_URL}/api/staff/${staffId}`)
+      const staffData = await staffResponse.json()
+      if (staffData.campus_ids && staffData.campus_ids.length > 0) {
+        setCampusId(staffData.campus_ids[0])
       }
     } catch (error) {
       console.error('Error fetching teacher data:', error)
@@ -108,6 +116,16 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               }`}
             >
               My Rooms
+            </button>
+            <button
+              onClick={() => setView('gradebook')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'gradebook'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Gradebook
             </button>
             <button
               onClick={() => setView('events')}
@@ -330,6 +348,25 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
           </Card>
         )}
           </>
+        )}
+
+        {view === 'gradebook' && selectedRoom && (
+          <TeacherGradebook 
+            staffId={staffId} 
+            campusId={campusId}
+            room={selectedRoom.room}
+          />
+        )}
+
+        {view === 'gradebook' && !selectedRoom && (
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No Room Selected</h3>
+            <p className="mt-1 text-sm text-gray-500">Please select a room from the "My Rooms" tab to access the gradebook.</p>
+            <Button onClick={() => setView('rooms')} className="mt-4 bg-amber-600 hover:bg-amber-700">
+              Go to My Rooms
+            </Button>
+          </div>
         )}
 
         {view === 'events' && (

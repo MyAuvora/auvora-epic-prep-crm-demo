@@ -22,6 +22,7 @@ import StandardsGradebook from './StandardsGradebook'
 import { IEP504Management } from './IEP504Management'
 import { InterventionManagement } from './InterventionManagement'
 import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
+import { AnnouncementManagement } from './AnnouncementManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -836,15 +837,19 @@ export function EnhancedAdminDashboard() {
               <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="messages">Direct Messages</TabsTrigger>
                 <TabsTrigger value="broadcasts">Broadcasts & Automation</TabsTrigger>
+                <TabsTrigger value="announcements">Announcements</TabsTrigger>
               </TabsList>
               <TabsContent value="messages" className="mt-6">
                 <MessagingPlatform role="admin" userId="admin_1" userType="Staff" />
               </TabsContent>
               <TabsContent value="broadcasts" className="mt-6">
                 <CommunicationAutomation selectedCampusId={selectedCampusId} />
+              </TabsContent>
+              <TabsContent value="announcements" className="mt-6">
+                <AnnouncementManagement role="admin" userId="admin_1" campusId={selectedCampusId || ''} />
               </TabsContent>
             </Tabs>
           </div>
