@@ -19,6 +19,9 @@ import FinancialManagement from './FinancialManagement'
 import AdmissionsPipeline from './AdmissionsPipeline'
 import CommunicationAutomation from './CommunicationAutomation'
 import StandardsGradebook from './StandardsGradebook'
+import { IEP504Management } from './IEP504Management'
+import { InterventionManagement } from './InterventionManagement'
+import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -811,34 +814,16 @@ export function EnhancedAdminDashboard() {
 
         {view === 'student-support' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900">Student Support</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
-            </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="iep">IEP / 504 Plans</TabsTrigger>
                 <TabsTrigger value="interventions">Interventions</TabsTrigger>
               </TabsList>
               <TabsContent value="iep" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>IEP / 504 Plans</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500">IEP and 504 plan tracking coming soon...</p>
-                  </CardContent>
-                </Card>
+                <IEP504Management />
               </TabsContent>
               <TabsContent value="interventions" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Intervention Plans</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500">RTI intervention tracking coming soon...</p>
-                  </CardContent>
-                </Card>
+                <InterventionManagement />
               </TabsContent>
             </Tabs>
           </div>
@@ -913,47 +898,7 @@ export function EnhancedAdminDashboard() {
 
         {view === 'analytics' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900">Analytics</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
-            </div>
-            <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="at-risk">At-Risk Dashboard</TabsTrigger>
-                <TabsTrigger value="retention">Retention & Forecasting</TabsTrigger>
-                <TabsTrigger value="kpis">Cross-Campus KPIs</TabsTrigger>
-              </TabsList>
-              <TabsContent value="at-risk" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>At-Risk Student Dashboard</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500">At-risk scoring and analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="retention" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Retention Prediction & Enrollment Forecasting</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500">Retention and forecasting analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="kpis" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cross-Campus KPIs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500">Cross-campus analytics coming soon...</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <AdvancedAnalyticsDashboard />
           </div>
         )}
       </div>
