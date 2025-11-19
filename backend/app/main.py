@@ -824,6 +824,9 @@ def generate_demo_data():
     global invoices_db, invoice_line_items_db, payment_plans_db, payment_schedules_db
     global leads_db, campus_capacity_db, message_templates_db, broadcast_messages_db
     global automated_alerts_db, academic_standards_db, standard_assessments_db, progress_reports_db
+    global iep_504_plans_db, accommodations_db, iep_goals_db
+    global intervention_plans_db, intervention_progress_db
+    global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
     
     from .demo_data import generate_all_demo_data
     
@@ -864,6 +867,14 @@ def generate_demo_data():
     academic_standards_db = data.get("academic_standards", [])
     standard_assessments_db = data.get("standard_assessments", [])
     progress_reports_db = data.get("progress_reports", [])
+    iep_504_plans_db = data.get("iep_504_plans", [])
+    accommodations_db = data.get("accommodations", [])
+    iep_goals_db = data.get("iep_goals", [])
+    intervention_plans_db = data.get("intervention_plans", [])
+    intervention_progress_db = data.get("intervention_progress", [])
+    at_risk_assessments_db = data.get("at_risk_assessments", [])
+    retention_predictions_db = data.get("retention_predictions", [])
+    enrollment_forecasts_db = data.get("enrollment_forecasts", [])
 
 @app.on_event("startup")
 async def startup_event():
@@ -2331,4 +2342,232 @@ async def get_student_progress(student_id: str):
         'progress_report': report,
         'assessments_by_subject': standards_by_subject,
         'total_assessments': len(assessments)
+    }
+
+@app.get("/api/iep-504-plans")
+async def get_iep_504_plans(campus_id: Optional[str] = None):
+    """Get all IEP/504 plans, optionally filtered by campus"""
+    plans = iep_504_plans_db
+    if campus_id:
+        plans = [p for p in plans if p.campus_id == campus_id]
+    return plans
+
+@app.get("/api/iep-504-plans/{plan_id}")
+async def get_iep_504_plan(plan_id: str):
+    """Get a specific IEP/504 plan with accommodations and goals"""
+    plan = next((p for p in iep_504_plans_db if p.plan_id == plan_id), None)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    accommodations = [a for a in accommodations_db if a.plan_id == plan_id]
+    goals = [g for g in iep_goals_db if g.plan_id == plan_id]
+    student = next((s for s in students_db if s.student_id == plan.student_id), None)
+    
+    return {
+        'plan': plan,
+        'student': student,
+        'accommodations': accommodations,
+        'goals': goals
+    }
+
+@app.get("/api/iep-504-plans/student/{student_id}")
+async def get_student_iep_504_plans(student_id: str):
+    """Get all IEP/504 plans for a specific student"""
+    plans = [p for p in iep_504_plans_db if p.student_id == student_id]
+    return plans
+
+@app.get("/api/accommodations")
+async def get_accommodations(plan_id: Optional[str] = None):
+    """Get all accommodations, optionally filtered by plan"""
+    accommodations = accommodations_db
+    if plan_id:
+        accommodations = [a for a in accommodations if a.plan_id == plan_id]
+    return accommodations
+
+@app.get("/api/iep-goals")
+async def get_iep_goals(plan_id: Optional[str] = None):
+    """Get all IEP goals, optionally filtered by plan"""
+    goals = iep_goals_db
+    if plan_id:
+        goals = [g for g in goals if g.plan_id == plan_id]
+    return goals
+
+@app.get("/api/interventions")
+async def get_interventions(campus_id: Optional[str] = None, student_id: Optional[str] = None, tier: Optional[str] = None):
+    """Get all intervention plans with optional filters"""
+    interventions = intervention_plans_db
+    if campus_id:
+        interventions = [i for i in interventions if i.campus_id == campus_id]
+    if student_id:
+        interventions = [i for i in interventions if i.student_id == student_id]
+    if tier:
+        interventions = [i for i in interventions if i.tier.value == tier]
+    return interventions
+
+@app.get("/api/interventions/{intervention_id}")
+async def get_intervention(intervention_id: str):
+    """Get a specific intervention plan with progress data"""
+    intervention = next((i for i in intervention_plans_db if i.intervention_id == intervention_id), None)
+    if not intervention:
+        raise HTTPException(status_code=404, detail="Intervention not found")
+    
+    progress = [p for p in intervention_progress_db if p.intervention_id == intervention_id]
+    student = next((s for s in students_db if s.student_id == intervention.student_id), None)
+    
+    return {
+        'intervention': intervention,
+        'student': student,
+        'progress': progress
+    }
+
+@app.get("/api/interventions/student/{student_id}")
+async def get_student_interventions(student_id: str):
+    """Get all interventions for a specific student"""
+    interventions = [i for i in intervention_plans_db if i.student_id == student_id]
+    return interventions
+
+@app.get("/api/intervention-progress/{intervention_id}")
+async def get_intervention_progress(intervention_id: str):
+    """Get all progress data for an intervention"""
+    progress = [p for p in intervention_progress_db if p.intervention_id == intervention_id]
+    return progress
+
+@app.get("/api/analytics/at-risk-assessments")
+async def get_at_risk_assessments(campus_id: Optional[str] = None, risk_level: Optional[str] = None):
+    """Get all at-risk assessments with optional filters"""
+    assessments = at_risk_assessments_db
+    if campus_id:
+        assessments = [a for a in assessments if a.campus_id == campus_id]
+    if risk_level:
+        assessments = [a for a in assessments if a.overall_risk_level.value == risk_level]
+    return assessments
+
+@app.get("/api/analytics/at-risk-assessments/{assessment_id}")
+async def get_at_risk_assessment(assessment_id: str):
+    """Get a specific at-risk assessment"""
+    assessment = next((a for a in at_risk_assessments_db if a.assessment_id == assessment_id), None)
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    student = next((s for s in students_db if s.student_id == assessment.student_id), None)
+    return {
+        'assessment': assessment,
+        'student': student
+    }
+
+@app.get("/api/analytics/at-risk-assessments/student/{student_id}")
+async def get_student_at_risk_assessment(student_id: str):
+    """Get the most recent at-risk assessment for a student"""
+    assessments = [a for a in at_risk_assessments_db if a.student_id == student_id]
+    if not assessments:
+        return None
+    return max(assessments, key=lambda a: a.assessment_date)
+
+@app.get("/api/analytics/retention-predictions")
+async def get_retention_predictions(campus_id: Optional[str] = None, risk_level: Optional[str] = None):
+    """Get all retention predictions with optional filters"""
+    predictions = retention_predictions_db
+    if campus_id:
+        predictions = [p for p in predictions if p.campus_id == campus_id]
+    if risk_level:
+        predictions = [p for p in predictions if p.risk_level.value == risk_level]
+    return predictions
+
+@app.get("/api/analytics/retention-predictions/{prediction_id}")
+async def get_retention_prediction(prediction_id: str):
+    """Get a specific retention prediction"""
+    prediction = next((p for p in retention_predictions_db if p.prediction_id == prediction_id), None)
+    if not prediction:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+    
+    student = next((s for s in students_db if s.student_id == prediction.student_id), None)
+    return {
+        'prediction': prediction,
+        'student': student
+    }
+
+@app.get("/api/analytics/retention-predictions/student/{student_id}")
+async def get_student_retention_prediction(student_id: str):
+    """Get the most recent retention prediction for a student"""
+    predictions = [p for p in retention_predictions_db if p.student_id == student_id]
+    if not predictions:
+        return None
+    return max(predictions, key=lambda p: p.last_updated)
+
+@app.get("/api/analytics/enrollment-forecasts")
+async def get_enrollment_forecasts(campus_id: Optional[str] = None, school_year: Optional[str] = None):
+    """Get all enrollment forecasts with optional filters"""
+    forecasts = enrollment_forecasts_db
+    if campus_id:
+        forecasts = [f for f in forecasts if f.campus_id == campus_id]
+    if school_year:
+        forecasts = [f for f in forecasts if f.school_year == school_year]
+    return forecasts
+
+@app.get("/api/analytics/enrollment-forecasts/{forecast_id}")
+async def get_enrollment_forecast(forecast_id: str):
+    """Get a specific enrollment forecast"""
+    forecast = next((f for f in enrollment_forecasts_db if f.forecast_id == forecast_id), None)
+    if not forecast:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    return forecast
+
+@app.get("/api/analytics/enrollment-forecasts/campus/{campus_id}")
+async def get_campus_enrollment_forecasts(campus_id: str, school_year: Optional[str] = None):
+    """Get all enrollment forecasts for a specific campus"""
+    forecasts = [f for f in enrollment_forecasts_db if f.campus_id == campus_id]
+    if school_year:
+        forecasts = [f for f in forecasts if f.school_year == school_year]
+    return forecasts
+
+@app.get("/api/analytics/dashboard")
+async def get_analytics_dashboard(campus_id: Optional[str] = None):
+    """Get comprehensive analytics dashboard data"""
+    at_risk = at_risk_assessments_db
+    if campus_id:
+        at_risk = [a for a in at_risk if a.campus_id == campus_id]
+    
+    critical_students = len([a for a in at_risk if a.overall_risk_level == RiskLevel.CRITICAL])
+    high_risk_students = len([a for a in at_risk if a.overall_risk_level == RiskLevel.HIGH])
+    medium_risk_students = len([a for a in at_risk if a.overall_risk_level == RiskLevel.MEDIUM])
+    low_risk_students = len([a for a in at_risk if a.overall_risk_level == RiskLevel.LOW])
+    
+    retention = retention_predictions_db
+    if campus_id:
+        retention = [r for r in retention if r.campus_id == campus_id]
+    
+    avg_retention_prob = sum([r.retention_probability for r in retention]) / len(retention) if retention else 0
+    
+    interventions = intervention_plans_db
+    if campus_id:
+        interventions = [i for i in interventions if i.campus_id == campus_id]
+    
+    active_interventions = len([i for i in interventions if i.status == InterventionStatus.ACTIVE])
+    
+    iep_plans = iep_504_plans_db
+    if campus_id:
+        iep_plans = [p for p in iep_plans if p.campus_id == campus_id]
+    
+    active_iep_plans = len([p for p in iep_plans if p.status == PlanStatus.ACTIVE])
+    
+    return {
+        'at_risk_summary': {
+            'critical': critical_students,
+            'high': high_risk_students,
+            'medium': medium_risk_students,
+            'low': low_risk_students,
+            'total': len(at_risk)
+        },
+        'retention_summary': {
+            'average_probability': round(avg_retention_prob, 2),
+            'total_predictions': len(retention)
+        },
+        'intervention_summary': {
+            'active': active_interventions,
+            'total': len(interventions)
+        },
+        'iep_504_summary': {
+            'active': active_iep_plans,
+            'total': len(iep_plans)
+        }
     }

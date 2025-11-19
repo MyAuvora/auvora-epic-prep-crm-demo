@@ -10,6 +10,9 @@ from .main import (
     Invoice, InvoiceLineItem, PaymentPlan, PaymentSchedule,
     Lead, CampusCapacity, MessageTemplate, BroadcastMessage, AutomatedAlert,
     AcademicStandard, StandardAssessment, ProgressReport,
+    IEP504Plan, Accommodation, IEPGoal,
+    InterventionPlan, InterventionProgress,
+    AtRiskAssessment, RetentionPrediction, EnrollmentForecast,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
@@ -19,7 +22,10 @@ from .main import (
     UserRole, AuditAction,
     InvoiceStatus, PaymentPlanStatus,
     LeadStage, LeadSource, CommunicationType, TriggerType, BroadcastStatus,
-    MasteryLevel
+    MasteryLevel,
+    PlanType, PlanStatus, AccommodationType, GoalStatus,
+    RTITier, InterventionStatus,
+    RiskCategory, RiskLevel
 )
 
 def generate_all_demo_data():
@@ -99,6 +105,14 @@ def generate_all_demo_data():
     billing_records_db = []
     conferences_db = []
     messages_db = []
+    iep_504_plans_db = []
+    accommodations_db = []
+    iep_goals_db = []
+    intervention_plans_db = []
+    intervention_progress_db = []
+    at_risk_assessments_db = []
+    retention_predictions_db = []
+    enrollment_forecasts_db = []
     
     first_names = ["Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "William",
                    "Mia", "James", "Charlotte", "Benjamin", "Amelia", "Lucas", "Harper", "Henry", "Evelyn", "Alexander",
@@ -1188,6 +1202,273 @@ def generate_all_demo_data():
             )
             progress_reports_db.append(report)
     
+    iep_504_students = random.sample([s for s in students_db if s.grade in ["K", "1", "2", "3", "4", "5"]], min(5, len(students_db)))
+    
+    for idx, student in enumerate(iep_504_students):
+        plan_type = random.choice([PlanType.IEP, PlanType.SECTION_504])
+        case_manager = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        
+        start_date = today - timedelta(days=random.randint(180, 730))
+        end_date = start_date + timedelta(days=365)
+        meeting_date = start_date - timedelta(days=random.randint(7, 30))
+        next_review_date = start_date + timedelta(days=180)
+        
+        plan = IEP504Plan(
+            plan_id=f"plan_{idx+1}",
+            student_id=student.student_id,
+            campus_id=student.campus_id,
+            plan_type=plan_type,
+            status=PlanStatus.ACTIVE,
+            start_date=start_date,
+            end_date=end_date,
+            case_manager=case_manager.staff_id,
+            disability_category=random.choice(["Specific Learning Disability", "Speech/Language Impairment", "ADHD", "Autism Spectrum", "Other Health Impairment"]) if plan_type == PlanType.IEP else None,
+            meeting_date=meeting_date,
+            next_review_date=next_review_date,
+            parent_consent_date=meeting_date + timedelta(days=random.randint(1, 5)),
+            notes=f"Student requires specialized support in academic and/or behavioral areas."
+        )
+        iep_504_plans_db.append(plan)
+        
+        accommodation_types = [
+            (AccommodationType.INSTRUCTIONAL, "Extended time on tests and assignments", "Daily", "All teachers"),
+            (AccommodationType.ENVIRONMENTAL, "Preferential seating near teacher", "Daily", case_manager.staff_id),
+            (AccommodationType.ASSESSMENT, "Tests read aloud", "During assessments", case_manager.staff_id),
+            (AccommodationType.BEHAVIORAL, "Frequent breaks as needed", "As needed", case_manager.staff_id),
+        ]
+        
+        num_accommodations = random.randint(2, 4)
+        for acc_idx, (acc_type, desc, freq, staff) in enumerate(random.sample(accommodation_types, num_accommodations)):
+            accommodation = Accommodation(
+                accommodation_id=f"acc_{idx+1}_{acc_idx+1}",
+                plan_id=plan.plan_id,
+                type=acc_type,
+                description=desc,
+                frequency=freq,
+                responsible_staff=staff,
+                implementation_notes="Implemented consistently across all settings."
+            )
+            accommodations_db.append(accommodation)
+        
+        if plan_type == PlanType.IEP:
+            goal_areas = [
+                ("Reading", "Improve reading fluency", "40 words per minute", "80 words per minute"),
+                ("Math", "Master multiplication facts", "50% accuracy", "90% accuracy"),
+                ("Behavior", "Reduce disruptive behaviors", "5 incidents per week", "1 incident per week"),
+                ("Social Skills", "Initiate peer interactions", "1 interaction per day", "5 interactions per day"),
+            ]
+            
+            num_goals = random.randint(2, 3)
+            for goal_idx, (area, desc, baseline, target) in enumerate(random.sample(goal_areas, num_goals)):
+                goal = IEPGoal(
+                    goal_id=f"goal_{idx+1}_{goal_idx+1}",
+                    plan_id=plan.plan_id,
+                    area=area,
+                    goal_description=desc,
+                    baseline=baseline,
+                    target=target,
+                    target_date=end_date - timedelta(days=30),
+                    status=random.choice([GoalStatus.IN_PROGRESS, GoalStatus.IN_PROGRESS, GoalStatus.ACHIEVED]),
+                    progress_percentage=random.randint(40, 95),
+                    last_updated=today - timedelta(days=random.randint(1, 30))
+                )
+                iep_goals_db.append(goal)
+    
+    intervention_students = random.sample([s for s in students_db if s not in iep_504_students], min(8, len(students_db) - len(iep_504_students)))
+    
+    for idx, student in enumerate(intervention_students):
+        tier = random.choice([RTITier.TIER_2, RTITier.TIER_2, RTITier.TIER_3])
+        area = random.choice(["Reading", "Math", "Behavior", "Attendance"])
+        
+        strategies = {
+            "Reading": ["Small group phonics instruction", "Guided reading sessions", "Reading fluency practice"],
+            "Math": ["Math fact fluency drills", "Concrete manipulatives", "One-on-one tutoring"],
+            "Behavior": ["Check-in/Check-out system", "Social skills group", "Behavior contract"],
+            "Attendance": ["Daily attendance monitoring", "Parent communication plan", "Incentive system"]
+        }
+        
+        start_date = today - timedelta(days=random.randint(30, 90))
+        staff_member = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        
+        intervention = InterventionPlan(
+            intervention_id=f"intervention_{idx+1}",
+            student_id=student.student_id,
+            campus_id=student.campus_id,
+            tier=tier,
+            area_of_concern=area,
+            intervention_strategy=random.choice(strategies[area]),
+            start_date=start_date,
+            end_date=None if random.random() > 0.3 else start_date + timedelta(days=random.randint(60, 120)),
+            frequency="Daily" if tier == RTITier.TIER_3 else random.choice(["Daily", "3x per week", "Weekly"]),
+            duration_minutes=30 if tier == RTITier.TIER_3 else 20,
+            staff_responsible=staff_member.staff_id,
+            status=InterventionStatus.ACTIVE if random.random() > 0.2 else InterventionStatus.COMPLETED,
+            baseline_data=f"Baseline: {random.randint(20, 50)}%",
+            target_goal=f"Target: {random.randint(70, 90)}%"
+        )
+        intervention_plans_db.append(intervention)
+        
+        num_progress_points = random.randint(3, 8)
+        for prog_idx in range(num_progress_points):
+            progress_date = start_date + timedelta(days=(prog_idx + 1) * 7)
+            if progress_date > today:
+                break
+            
+            progress = InterventionProgress(
+                progress_id=f"progress_{idx+1}_{prog_idx+1}",
+                intervention_id=intervention.intervention_id,
+                date=progress_date,
+                data_point=random.uniform(30.0, 85.0),
+                notes=random.choice(["Showing improvement", "Steady progress", "Needs more support", "Excellent growth", "Maintaining gains"]),
+                staff_id=staff_member.staff_id
+            )
+            intervention_progress_db.append(progress)
+    
+    at_risk_students = random.sample(students_db, min(12, len(students_db)))
+    
+    for idx, student in enumerate(at_risk_students):
+        attendance_rate = student.attendance_present_count / max(1, student.attendance_present_count + student.attendance_absent_count)
+        attendance_score = int(attendance_rate * 100)
+        
+        student_grades = [g for g in grade_records_db if g.student_id == student.student_id]
+        failing_count = len([g for g in student_grades if g.is_failing])
+        academic_score = max(0, 100 - (failing_count * 25))
+        
+        student_behaviors = [b for b in behavior_notes_db if b.student_id == student.student_id]
+        concern_count = len([b for b in student_behaviors if b.type == BehaviorType.CONCERN])
+        behavior_score = max(0, 100 - (concern_count * 15))
+        
+        engagement_score = random.randint(50, 95)
+        
+        overall_score = int((academic_score * 0.35 + attendance_score * 0.25 + behavior_score * 0.25 + engagement_score * 0.15))
+        
+        if overall_score >= 75:
+            risk_level = RiskLevel.LOW
+        elif overall_score >= 60:
+            risk_level = RiskLevel.MEDIUM
+        elif overall_score >= 40:
+            risk_level = RiskLevel.HIGH
+        else:
+            risk_level = RiskLevel.CRITICAL
+        
+        risk_factors = []
+        if attendance_score < 85:
+            risk_factors.append("Poor attendance")
+        if academic_score < 70:
+            risk_factors.append("Failing grades")
+        if behavior_score < 70:
+            risk_factors.append("Behavior concerns")
+        if engagement_score < 60:
+            risk_factors.append("Low engagement")
+        
+        recommended_interventions = []
+        if "Poor attendance" in risk_factors:
+            recommended_interventions.append("Attendance intervention plan")
+        if "Failing grades" in risk_factors:
+            recommended_interventions.append("Academic tutoring")
+        if "Behavior concerns" in risk_factors:
+            recommended_interventions.append("Behavior support plan")
+        if "Low engagement" in risk_factors:
+            recommended_interventions.append("Mentorship program")
+        
+        assessor = random.choice([s for s in staff_db if s.role in [StaffRole.TEACHER, StaffRole.ADMIN]])
+        
+        assessment = AtRiskAssessment(
+            assessment_id=f"risk_assessment_{idx+1}",
+            student_id=student.student_id,
+            campus_id=student.campus_id,
+            assessment_date=today - timedelta(days=random.randint(1, 30)),
+            overall_risk_score=overall_score,
+            overall_risk_level=risk_level,
+            academic_score=academic_score,
+            attendance_score=attendance_score,
+            behavior_score=behavior_score,
+            engagement_score=engagement_score,
+            risk_factors=risk_factors if risk_factors else ["None identified"],
+            recommended_interventions=recommended_interventions if recommended_interventions else ["Continue monitoring"],
+            assessed_by=assessor.staff_id
+        )
+        at_risk_assessments_db.append(assessment)
+    
+    retention_students = random.sample(students_db, min(10, len(students_db)))
+    
+    for idx, student in enumerate(retention_students):
+        student_assessment = next((a for a in at_risk_assessments_db if a.student_id == student.student_id), None)
+        
+        if student_assessment:
+            base_probability = student_assessment.overall_risk_score / 100.0
+        else:
+            base_probability = random.uniform(0.6, 0.95)
+        
+        retention_prob = min(1.0, max(0.0, base_probability + random.uniform(-0.1, 0.1)))
+        
+        if retention_prob >= 0.8:
+            risk_level = RiskLevel.LOW
+        elif retention_prob >= 0.65:
+            risk_level = RiskLevel.MEDIUM
+        elif retention_prob >= 0.5:
+            risk_level = RiskLevel.HIGH
+        else:
+            risk_level = RiskLevel.CRITICAL
+        
+        key_factors = []
+        if retention_prob < 0.7:
+            key_factors.extend(["Academic performance", "Attendance patterns", "Family engagement"])
+        else:
+            key_factors.extend(["Strong academic performance", "Good attendance", "Family support"])
+        
+        recommended_actions = []
+        if retention_prob < 0.7:
+            recommended_actions.extend(["Schedule parent conference", "Implement intervention plan", "Increase communication"])
+        else:
+            recommended_actions.extend(["Continue current support", "Monitor progress"])
+        
+        prediction = RetentionPrediction(
+            prediction_id=f"retention_{idx+1}",
+            student_id=student.student_id,
+            campus_id=student.campus_id,
+            school_year="2024-2025",
+            retention_probability=retention_prob,
+            risk_level=risk_level,
+            key_factors=key_factors,
+            recommended_actions=recommended_actions,
+            last_updated=today - timedelta(days=random.randint(1, 14))
+        )
+        retention_predictions_db.append(prediction)
+    
+    for campus in campuses_db:
+        grades = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+        
+        for grade in grades:
+            current_enrollment = len([s for s in students_db if s.campus_id == campus.campus_id and s.grade == grade])
+            
+            growth_factor = random.uniform(0.9, 1.15)
+            forecasted = int(current_enrollment * growth_factor)
+            
+            confidence_low = int(forecasted * 0.85)
+            confidence_high = int(forecasted * 1.15)
+            
+            factors = [
+                "Historical enrollment trends",
+                "Local demographic data",
+                "Marketing initiatives",
+                "Retention rates",
+                "Waitlist size"
+            ]
+            
+            forecast = EnrollmentForecast(
+                forecast_id=f"forecast_{campus.campus_id}_{grade}",
+                campus_id=campus.campus_id,
+                school_year="2025-2026",
+                grade_level=grade,
+                forecasted_enrollment=forecasted,
+                confidence_interval_low=confidence_low,
+                confidence_interval_high=confidence_high,
+                based_on_factors=random.sample(factors, 3),
+                generated_date=today
+            )
+            enrollment_forecasts_db.append(forecast)
+    
     return {
         "organizations": organizations_db,
         "campuses": campuses_db,
@@ -1224,5 +1505,13 @@ def generate_all_demo_data():
         "automated_alerts": automated_alerts_db,
         "academic_standards": academic_standards_db,
         "standard_assessments": standard_assessments_db,
-        "progress_reports": progress_reports_db
+        "progress_reports": progress_reports_db,
+        "iep_504_plans": iep_504_plans_db,
+        "accommodations": accommodations_db,
+        "iep_goals": iep_goals_db,
+        "intervention_plans": intervention_plans_db,
+        "intervention_progress": intervention_progress_db,
+        "at_risk_assessments": at_risk_assessments_db,
+        "retention_predictions": retention_predictions_db,
+        "enrollment_forecasts": enrollment_forecasts_db
     }
