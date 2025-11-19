@@ -11,6 +11,7 @@ import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
 import { AttendanceTakingModal } from './AttendanceTakingModal'
 import { TeacherGradebook } from './TeacherGradebook'
+import { AnnouncementManagement } from './AnnouncementManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -52,7 +53,7 @@ interface TeacherDashboardProps {
 }
 
 export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
-  const [view, setView] = useState<'rooms' | 'gradebook' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
@@ -126,6 +127,16 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               }`}
             >
               Gradebook
+            </button>
+            <button
+              onClick={() => setView('announcements')}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'announcements'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Announcements
             </button>
             <button
               onClick={() => setView('events')}
@@ -367,6 +378,14 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               Go to My Rooms
             </Button>
           </div>
+        )}
+
+        {view === 'announcements' && (
+          <AnnouncementManagement 
+            role="teacher" 
+            userId={staffId} 
+            campusId={campusId} 
+          />
         )}
 
         {view === 'events' && (
