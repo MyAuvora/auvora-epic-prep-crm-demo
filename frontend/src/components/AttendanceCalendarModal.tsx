@@ -39,11 +39,17 @@ export const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = (
   const fetchAttendance = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/attendance?student_id=${studentId}`);
+      const response = await fetch(`${API_URL}/api/attendance/${studentId}`);
+      if (!response.ok) {
+        console.error('Failed to fetch attendance:', response.status);
+        setAttendanceRecords([]);
+        return;
+      }
       const data = await response.json();
-      setAttendanceRecords(data);
+      setAttendanceRecords(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setAttendanceRecords([]);
     } finally {
       setLoading(false);
     }

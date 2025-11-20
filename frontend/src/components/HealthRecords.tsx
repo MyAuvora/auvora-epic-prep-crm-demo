@@ -63,11 +63,17 @@ export const HealthRecords: React.FC<HealthRecordsProps> = ({ role, studentId, u
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`${API_URL}/students`);
+      const response = await fetch(`${API_URL}/api/students`);
+      if (!response.ok) {
+        console.error('Failed to fetch students:', response.status);
+        setStudents([]);
+        return;
+      }
       const data = await response.json();
-      setStudents(data);
+      setStudents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching students:', error);
+      setStudents([]);
     }
   };
 
