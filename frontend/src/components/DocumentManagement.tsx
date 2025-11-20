@@ -190,6 +190,19 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
 
   return (
     <div className="space-y-6">
+      {(role === 'admin' || role === 'teacher') && (
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Document Management</h2>
+            <p className="text-gray-600 mt-1">Upload and manage forms for parents to sign</p>
+          </div>
+          <Button onClick={() => setShowUploadModal(true)} className="bg-amber-600 hover:bg-amber-700">
+            <FileText className="w-4 h-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
+      )}
+      
       <div>
         <h2 className="text-2xl font-bold mb-4">Pending Documents</h2>
         {pendingDocuments.length === 0 ? (

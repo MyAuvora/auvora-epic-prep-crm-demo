@@ -77,7 +77,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'staff'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -325,19 +325,6 @@ export function EnhancedAdminDashboard() {
               }`}
             >
               Operations
-            </button>
-            <button
-              onClick={() => {
-                setView('staff')
-                setSubView('main')
-              }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'staff'
-                  ? 'bg-amber-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Staff
             </button>
             <button
               onClick={() => {
@@ -876,10 +863,11 @@ export function EnhancedAdminDashboard() {
               <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="events">Events Calendar</TabsTrigger>
                 <TabsTrigger value="incidents">Incidents</TabsTrigger>
                 <TabsTrigger value="health">Health Records</TabsTrigger>
+                <TabsTrigger value="staff">Staff Management</TabsTrigger>
               </TabsList>
               <TabsContent value="events" className="mt-6">
                 <EventsCalendar role="admin" />
@@ -889,6 +877,9 @@ export function EnhancedAdminDashboard() {
               </TabsContent>
               <TabsContent value="health" className="mt-6">
                 <HealthRecords role="admin" />
+              </TabsContent>
+              <TabsContent value="staff" className="mt-6">
+                <StaffManagement campusId={selectedCampusId || undefined} />
               </TabsContent>
             </Tabs>
           </div>
@@ -919,10 +910,6 @@ export function EnhancedAdminDashboard() {
           <div className="space-y-6">
             <AdvancedAnalyticsDashboard />
           </div>
-        )}
-
-        {view === 'staff' && (
-          <StaffManagement campusId={selectedCampusId || undefined} />
         )}
       </div>
 
