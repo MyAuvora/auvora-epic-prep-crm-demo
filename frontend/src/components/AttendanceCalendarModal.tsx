@@ -94,7 +94,7 @@ export const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = (
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
-        <div key={`empty-${i}`} className="aspect-square p-2"></div>
+        <div key={`empty-${i}`} className="aspect-square p-1"></div>
       );
     }
 
@@ -110,7 +110,7 @@ export const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = (
       days.push(
         <div
           key={day}
-          className={`aspect-square p-2 border rounded-lg flex flex-col items-center justify-center text-sm font-medium transition-colors ${
+          className={`aspect-square p-1 border rounded-md flex flex-col items-center justify-center text-xs font-medium transition-colors ${
             isFutureDate
               ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
               : attendance
@@ -121,9 +121,9 @@ export const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = (
           } ${isToday ? 'ring-2 ring-amber-500' : ''}`}
           title={attendance ? `${attendance.status} - ${attendance.session}` : isFutureDate ? 'Future date' : 'No record'}
         >
-          <span className="text-xs">{day}</span>
+          <span className="text-[11px]">{day}</span>
           {attendance && (
-            <span className="text-[10px] mt-1">{attendance.status[0]}</span>
+            <span className="text-[9px] sm:text-[10px] mt-0.5">{attendance.status[0]}</span>
           )}
         </div>
       );
@@ -148,77 +148,77 @@ export const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = (
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5" />
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <CalendarIcon className="w-4 h-4" />
             Attendance Calendar - {studentName}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Color-coded attendance history for the selected month
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Month Navigation */}
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={previousMonth}>
+            <Button variant="outline" onClick={previousMonth} className="h-8 px-2 text-sm">
               ← Previous
             </Button>
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-base font-semibold">
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </h3>
-            <Button variant="outline" onClick={nextMonth}>
+            <Button variant="outline" onClick={nextMonth} className="h-8 px-2 text-sm">
               Next →
             </Button>
           </div>
 
           {/* Legend */}
-          <div className="flex gap-4 justify-center text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
+          <div className="flex flex-wrap gap-3 justify-center text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
               <span>Present</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
               <span>Tardy</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-red-500 rounded"></div>
               <span>Absent</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 border rounded"></div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-gray-100 border rounded"></div>
               <span>No Record</span>
             </div>
           </div>
 
           {/* Calendar Grid */}
           {loading ? (
-            <div className="text-center py-8">Loading attendance...</div>
+            <div className="text-center py-6 text-sm">Loading attendance...</div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {/* Day Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-2">
+              <div className="grid grid-cols-7 gap-1 mb-1">
                 {dayNames.map(day => (
-                  <div key={day} className="text-center text-sm font-semibold text-gray-600">
+                  <div key={day} className="text-center text-xs font-semibold text-gray-600">
                     {day}
                   </div>
                 ))}
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {renderCalendar()}
               </div>
             </div>
           )}
 
           {/* Summary */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">Summary for {monthNames[currentMonth.getMonth()]}</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h4 className="font-semibold mb-2 text-sm">Summary for {monthNames[currentMonth.getMonth()]}</h4>
+            <div className="grid grid-cols-3 gap-3 text-xs">
               <div>
                 <span className="text-green-600 font-semibold">
                   {attendanceRecords.filter(r => 
