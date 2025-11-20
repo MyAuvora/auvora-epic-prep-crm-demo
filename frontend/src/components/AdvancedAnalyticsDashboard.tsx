@@ -88,19 +88,21 @@ export function AdvancedAnalyticsDashboard() {
         fetch(`${API_URL}/api/analytics/dashboard`)
       ])
 
-      const [atRiskData, retentionData, enrollmentData, summaryData] = await Promise.all([
-        atRiskRes.json(),
-        retentionRes.json(),
-        enrollmentRes.json(),
-        summaryRes.json()
-      ])
+      const atRiskData = atRiskRes.ok ? await atRiskRes.json() : []
+      const retentionData = retentionRes.ok ? await retentionRes.json() : []
+      const enrollmentData = enrollmentRes.ok ? await enrollmentRes.json() : []
+      const summaryData = summaryRes.ok ? await summaryRes.json() : null
 
-      setAtRiskAssessments(atRiskData)
-      setRetentionPredictions(retentionData)
-      setEnrollmentForecasts(enrollmentData)
+      setAtRiskAssessments(Array.isArray(atRiskData) ? atRiskData : [])
+      setRetentionPredictions(Array.isArray(retentionData) ? retentionData : [])
+      setEnrollmentForecasts(Array.isArray(enrollmentData) ? enrollmentData : [])
       setSummary(summaryData)
     } catch (error) {
       console.error('Error fetching analytics data:', error)
+      setAtRiskAssessments([])
+      setRetentionPredictions([])
+      setEnrollmentForecasts([])
+      setSummary(null)
     } finally {
       setLoading(false)
     }
@@ -127,7 +129,7 @@ export function AdvancedAnalyticsDashboard() {
   }
 
   const prepareRetentionData = () => {
-    const grouped = retentionPredictions.reduce((acc, pred) => {
+    const grouped = (retentionPredictions ?? []).reduce((acc, pred) => {
       const range = Math.floor(pred.retention_probability / 10) * 10
       const key = `${range}-${range + 10}%`
       acc[key] = (acc[key] || 0) + 1
@@ -141,7 +143,7 @@ export function AdvancedAnalyticsDashboard() {
   }
 
   const prepareEnrollmentData = () => {
-    return enrollmentForecasts.map(forecast => ({
+    return (enrollmentForecasts ?? []).map(forecast => ({
       grade: forecast.grade_level,
       current: forecast.current_enrollment,
       projected: forecast.projected_enrollment
@@ -276,7 +278,7 @@ export function AdvancedAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {atRiskAssessments
+                {(atRiskAssessments ?? [])
                   .sort((a, b) => b.overall_risk_score - a.overall_risk_score)
                   .map(assessment => (
                     <div key={assessment.assessment_id} className="p-3 border rounded-lg">
@@ -297,11 +299,11 @@ export function AdvancedAnalyticsDashboard() {
                         <div>Behavior: {assessment.behavior_score}</div>
                         <div>Engagement: {assessment.engagement_score}</div>
                       </div>
-                      {assessment.risk_factors.length > 0 && (
+                      {(assessment.risk_factors?.length ?? 0) > 0 && (
                         <div className="text-xs text-gray-600">
                           <p className="font-medium">Risk Factors:</p>
                           <ul className="list-disc list-inside">
-                            {assessment.risk_factors.slice(0, 2).map((factor, idx) => (
+                            {(assessment.risk_factors ?? []).slice(0, 2).map((factor, idx) => (
                               <li key={idx}>{factor}</li>
                             ))}
                           </ul>
@@ -342,7 +344,7 @@ export function AdvancedAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {retentionPredictions
+                {(retentionPredictions ?? [])
                   .sort((a, b) => a.retention_probability - b.retention_probability)
                   .map(prediction => (
                     <div key={prediction.prediction_id} className="p-3 border rounded-lg">
@@ -357,17 +359,17 @@ export function AdvancedAnalyticsDashboard() {
                           {prediction.risk_level}
                         </span>
                       </div>
-                      {prediction.key_factors.length > 0 && (
+                      {(prediction.key_factors?.length ?? 0) > 0 && (
                         <div className="text-xs text-gray-600 mb-2">
                           <p className="font-medium">Key Factors:</p>
                           <ul className="list-disc list-inside">
-                            {prediction.key_factors.slice(0, 2).map((factor, idx) => (
+                            {(prediction.key_factors ?? []).slice(0, 2).map((factor, idx) => (
                               <li key={idx}>{factor}</li>
                             ))}
                           </ul>
                         </div>
                       )}
-                      {prediction.recommended_actions.length > 0 && (
+                      {(prediction.recommended_actions?.length ?? 0) > 0 && (
                         <div className="text-xs text-blue-600">
                           <p className="font-medium">Recommended:</p>
                           <p>{prediction.recommended_actions[0]}</p>
@@ -410,7 +412,8 @@ export function AdvancedAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {enrollmentForecasts.map(forecast => (
+                {(enrollmentForecasts ?? []).length > 0 ? (
+                  (enrollmentForecasts ?? []).map(forecast => (
                   <div key={forecast.forecast_id} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <div>
@@ -426,12 +429,15 @@ export function AdvancedAnalyticsDashboard() {
                     </div>
                     <div className="text-xs text-gray-600">
                       <p>Confidence: {forecast.confidence_interval_low} - {forecast.confidence_interval_high}</p>
-                      {forecast.factors.length > 0 && (
+                      {(forecast.factors?.length ?? 0) > 0 && (
                         <p className="mt-1">Factors: {forecast.factors.join(', ')}</p>
                       )}
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No enrollment forecasts available</p>
+                )}
               </div>
             </CardContent>
           </Card>

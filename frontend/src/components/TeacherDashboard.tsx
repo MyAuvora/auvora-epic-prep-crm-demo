@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Users, Calendar, BookOpen, ClipboardCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
 import { DocumentManagement } from './DocumentManagement'
@@ -10,6 +11,8 @@ import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
 import { AttendanceTakingModal } from './AttendanceTakingModal'
+import { AttendanceCalendarModal } from './AttendanceCalendarModal'
+import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { TeacherGradebook } from './TeacherGradebook'
 import { AnnouncementManagement } from './AnnouncementManagement'
 
@@ -58,6 +61,10 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
   const [campusId, setCampusId] = useState<string>('')
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
+  const [isAttendanceCalendarOpen, setIsAttendanceCalendarOpen] = useState(false)
+  const [isGradeBreakdownOpen, setIsGradeBreakdownOpen] = useState(false)
 
   useEffect(() => {
     fetchTeacherData()
@@ -97,6 +104,25 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
 
   const handleAttendanceSuccess = () => {
     fetchTeacherData()
+  }
+
+  const handleStudentClick = (student: Student) => {
+    setSelectedStudent(student)
+    setIsStudentModalOpen(true)
+  }
+
+  const handleViewAttendance = () => {
+    setIsStudentModalOpen(false)
+    setIsAttendanceCalendarOpen(true)
+  }
+
+  const handleViewGrades = () => {
+    setIsStudentModalOpen(false)
+    setIsGradeBreakdownOpen(true)
+  }
+
+  const getSubjectForGradeBreakdown = () => {
+    return 'Math'
   }
 
   if (!teacherData) {
@@ -318,9 +344,12 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
                     {selectedRoom.students.map((student) => (
                       <tr key={student.student_id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <button
+                            onClick={() => handleStudentClick(student)}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          >
                             {student.first_name} {student.last_name}
-                          </div>
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {student.grade}
@@ -425,6 +454,129 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
           roomName={selectedRoom.room}
           session={selectedRoom.session}
           onSuccess={handleAttendanceSuccess}
+        />
+      )}
+
+      {/* Student Quick View Modal */}
+      {selectedStudent && (
+        <Dialog open={isStudentModalOpen} onOpenChange={(open) => !open && setIsStudentModalOpen(false)}>
+          <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg">
+                {selectedStudent.first_name} {selectedStudent.last_name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-600 text-xs">Grade</p>
+                  <p className="font-medium">{selectedStudent.grade}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs">Room</p>
+                  <p className="font-medium">{selectedStudent.room} - {selectedStudent.session}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <p className="text-gray-600 text-xs mb-2">Attendance Summary</p>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="bg-green-50 p-2 rounded">
+                    <p className="text-xs text-gray-600">Present</p>
+                    <p className="font-bold text-green-700">{selectedStudent.attendance_present_count}</p>
+                  </div>
+                  <div className="bg-red-50 p-2 rounded">
+                    <p className="text-xs text-gray-600">Absent</p>
+                    <p className="font-bold text-red-700">{selectedStudent.attendance_absent_count}</p>
+                  </div>
+                  <div className="bg-yellow-50 p-2 rounded">
+                    <p className="text-xs text-gray-600">Tardy</p>
+                    <p className="font-bold text-yellow-700">{selectedStudent.attendance_tardy_count}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <p className="text-gray-600 text-xs mb-2">Academic Status</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-600">Grade Status</p>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      selectedStudent.overall_grade_flag === 'On track' ? 'bg-green-100 text-green-800' :
+                      selectedStudent.overall_grade_flag === 'Needs attention' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedStudent.overall_grade_flag}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">IXL Status</p>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      selectedStudent.ixl_status_flag === 'On track' ? 'bg-green-100 text-green-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedStudent.ixl_status_flag}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <p className="text-gray-600 text-xs mb-2">Risk Assessment</p>
+                <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getRiskFlagColor(selectedStudent.overall_risk_flag)}`}>
+                  {selectedStudent.overall_risk_flag}
+                </span>
+              </div>
+
+              <div className="border-t pt-3 flex gap-2">
+                <Button
+                  onClick={handleViewAttendance}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                >
+                  <Calendar className="mr-1 h-3 w-3" />
+                  View Attendance Calendar
+                </Button>
+                <Button
+                  onClick={handleViewGrades}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                >
+                  <BookOpen className="mr-1 h-3 w-3" />
+                  View Grade Breakdown
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Attendance Calendar Modal */}
+      {selectedStudent && (
+        <AttendanceCalendarModal
+          isOpen={isAttendanceCalendarOpen}
+          onClose={() => {
+            setIsAttendanceCalendarOpen(false)
+            setIsStudentModalOpen(true)
+          }}
+          studentId={selectedStudent.student_id}
+          studentName={`${selectedStudent.first_name} ${selectedStudent.last_name}`}
+        />
+      )}
+
+      {/* Grade Breakdown Modal */}
+      {selectedStudent && (
+        <GradeBreakdownModal
+          isOpen={isGradeBreakdownOpen}
+          onClose={() => {
+            setIsGradeBreakdownOpen(false)
+            setIsStudentModalOpen(true)
+          }}
+          studentId={selectedStudent.student_id}
+          subject={getSubjectForGradeBreakdown()}
+          overallGrade={selectedStudent.overall_grade_flag}
         />
       )}
     </div>

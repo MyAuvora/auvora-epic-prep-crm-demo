@@ -109,7 +109,7 @@ export const GradeBreakdownModal: React.FC<GradeBreakdownModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             <GraduationCap className="w-6 h-6" />

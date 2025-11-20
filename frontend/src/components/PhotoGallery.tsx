@@ -172,7 +172,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
       )}
 
       <Dialog open={!!selectedAlbum} onOpenChange={() => setSelectedAlbum(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
           {selectedAlbum && (
             <>
               <DialogHeader>
@@ -210,7 +210,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
       </Dialog>
 
       <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
           <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
             <ImageIcon className="w-24 h-24 text-gray-400" />
           </div>

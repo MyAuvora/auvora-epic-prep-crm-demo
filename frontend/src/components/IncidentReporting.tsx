@@ -246,7 +246,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       )}
 
       <Dialog open={!!selectedIncident} onOpenChange={() => setSelectedIncident(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
           {selectedIncident && (
             <>
               <DialogHeader>
@@ -317,7 +317,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
 
       {/* Add Incident Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>Report New Incident</DialogTitle>
             <DialogDescription>

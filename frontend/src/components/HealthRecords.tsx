@@ -226,7 +226,7 @@ export const HealthRecords: React.FC<HealthRecordsProps> = ({ role, studentId, u
       )}
 
       <Dialog open={!!selectedRecord} onOpenChange={() => setSelectedRecord(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
           {selectedRecord && (
             <>
               <DialogHeader>

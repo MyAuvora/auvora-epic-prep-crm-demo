@@ -248,7 +248,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
       )}
 
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
           {selectedEvent && (
             <>
               <DialogHeader>

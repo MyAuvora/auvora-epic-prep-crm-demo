@@ -268,7 +268,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
               Create Assignment
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>Create New Assignment</DialogTitle>
             </DialogHeader>
