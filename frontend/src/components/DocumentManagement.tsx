@@ -4,6 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -35,12 +39,19 @@ interface DocumentManagementProps {
   userId?: string;
 }
 
-export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, parentId, studentId, userId: _userId }) => {
+export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, parentId, studentId, userId }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [signatures, setSignatures] = useState<DocumentSignature[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newDocument, setNewDocument] = useState({
+    title: '',
+    document_type: 'Permission Slip',
+    description: '',
+    required_for: 'All Students'
+  });
 
   useEffect(() => {
     fetchDocuments();
@@ -71,6 +82,36 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
       setSignatures(data);
     } catch (error) {
       console.error('Error fetching signatures:', error);
+    }
+  };
+
+  const handleCreateDocument = async () => {
+    if (!userId) return;
+    
+    try {
+      await fetch(`${API_URL}/api/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          document_id: `doc_${Date.now()}`,
+          status: 'Active',
+          created_date: new Date().toISOString().split('T')[0],
+          expiration_date: null,
+          file_url: `document_${Date.now()}.pdf`,
+          ...newDocument
+        })
+      });
+      
+      setShowUploadModal(false);
+      setNewDocument({
+        title: '',
+        document_type: 'Permission Slip',
+        description: '',
+        required_for: 'All Students'
+      });
+      fetchDocuments();
+    } catch (error) {
+      console.error('Error creating document:', error);
     }
   };
 
@@ -304,6 +345,82 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
             <Button variant="outline" onClick={() => setShowSignatureDialog(false)}>Cancel</Button>
             <Button onClick={() => selectedDocument && handleSign(selectedDocument.document_id)}>
               Sign Document
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Document Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload New Document</DialogTitle>
+            <DialogDescription>
+              Add a new document or form for parents to sign
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Document Title</Label>
+              <Input
+                id="title"
+                value={newDocument.title}
+                onChange={(e) => setNewDocument({ ...newDocument, title: e.target.value })}
+                placeholder="Field Trip Permission Slip"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="document_type">Document Type</Label>
+              <Select value={newDocument.document_type} onValueChange={(value) => setNewDocument({ ...newDocument, document_type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Permission Slip">Permission Slip</SelectItem>
+                  <SelectItem value="Enrollment Contract">Enrollment Contract</SelectItem>
+                  <SelectItem value="Emergency Contact">Emergency Contact</SelectItem>
+                  <SelectItem value="Medical Form">Medical Form</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newDocument.description}
+                onChange={(e) => setNewDocument({ ...newDocument, description: e.target.value })}
+                placeholder="Describe the document..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="required_for">Required For</Label>
+              <Select value={newDocument.required_for} onValueChange={(value) => setNewDocument({ ...newDocument, required_for: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Students">All Students</SelectItem>
+                  <SelectItem value="Specific Event">Specific Event</SelectItem>
+                  <SelectItem value="New Enrollments">New Enrollments</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateDocument}
+              className="bg-amber-600 hover:bg-amber-700"
+              disabled={!newDocument.title || !newDocument.description}
+            >
+              Upload Document
             </Button>
           </DialogFooter>
         </DialogContent>

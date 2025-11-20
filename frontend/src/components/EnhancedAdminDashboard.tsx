@@ -23,6 +23,7 @@ import { IEP504Management } from './IEP504Management'
 import { InterventionManagement } from './InterventionManagement'
 import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 import { AnnouncementManagement } from './AnnouncementManagement'
+import { StaffManagement } from './StaffManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -76,7 +77,7 @@ interface Family {
 }
 
 export function EnhancedAdminDashboard() {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'staff'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -324,6 +325,19 @@ export function EnhancedAdminDashboard() {
               }`}
             >
               Operations
+            </button>
+            <button
+              onClick={() => {
+                setView('staff')
+                setSubView('main')
+              }}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                view === 'staff'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Staff
             </button>
             <button
               onClick={() => {
@@ -905,6 +919,10 @@ export function EnhancedAdminDashboard() {
           <div className="space-y-6">
             <AdvancedAnalyticsDashboard />
           </div>
+        )}
+
+        {view === 'staff' && (
+          <StaffManagement campusId={selectedCampusId || undefined} />
         )}
       </div>
 

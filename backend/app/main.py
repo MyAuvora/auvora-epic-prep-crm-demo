@@ -2856,3 +2856,101 @@ async def complete_payment(workflow_id: str, order_id: str):
             event_workflows_db[i].completed_date = date.today()
             return event_workflows_db[i]
     raise HTTPException(status_code=404, detail="Workflow not found")
+
+# Staff Management endpoints
+@app.get("/api/staff")
+async def get_staff(campus_id: str = None):
+    """Get all staff members, optionally filtered by campus"""
+    staff_list = []
+    for s in staff_db:
+        staff_dict = {
+            'staff_id': s.staff_id,
+            'first_name': s.first_name,
+            'last_name': s.last_name,
+            'role': s.role,
+            'email': s.email,
+            'assigned_rooms': s.assigned_rooms if hasattr(s, 'assigned_rooms') else [],
+            'campus_id': s.campus_id if hasattr(s, 'campus_id') else None
+        }
+        if campus_id and staff_dict.get('campus_id') == campus_id:
+            staff_list.append(staff_dict)
+        elif not campus_id:
+            staff_list.append(staff_dict)
+    return staff_list
+
+@app.post("/api/staff")
+async def create_staff(staff_data: dict):
+    """Create a new staff member"""
+    new_staff = Staff(
+        staff_id=staff_data['staff_id'],
+        first_name=staff_data['first_name'],
+        last_name=staff_data['last_name'],
+        role=staff_data['role'],
+        email=staff_data['email'],
+        assigned_rooms=staff_data.get('assigned_rooms', [])
+    )
+    staff_db.append(new_staff)
+    return {"status": "success", "staff_id": staff_data['staff_id']}
+
+# Grade Assignment endpoints
+@app.get("/api/grade-assignments")
+async def get_grade_assignments(student_id: str, subject: str):
+    """Get grade assignments for a student in a specific subject"""
+    from datetime import datetime, timedelta
+    
+    # Generate demo assignments
+    assignments = []
+    assignment_types = ['Test', 'Project', 'Homework', 'Quiz', 'Classwork']
+    grades = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F']
+    
+    for i in range(15):
+        assignment_type = assignment_types[i % len(assignment_types)]
+        grade = grades[min(i % len(grades), len(grades)-1)]
+        points_possible = 100 if assignment_type in ['Test', 'Project'] else 50 if assignment_type == 'Quiz' else 20
+        points_earned = int(points_possible * (0.95 - (i * 0.03)))
+        
+        assignments.append({
+            'assignment_id': f'assign_{student_id}_{subject}_{i}',
+            'student_id': student_id,
+            'subject': subject,
+            'assignment_type': assignment_type,
+            'title': f'{subject} {assignment_type} #{i+1}',
+            'grade': grade,
+            'points_earned': points_earned,
+            'points_possible': points_possible,
+            'date_assigned': (datetime.now() - timedelta(days=60-i*4)).isoformat(),
+            'date_submitted': (datetime.now() - timedelta(days=58-i*4)).isoformat()
+        })
+    
+    return assignments
+
+# Payment Method endpoints
+payment_methods_db = []
+
+@app.get("/api/payment-methods")
+async def get_payment_methods(family_id: str):
+    """Get payment methods for a family"""
+    return [pm for pm in payment_methods_db if pm.get('family_id') == family_id]
+
+@app.post("/api/payment-methods")
+async def create_payment_method(payment_data: dict):
+    """Create a new payment method"""
+    payment_methods_db.append(payment_data)
+    return {"status": "success", "payment_method_id": payment_data['payment_method_id']}
+
+@app.put("/api/payment-methods/{payment_method_id}/set-default")
+async def set_default_payment_method(payment_method_id: str):
+    """Set a payment method as default"""
+    for pm in payment_methods_db:
+        if pm['payment_method_id'] == payment_method_id:
+            pm['is_default'] = True
+        else:
+            pm['is_default'] = False
+    return {"status": "success"}
+
+@app.delete("/api/payment-methods/{payment_method_id}")
+async def delete_payment_method(payment_method_id: str):
+    """Delete a payment method"""
+    global payment_methods_db
+    payment_methods_db = [pm for pm in payment_methods_db if pm['payment_method_id'] != payment_method_id]
+    return {"status": "success"}

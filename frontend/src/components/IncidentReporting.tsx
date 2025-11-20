@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Clock, User, FileText } from 'lucide-react';
+import { AlertTriangle, Clock, User, FileText, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -26,10 +32,20 @@ interface IncidentReportingProps {
   userId?: string;
 }
 
-export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, studentId, userId: _userId }) => {
+export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, studentId, userId }) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newIncident, setNewIncident] = useState({
+    student_id: studentId || '',
+    incident_type: 'Behavioral',
+    severity: 'Low',
+    description: '',
+    action_taken: '',
+    parent_notified: false,
+    followup_required: false
+  });
 
   useEffect(() => {
     fetchIncidents();
@@ -49,6 +65,39 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       console.error('Error fetching incidents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddIncident = async () => {
+    if (!userId) return;
+    
+    try {
+      const now = new Date();
+      await fetch(`${API_URL}/api/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incident_id: `inc_${Date.now()}`,
+          reported_by_staff_id: userId,
+          date: now.toISOString().split('T')[0],
+          time: now.toTimeString().split(' ')[0].substring(0, 5),
+          ...newIncident
+        })
+      });
+      
+      setShowAddModal(false);
+      setNewIncident({
+        student_id: studentId || '',
+        incident_type: 'Behavioral',
+        severity: 'Low',
+        description: '',
+        action_taken: '',
+        parent_notified: false,
+        followup_required: false
+      });
+      fetchIncidents();
+    } catch (error) {
+      console.error('Error adding incident:', error);
     }
   };
 
@@ -87,16 +136,24 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Incident Reports</h2>
-        {role === 'admin' && (
-          <div className="flex gap-2">
-            <Badge variant="outline" className="bg-red-50 text-red-800">
-              {highSeverityIncidents.length} High Priority
-            </Badge>
-            <Badge variant="outline">
-              {incidents.length} Total
-            </Badge>
-          </div>
-        )}
+        <div className="flex gap-2">
+          {(role === 'admin' || role === 'teacher') && (
+            <Button onClick={() => setShowAddModal(true)} className="bg-amber-600 hover:bg-amber-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Incident
+            </Button>
+          )}
+          {role === 'admin' && (
+            <>
+              <Badge variant="outline" className="bg-red-50 text-red-800">
+                {highSeverityIncidents.length} High Priority
+              </Badge>
+              <Badge variant="outline">
+                {incidents.length} Total
+              </Badge>
+            </>
+          )}
+        </div>
       </div>
 
       {highSeverityIncidents.length > 0 && (
@@ -255,6 +312,121 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Incident Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Report New Incident</DialogTitle>
+            <DialogDescription>
+              Document an incident that occurred with a student
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="incident_type">Incident Type</Label>
+                <Select value={newIncident.incident_type} onValueChange={(value) => setNewIncident({ ...newIncident, incident_type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Behavioral">Behavioral</SelectItem>
+                    <SelectItem value="Medical">Medical</SelectItem>
+                    <SelectItem value="Safety">Safety</SelectItem>
+                    <SelectItem value="Academic">Academic</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="severity">Severity</Label>
+                <Select value={newIncident.severity} onValueChange={(value) => setNewIncident({ ...newIncident, severity: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {!studentId && (
+              <div>
+                <Label htmlFor="student_id">Student ID</Label>
+                <Input
+                  id="student_id"
+                  value={newIncident.student_id}
+                  onChange={(e) => setNewIncident({ ...newIncident, student_id: e.target.value })}
+                  placeholder="Enter student ID"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newIncident.description}
+                onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
+                placeholder="Describe what happened..."
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="action_taken">Action Taken</Label>
+              <Textarea
+                id="action_taken"
+                value={newIncident.action_taken}
+                onChange={(e) => setNewIncident({ ...newIncident, action_taken: e.target.value })}
+                placeholder="Describe the action taken..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="parent_notified"
+                  checked={newIncident.parent_notified}
+                  onCheckedChange={(checked) => setNewIncident({ ...newIncident, parent_notified: checked as boolean })}
+                />
+                <Label htmlFor="parent_notified" className="text-sm font-normal cursor-pointer">
+                  Parent has been notified
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="followup_required"
+                  checked={newIncident.followup_required}
+                  onCheckedChange={(checked) => setNewIncident({ ...newIncident, followup_required: checked as boolean })}
+                />
+                <Label htmlFor="followup_required" className="text-sm font-normal cursor-pointer">
+                  Followup required
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddIncident}
+              className="bg-amber-600 hover:bg-amber-700"
+              disabled={!newIncident.student_id || !newIncident.description || !newIncident.action_taken}
+            >
+              Report Incident
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

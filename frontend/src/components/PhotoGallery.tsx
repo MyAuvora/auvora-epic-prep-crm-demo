@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Image as ImageIcon, Calendar } from 'lucide-react';
+import { Camera, Image as ImageIcon, Calendar, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -23,11 +27,18 @@ interface PhotoGalleryProps {
   userId?: string;
 }
 
-export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, userId: _userId }) => {
+export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, userId }) => {
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<PhotoAlbum | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newAlbum, setNewAlbum] = useState({
+    title: '',
+    description: '',
+    visible_to_grades: ['All'],
+    photo_count: 5
+  });
 
   useEffect(() => {
     fetchAlbums();
@@ -50,6 +61,38 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
     }
   };
 
+  const handleCreateAlbum = async () => {
+    if (!userId) return;
+    
+    try {
+      const photoUrls = Array.from({ length: newAlbum.photo_count }, (_, i) => `photo_${Date.now()}_${i}.jpg`);
+      
+      await fetch(`${API_URL}/api/photo-albums`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          album_id: `album_${Date.now()}`,
+          created_by_staff_id: userId,
+          created_date: new Date().toISOString().split('T')[0],
+          status: 'Published',
+          photo_urls: photoUrls,
+          ...newAlbum
+        })
+      });
+      
+      setShowUploadModal(false);
+      setNewAlbum({
+        title: '',
+        description: '',
+        visible_to_grades: ['All'],
+        photo_count: 5
+      });
+      fetchAlbums();
+    } catch (error) {
+      console.error('Error creating album:', error);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
@@ -69,11 +112,11 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Photo Gallery</h2>
-        {role === 'teacher' && (
-          <Badge className="bg-green-100 text-green-800">
-            <Camera className="w-4 h-4 mr-1" />
-            Upload photos in admin panel
-          </Badge>
+        {(role === 'admin' || role === 'teacher') && (
+          <Button onClick={() => setShowUploadModal(true)} className="bg-amber-600 hover:bg-amber-700">
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Photos
+          </Button>
         )}
       </div>
 
@@ -171,6 +214,87 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
           <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
             <ImageIcon className="w-24 h-24 text-gray-400" />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Photos Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Photo Album</DialogTitle>
+            <DialogDescription>
+              Upload photos to share with parents
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Album Title</Label>
+              <Input
+                id="title"
+                value={newAlbum.title}
+                onChange={(e) => setNewAlbum({ ...newAlbum, title: e.target.value })}
+                placeholder="Field Trip to Science Museum"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newAlbum.description}
+                onChange={(e) => setNewAlbum({ ...newAlbum, description: e.target.value })}
+                placeholder="Photos from our field trip..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="photo_count">Number of Photos</Label>
+              <Input
+                id="photo_count"
+                type="number"
+                min="1"
+                max="50"
+                value={newAlbum.photo_count}
+                onChange={(e) => setNewAlbum({ ...newAlbum, photo_count: parseInt(e.target.value) || 5 })}
+              />
+              <p className="text-xs text-gray-500 mt-1">Demo: Simulates uploading this many photos</p>
+            </div>
+
+            <div>
+              <Label>Visible to Grades</Label>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant={newAlbum.visible_to_grades.includes('All') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewAlbum({ ...newAlbum, visible_to_grades: ['All'] })}
+                >
+                  All Grades
+                </Button>
+                <Button
+                  type="button"
+                  variant={!newAlbum.visible_to_grades.includes('All') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewAlbum({ ...newAlbum, visible_to_grades: ['K', '1', '2'] })}
+                >
+                  Specific Grades
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateAlbum}
+              className="bg-amber-600 hover:bg-amber-700"
+              disabled={!newAlbum.title || !newAlbum.description}
+            >
+              Create Album
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { User, DollarSign, Calendar, BookOpen, GraduationCap } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConferenceScheduling } from './ConferenceScheduling'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
@@ -11,6 +11,8 @@ import { MessagingPlatform } from './MessagingPlatform'
 import { HealthRecords } from './HealthRecords'
 import { ParentTuitionHistory } from './ParentTuitionHistory'
 import { ParentAnnouncementFeed } from './ParentAnnouncementFeed'
+import { GradeBreakdownModal } from './GradeBreakdownModal'
+import { PaymentMethodStorage } from './PaymentMethodStorage'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -61,6 +63,17 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
   const [childGrades, setChildGrades] = useState<any[]>([])
   const [childIXL, setChildIXL] = useState<any>(null)
+  const [gradeBreakdownModal, setGradeBreakdownModal] = useState<{
+    isOpen: boolean;
+    studentId: string;
+    subject: string;
+    overallGrade: string;
+  }>({
+    isOpen: false,
+    studentId: '',
+    subject: '',
+    overallGrade: ''
+  })
 
   useEffect(() => {
     fetchParentData()
@@ -409,11 +422,21 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                   <Card>
                     <CardHeader>
                       <CardTitle>Current Grades</CardTitle>
+                      <CardDescription>Click on any grade to see detailed breakdown</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {childGrades.map((grade) => (
-                          <div key={grade.grade_record_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div 
+                            key={grade.grade_record_id} 
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => setGradeBreakdownModal({
+                              isOpen: true,
+                              studentId: selectedChild.student_id,
+                              subject: grade.subject,
+                              overallGrade: grade.grade_value
+                            })}
+                          >
                             <div>
                               <p className="font-medium">{grade.subject}</p>
                               <p className="text-xs text-gray-500">{grade.term}</p>
@@ -506,7 +529,10 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
         )}
 
         {view === 'billing' && (
-          <ParentTuitionHistory familyId={parentData.family.family_id} />
+          <div className="space-y-6">
+            <PaymentMethodStorage familyId={parentData.family.family_id} />
+            <ParentTuitionHistory familyId={parentData.family.family_id} />
+          </div>
         )}
 
         {view === 'conferences' && (
@@ -543,6 +569,15 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget onSearch={handleAskAuvora} />
+
+      {/* Grade Breakdown Modal */}
+      <GradeBreakdownModal
+        isOpen={gradeBreakdownModal.isOpen}
+        onClose={() => setGradeBreakdownModal({ ...gradeBreakdownModal, isOpen: false })}
+        studentId={gradeBreakdownModal.studentId}
+        subject={gradeBreakdownModal.subject}
+        overallGrade={gradeBreakdownModal.overallGrade}
+      />
     </div>
   )
 }
