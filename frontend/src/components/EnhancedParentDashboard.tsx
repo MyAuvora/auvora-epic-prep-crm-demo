@@ -13,6 +13,7 @@ import { ParentTuitionHistory } from './ParentTuitionHistory'
 import { ParentAnnouncementFeed } from './ParentAnnouncementFeed'
 import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { PaymentMethodStorage } from './PaymentMethodStorage'
+import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -73,6 +74,16 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     studentId: '',
     subject: '',
     overallGrade: ''
+  })
+
+  const [attendanceCalendarModal, setAttendanceCalendarModal] = useState<{
+    isOpen: boolean;
+    studentId: string;
+    studentName: string;
+  }>({
+    isOpen: false,
+    studentId: '',
+    studentName: ''
   })
 
   useEffect(() => {
@@ -359,7 +370,17 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-                      <Calendar className="h-4 w-4 text-amber-600" />
+                      <button
+                        onClick={() => setAttendanceCalendarModal({
+                          isOpen: true,
+                          studentId: selectedChild.student_id,
+                          studentName: `${selectedChild.first_name} ${selectedChild.last_name}`
+                        })}
+                        className="text-amber-600 hover:text-amber-700 transition-colors"
+                        title="View attendance calendar"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </button>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
@@ -577,6 +598,14 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
         studentId={gradeBreakdownModal.studentId}
         subject={gradeBreakdownModal.subject}
         overallGrade={gradeBreakdownModal.overallGrade}
+      />
+
+      {/* Attendance Calendar Modal */}
+      <AttendanceCalendarModal
+        isOpen={attendanceCalendarModal.isOpen}
+        onClose={() => setAttendanceCalendarModal({ ...attendanceCalendarModal, isOpen: false })}
+        studentId={attendanceCalendarModal.studentId}
+        studentName={attendanceCalendarModal.studentName}
       />
     </div>
   )
