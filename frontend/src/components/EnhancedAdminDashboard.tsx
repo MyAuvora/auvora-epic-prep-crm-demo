@@ -25,6 +25,7 @@ import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { StaffManagement } from './StaffManagement'
 import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
+import { FullAccountView } from './FullAccountView'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -83,8 +84,9 @@ export function EnhancedAdminDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
-  const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+    const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
+    const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
@@ -210,9 +212,22 @@ export function EnhancedAdminDashboard() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    // If viewing a full account, show the FullAccountView instead
+    if (accountView) {
+      return (
+        <FullAccountView
+          type={accountView.type}
+          id={accountView.id}
+          onBack={() => setAccountView(null)}
+          onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
+          onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
+        />
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 py-4">
             <button
@@ -569,11 +584,11 @@ export function EnhancedAdminDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map((student) => (
-                        <tr 
-                          key={student.student_id} 
-                          className="hover:bg-amber-50 cursor-pointer transition-colors"
-                          onClick={() => setSelectedStudentId(student.student_id)}
-                        >
+                                                <tr 
+                                                  key={student.student_id} 
+                                                  className="hover:bg-amber-50 cursor-pointer transition-colors"
+                                                  onClick={() => setAccountView({ type: 'student', id: student.student_id })}
+                                                >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
                               {student.first_name} {student.last_name}
@@ -658,10 +673,10 @@ export function EnhancedAdminDashboard() {
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {families.map((family) => (
-                              <tr key={family.family_id} className="hover:bg-amber-50 cursor-pointer transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">{family.family_name}</div>
-                                </td>
+                                                            <tr key={family.family_id} className="hover:bg-amber-50 cursor-pointer transition-colors" onClick={() => setAccountView({ type: 'family', id: family.family_id })}>
+                                                              <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-sm font-medium text-gray-900">{family.family_name}</div>
+                                                              </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {family.student_ids.length} student{family.student_ids.length !== 1 ? 's' : ''}
                                 </td>
