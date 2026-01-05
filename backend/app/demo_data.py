@@ -393,7 +393,9 @@ def generate_all_demo_data():
             )
             ixl_summaries_db.append(ixl_summary)
             
-            if grade_level >= 9:
+            # Convert grade to integer for comparison (K=0, 1-12 as integers)
+            grade_num = 0 if grade == "K" else int(grade)
+            if grade_num >= 9:
                 acellus_courses_list = [
                     {"name": "Algebra I", "subject": "Math"},
                     {"name": "Algebra II", "subject": "Math"},
