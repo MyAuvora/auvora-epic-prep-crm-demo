@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DollarSign, Users, FileText, CheckCircle, Clock, AlertTriangle, TrendingUp, Download } from 'lucide-react'
+import { DollarSign, Users, FileText, CheckCircle, Clock, AlertTriangle, TrendingUp, Download, Edit2, Save, X, Plus } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -87,6 +87,8 @@ interface Student {
   grade: string
 }
 
+const ANNUAL_TUITION = 10000 // $10,000/year per student - can be made editable per family
+
 export function SUFSScholarshipManagement({ campusId }: { campusId?: string | null }) {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [dashboard, setDashboard] = useState<SUFSDashboard | null>(null)
@@ -95,6 +97,18 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
   const [payments, setPayments] = useState<SUFSPayment[]>([])
   const [students, setStudents] = useState<Record<string, Student>>({})
   const [loading, setLoading] = useState(true)
+  
+  // Editing state
+  const [editingScholarshipId, setEditingScholarshipId] = useState<string | null>(null)
+  const [editAwardAmount, setEditAwardAmount] = useState<string>('')
+  const [editTuitionAmount, setEditTuitionAmount] = useState<string>('')
+  const [showNewScholarshipModal, setShowNewScholarshipModal] = useState(false)
+  const [newScholarship, setNewScholarship] = useState({
+    student_id: '',
+    scholarship_type: 'FTC',
+    annual_award_amount: '',
+    tuition_amount: ANNUAL_TUITION.toString()
+  })
 
   useEffect(() => {
     fetchDashboard()
@@ -209,6 +223,128 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
     }
     return labels[type] || type
   }
+
+  // Edit handlers
+  const handleEditScholarship = (scholarship: SUFSScholarship) => {
+    setEditingScholarshipId(scholarship.scholarship_id)
+    setEditAwardAmount(scholarship.annual_award_amount.toString())
+    setEditTuitionAmount(ANNUAL_TUITION.toString())
+  }
+
+  const handleCancelEdit = () => {
+    setEditingScholarshipId(null)
+    setEditAwardAmount('')
+    setEditTuitionAmount('')
+  }
+
+  const handleSaveScholarship = async (scholarship: SUFSScholarship) => {
+    const newAwardAmount = parseFloat(editAwardAmount)
+    const newTuitionAmount = parseFloat(editTuitionAmount) || ANNUAL_TUITION
+    
+    if (isNaN(newAwardAmount) || newAwardAmount < 0) {
+      alert('Please enter a valid award amount')
+      return
+    }
+    
+    if (newAwardAmount > newTuitionAmount) {
+      alert(`Award amount cannot exceed tuition ($${newTuitionAmount.toLocaleString()})`)
+      return
+    }
+
+    try {
+      // Calculate new remaining balance based on what's been paid
+      const paidSoFar = scholarship.annual_award_amount - scholarship.remaining_balance
+      const newRemainingBalance = Math.max(0, newAwardAmount - paidSoFar)
+
+      const response = await fetch(`${API_URL}/api/sufs/scholarships/${scholarship.scholarship_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          annual_award_amount: newAwardAmount,
+          quarterly_amount: newAwardAmount / 6, // bi-monthly payments
+          remaining_balance: newRemainingBalance
+        })
+      })
+
+      if (response.ok) {
+        // Update local state
+        setScholarships(prev => prev.map(s => 
+          s.scholarship_id === scholarship.scholarship_id 
+            ? { ...s, annual_award_amount: newAwardAmount, remaining_balance: newRemainingBalance }
+            : s
+        ))
+        setEditingScholarshipId(null)
+        setEditAwardAmount('')
+        setEditTuitionAmount('')
+        // Refresh dashboard to update totals
+        fetchDashboard()
+      } else {
+        alert('Failed to update scholarship')
+      }
+    } catch (error) {
+      console.error('Error updating scholarship:', error)
+      alert('Error updating scholarship')
+    }
+  }
+
+  const handleCreateScholarship = async () => {
+    if (!newScholarship.student_id || !newScholarship.annual_award_amount) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    const awardAmount = parseFloat(newScholarship.annual_award_amount)
+    const tuitionAmount = parseFloat(newScholarship.tuition_amount) || ANNUAL_TUITION
+
+    if (isNaN(awardAmount) || awardAmount < 0) {
+      alert('Please enter a valid award amount')
+      return
+    }
+
+    if (awardAmount > tuitionAmount) {
+      alert(`Award amount cannot exceed tuition ($${tuitionAmount.toLocaleString()})`)
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/sufs/scholarships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: newScholarship.student_id,
+          scholarship_type: newScholarship.scholarship_type,
+          annual_award_amount: awardAmount,
+          quarterly_amount: awardAmount / 6,
+          remaining_balance: awardAmount,
+          status: 'Active',
+          eligibility_verified: false
+        })
+      })
+
+      if (response.ok) {
+        setShowNewScholarshipModal(false)
+        setNewScholarship({
+          student_id: '',
+          scholarship_type: 'FTC',
+          annual_award_amount: '',
+          tuition_amount: ANNUAL_TUITION.toString()
+        })
+        // Refresh data
+        fetchScholarships()
+        fetchDashboard()
+      } else {
+        alert('Failed to create scholarship')
+      }
+    } catch (error) {
+      console.error('Error creating scholarship:', error)
+      alert('Error creating scholarship')
+    }
+  }
+
+  // Get students without scholarships for new scholarship dropdown
+  const studentsWithoutScholarships = Object.values(students).filter(
+    student => !scholarships.some(s => s.student_id === student.student_id)
+  )
 
   if (loading) {
     return (
@@ -395,65 +531,231 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
         </TabsContent>
 
         <TabsContent value="scholarships" className="mt-6">
+          {/* New Scholarship Modal */}
+          {showNewScholarshipModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Add New Scholarship</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowNewScholarshipModal(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Student *</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      value={newScholarship.student_id}
+                      onChange={(e) => setNewScholarship({...newScholarship, student_id: e.target.value})}
+                    >
+                      <option value="">Select a student...</option>
+                      {studentsWithoutScholarships.map(student => (
+                        <option key={student.student_id} value={student.student_id}>
+                          {student.first_name} {student.last_name} - Grade {student.grade}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Type *</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      value={newScholarship.scholarship_type}
+                      onChange={(e) => setNewScholarship({...newScholarship, scholarship_type: e.target.value})}
+                    >
+                      <option value="FTC">FTC - Florida Tax Credit</option>
+                      <option value="FES-UA">FES-UA - Family Empowerment (Unique Abilities)</option>
+                      <option value="FES-EO">FES-EO - Family Empowerment (Educational Options)</option>
+                      <option value="Hope">Hope Scholarship</option>
+                      <option value="New Worlds">New Worlds Scholarship</option>
+                      <option value="AAA">AAA - Reading Scholarship</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Annual Tuition</label>
+                    <div className="flex items-center">
+                      <span className="text-gray-500 mr-2">$</span>
+                      <input
+                        type="number"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        value={newScholarship.tuition_amount}
+                        onChange={(e) => setNewScholarship({...newScholarship, tuition_amount: e.target.value})}
+                        placeholder="10000"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Default: $10,000/year</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Award Amount *</label>
+                    <div className="flex items-center">
+                      <span className="text-gray-500 mr-2">$</span>
+                      <input
+                        type="number"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        value={newScholarship.annual_award_amount}
+                        onChange={(e) => setNewScholarship({...newScholarship, annual_award_amount: e.target.value})}
+                        placeholder="Enter award amount"
+                      />
+                    </div>
+                    {newScholarship.annual_award_amount && newScholarship.tuition_amount && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Parent Responsibility: ${(parseFloat(newScholarship.tuition_amount) - parseFloat(newScholarship.annual_award_amount)).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button variant="outline" onClick={() => setShowNewScholarshipModal(false)}>Cancel</Button>
+                  <Button onClick={handleCreateScholarship} className="bg-amber-600 hover:bg-amber-700 text-white">
+                    Create Scholarship
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Active Scholarships</CardTitle>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowNewScholarshipModal(true)} className="bg-amber-600 hover:bg-amber-700 text-white" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Scholarship
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scholarship Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Award ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remaining</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verified</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Award ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Tuition</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scholarship Award</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent Pays</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remaining</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verified</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {scholarships.map((scholarship) => (
-                      <tr key={scholarship.scholarship_id} className="hover:bg-amber-50 cursor-pointer">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {getStudentName(scholarship.student_id)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{scholarship.scholarship_type}</div>
-                          <div className="text-xs text-gray-500">{getScholarshipTypeLabel(scholarship.scholarship_type)}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {scholarship.award_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          ${scholarship.annual_award_amount.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          ${scholarship.remaining_balance.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            scholarship.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {scholarship.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {scholarship.eligibility_verified ? (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <Clock className="h-5 w-5 text-yellow-500" />
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {scholarships.map((scholarship) => {
+                      const isEditing = editingScholarshipId === scholarship.scholarship_id
+                      const currentAward = isEditing ? parseFloat(editAwardAmount) || 0 : scholarship.annual_award_amount
+                      const currentTuition = isEditing ? parseFloat(editTuitionAmount) || ANNUAL_TUITION : ANNUAL_TUITION
+                      const parentPays = currentTuition - currentAward
+                      
+                      return (
+                        <tr key={scholarship.scholarship_id} className="hover:bg-amber-50">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {getStudentName(scholarship.student_id)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{scholarship.scholarship_type}</div>
+                            <div className="text-xs text-gray-500">{getScholarshipTypeLabel(scholarship.scholarship_type)}</div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {scholarship.award_id}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <div className="flex items-center">
+                                <span className="text-gray-500 mr-1">$</span>
+                                <input
+                                  type="number"
+                                  value={editTuitionAmount}
+                                  onChange={(e) => setEditTuitionAmount(e.target.value)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-900">${ANNUAL_TUITION.toLocaleString()}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <div className="flex items-center">
+                                <span className="text-gray-500 mr-1">$</span>
+                                <input
+                                  type="number"
+                                  value={editAwardAmount}
+                                  onChange={(e) => setEditAwardAmount(e.target.value)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium text-green-600">
+                                ${scholarship.annual_award_amount.toLocaleString()}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`text-sm font-medium ${parentPays > 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                              ${parentPays.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-amber-600">
+                            ${scholarship.remaining_balance.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              scholarship.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {scholarship.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {scholarship.eligibility_verified ? (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <Clock className="h-5 w-5 text-yellow-500" />
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleSaveScholarship(scholarship)}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleCancelEdit}
+                                  className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditScholarship(scholarship)}
+                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              >
+                                <Edit2 className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
