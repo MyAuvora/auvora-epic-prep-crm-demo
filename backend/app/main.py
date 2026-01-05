@@ -1159,6 +1159,7 @@ async def get_user(user_id: str):
 @app.get("/api/students", response_model=List[Student])
 async def get_students(
     campus_id: Optional[str] = None,
+    family_id: Optional[str] = None,
     grade: Optional[str] = None,
     session: Optional[Session] = None,
     room: Optional[Room] = None,
@@ -1170,6 +1171,8 @@ async def get_students(
     
     if campus_id:
         filtered_students = [s for s in filtered_students if s.campus_id == campus_id]
+    if family_id:
+        filtered_students = [s for s in filtered_students if s.family_id == family_id]
     if grade:
         filtered_students = [s for s in filtered_students if s.grade == grade]
     if session:
