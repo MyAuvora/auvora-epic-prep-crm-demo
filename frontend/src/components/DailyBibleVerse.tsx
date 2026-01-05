@@ -56,7 +56,7 @@ export function DailyBibleVerse() {
             <Book className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Daily Bible Verse</h3>
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">Daily Devotional</h3>
             <p className="text-gray-700 italic text-lg leading-relaxed">"{todaysVerse.verse}"</p>
             <p className="text-blue-600 font-medium mt-3">— {todaysVerse.reference}</p>
           </div>
