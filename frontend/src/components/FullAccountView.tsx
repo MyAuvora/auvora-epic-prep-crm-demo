@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -79,11 +79,14 @@ interface BillingRecord {
 
 interface SUFSScholarship {
   scholarship_id: string;
+  student_id: string;
   scholarship_type: string;
   annual_award_amount: number;
   remaining_balance: number;
   status: string;
 }
+
+const ANNUAL_TUITION = 10000; // $10,000/year per student
 
 interface FullAccountViewProps {
   type: 'family' | 'student';
@@ -103,6 +106,8 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [scholarships, setScholarships] = useState<SUFSScholarship[]>([]);
+  const [editingScholarshipId, setEditingScholarshipId] = useState<string | null>(null);
+  const [editAwardAmount, setEditAwardAmount] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -210,6 +215,56 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
       case 'Watch': return 'text-yellow-600 bg-yellow-100';
       case 'At risk': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const handleEditScholarship = (scholarship: SUFSScholarship) => {
+    setEditingScholarshipId(scholarship.scholarship_id);
+    setEditAwardAmount(scholarship.annual_award_amount.toString());
+  };
+
+  const handleCancelEdit = () => {
+    setEditingScholarshipId(null);
+    setEditAwardAmount('');
+  };
+
+  const handleSaveScholarship = async (scholarship: SUFSScholarship) => {
+    const newAwardAmount = parseFloat(editAwardAmount);
+    if (isNaN(newAwardAmount) || newAwardAmount < 0 || newAwardAmount > ANNUAL_TUITION) {
+      alert(`Award amount must be between $0 and $${ANNUAL_TUITION.toLocaleString()}`);
+      return;
+    }
+
+    try {
+      // Calculate new remaining balance based on what's been paid
+      const paidSoFar = scholarship.annual_award_amount - scholarship.remaining_balance;
+      const newRemainingBalance = Math.max(0, newAwardAmount - paidSoFar);
+
+      const response = await fetch(`${API_URL}/api/sufs/scholarships/${scholarship.scholarship_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          annual_award_amount: newAwardAmount,
+          quarterly_amount: newAwardAmount / 6, // bi-monthly payments
+          remaining_balance: newRemainingBalance
+        })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setScholarships(prev => prev.map(s => 
+          s.scholarship_id === scholarship.scholarship_id 
+            ? { ...s, annual_award_amount: newAwardAmount, remaining_balance: newRemainingBalance }
+            : s
+        ));
+        setEditingScholarshipId(null);
+        setEditAwardAmount('');
+      } else {
+        alert('Failed to update scholarship');
+      }
+    } catch (error) {
+      console.error('Error updating scholarship:', error);
+      alert('Error updating scholarship');
     }
   };
 
@@ -610,7 +665,41 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               </Card>
             </TabsContent>
 
-            <TabsContent value="scholarships" className="mt-6">
+            <TabsContent value="scholarships" className="mt-6 space-y-6">
+              {/* Tuition Summary Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tuition & Scholarship Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="text-sm text-gray-600 mb-1">Annual Tuition (per student)</div>
+                      <div className="text-2xl font-bold text-gray-900">${ANNUAL_TUITION.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <div className="text-sm text-green-600 mb-1">Total Scholarship Awards</div>
+                      <div className="text-2xl font-bold text-green-700">
+                        ${scholarships.reduce((sum, s) => sum + (s.annual_award_amount || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <div className="text-sm text-blue-600 mb-1">Parent Responsibility</div>
+                      <div className="text-2xl font-bold text-blue-700">
+                        ${((students.length * ANNUAL_TUITION) - scholarships.reduce((sum, s) => sum + (s.annual_award_amount || 0), 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                      <div className="text-sm text-amber-600 mb-1">Scholarship Remaining</div>
+                      <div className="text-2xl font-bold text-amber-700">
+                        ${scholarships.reduce((sum, s) => sum + (s.remaining_balance || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Scholarships Table */}
               <Card>
                 <CardHeader>
                   <CardTitle>Step Up for Students Scholarships</CardTitle>
@@ -623,28 +712,94 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Award</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Tuition</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scholarship Award</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent Pays</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remaining</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {scholarships.map((scholarship) => {
-                            const student = students.find(s => s.student_id === scholarship.scholarship_id.split('-')[0]);
+                            const student = students.find(s => s.student_id === scholarship.student_id) || 
+                                           students.find(s => s.student_id === scholarship.scholarship_id.split('-')[0]);
+                            const isEditing = editingScholarshipId === scholarship.scholarship_id;
+                            const parentResponsibility = ANNUAL_TUITION - (scholarship.annual_award_amount || 0);
+                            
                             return (
                               <tr key={scholarship.scholarship_id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                   {student ? `${student.first_name} ${student.last_name}` : 'Unknown'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{scholarship.scholarship_type}</td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(scholarship.annual_award_amount || 0).toFixed(2)}</td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(scholarship.remaining_balance || 0).toFixed(2)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ANNUAL_TUITION.toLocaleString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {isEditing ? (
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500">$</span>
+                                      <input
+                                        type="number"
+                                        value={editAwardAmount}
+                                        onChange={(e) => setEditAwardAmount(e.target.value)}
+                                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                        min="0"
+                                        max={ANNUAL_TUITION}
+                                        step="0.01"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm font-medium text-green-600">
+                                      ${(scholarship.annual_award_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`text-sm font-medium ${parentResponsibility > 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                                    ${(isEditing ? (ANNUAL_TUITION - parseFloat(editAwardAmount || '0')) : parentResponsibility).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-600">
+                                  ${(scholarship.remaining_balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                     scholarship.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                                   }`}>
                                     {scholarship.status}
                                   </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {isEditing ? (
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleSaveScholarship(scholarship)}
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      >
+                                        <Save className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={handleCancelEdit}
+                                        className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleEditScholarship(scholarship)}
+                                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    >
+                                      <Edit2 className="h-4 w-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                  )}
                                 </td>
                               </tr>
                             );
