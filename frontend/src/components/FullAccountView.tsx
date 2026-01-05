@@ -673,6 +673,81 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </Card>
               </div>
 
+              {/* Custom Invoice/Payment Schedule Section */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Custom Invoices & Payment Schedules</CardTitle>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => setShowNewInvoiceModal(true)}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Invoice
+                    </Button>
+                    <Button 
+                      onClick={() => setShowNewScheduleModal(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Repeat className="w-4 h-4 mr-2" />
+                      New Schedule
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {paymentSchedules.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Due</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {paymentSchedules.map((schedule) => (
+                            <tr key={schedule.schedule_id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.description}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${schedule.amount.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFrequencyLabel(schedule.frequency)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(schedule.next_due_date).toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                  schedule.source === 'SUFS' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                                }`}>
+                                  {schedule.source}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  schedule.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  schedule.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 mb-2">No custom payment schedules yet</p>
+                      <p className="text-sm text-gray-400">Create custom invoices or recurring payment schedules for this family</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Recent Invoices */}
               <Card>
                 <CardHeader>
@@ -811,81 +886,6 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     </div>
                   ) : (
                     <p className="text-gray-500 text-center py-8">No billing activity found</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Custom Invoice/Payment Schedule Section */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Custom Invoices & Payment Schedules</CardTitle>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setShowNewInvoiceModal(true)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Invoice
-                    </Button>
-                    <Button 
-                      onClick={() => setShowNewScheduleModal(true)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Repeat className="w-4 h-4 mr-2" />
-                      New Schedule
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {paymentSchedules.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Due</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {paymentSchedules.map((schedule) => (
-                            <tr key={schedule.schedule_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${schedule.amount.toFixed(2)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFrequencyLabel(schedule.frequency)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(schedule.next_due_date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                  schedule.source === 'SUFS' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                                }`}>
-                                  {schedule.source}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  schedule.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  schedule.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 mb-2">No custom payment schedules yet</p>
-                      <p className="text-sm text-gray-400">Create custom invoices or recurring payment schedules for this family</p>
-                    </div>
                   )}
                 </CardContent>
               </Card>
