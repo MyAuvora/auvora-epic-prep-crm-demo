@@ -64,12 +64,17 @@ interface Invoice {
   description: string;
 }
 
-interface Payment {
-  payment_id: string;
-  payment_date: string;
+interface BillingRecord {
+  billing_record_id: string;
+  family_id: string;
+  date: string;
+  type: string;
+  description: string;
   amount: number;
-  method: string;
-  reference?: string;
+  source: string | null;
+  period_month: string | null;
+  category: string | null;
+  student_id: string | null;
 }
 
 interface SUFSScholarship {
@@ -96,7 +101,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [grades, setGrades] = useState<Grade[]>([]);
   const [ixl, setIxl] = useState<IXLSummary | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [scholarships, setScholarships] = useState<SUFSScholarship[]>([]);
 
   useEffect(() => {
@@ -125,15 +130,15 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             console.log('Invoices not available');
           }
 
-          // Fetch payments
+          // Fetch billing records (includes payment source info)
           try {
-            const paymentsRes = await fetch(`${API_URL}/api/payments?family_id=${id}`);
-            if (paymentsRes.ok) {
-              const paymentsData = await paymentsRes.json();
-              setPayments(paymentsData);
+            const billingRes = await fetch(`${API_URL}/api/billing/${id}`);
+            if (billingRes.ok) {
+              const billingData = await billingRes.json();
+              setBillingRecords(billingData);
             }
           } catch (e) {
-            console.log('Payments not available');
+            console.log('Billing records not available');
           }
 
           // Fetch SUFS scholarships for this family
@@ -507,37 +512,99 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </CardContent>
               </Card>
 
-              {/* Payment History */}
+              {/* Payment Summary by Source */}
+              {billingRecords.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Payment Summary by Source</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">Out of Pocket</span>
+                        </div>
+                        <div className="text-2xl font-bold text-blue-700">
+                          ${Math.abs(billingRecords.filter(b => b.type === 'Payment' && b.source === 'Out of pocket').reduce((sum, b) => sum + b.amount, 0)).toFixed(2)}
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">Family payments</p>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-500 text-white">Step Up (SUFS)</span>
+                        </div>
+                        <div className="text-2xl font-bold text-green-700">
+                          ${Math.abs(billingRecords.filter(b => b.type === 'Payment' && b.source === 'Step-Up').reduce((sum, b) => sum + b.amount, 0)).toFixed(2)}
+                        </div>
+                        <p className="text-xs text-green-600 mt-1">Scholarship payments</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-500 text-white">Total Charges</span>
+                        </div>
+                        <div className="text-2xl font-bold text-gray-700">
+                          ${billingRecords.filter(b => b.type === 'Charge').reduce((sum, b) => sum + b.amount, 0).toFixed(2)}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">All tuition charges</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Billing Activity */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Payment History</CardTitle>
+                  <CardTitle>Billing Activity</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {payments.length > 0 ? (
+                  {billingRecords.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50 border-b">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {payments.map((payment) => (
-                            <tr key={payment.payment_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(payment.payment_date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">${(payment.amount || 0).toFixed(2)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payment.method}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payment.reference || '-'}</td>
+                          {billingRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
+                            <tr key={record.billing_record_id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(record.date).toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.description}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  record.type === 'Payment' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {record.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {record.source ? (
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                    record.source === 'Step-Up' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                                  }`}>
+                                    {record.source === 'Step-Up' ? 'SUFS' : 'Out of Pocket'}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                                record.amount < 0 ? 'text-green-600' : 'text-gray-900'
+                              }`}>
+                                {record.amount < 0 ? '-' : ''}${Math.abs(record.amount || 0).toFixed(2)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-8">No payment history found</p>
+                    <p className="text-gray-500 text-center py-8">No billing activity found</p>
                   )}
                 </CardContent>
               </Card>

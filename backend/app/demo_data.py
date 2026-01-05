@@ -199,7 +199,10 @@ def generate_all_demo_data():
         else:
             current_balance = random.uniform(200, 800)
         
-        monthly_tuition = num_children * random.uniform(400, 600)
+        # $10,000/year per student = $833.33/month per student
+        annual_tuition_per_student = 10000.00
+        monthly_tuition_per_student = annual_tuition_per_student / 12  # $833.33
+        monthly_tuition = num_children * monthly_tuition_per_student
         
         family_student_ids = []
         
@@ -1651,13 +1654,15 @@ def generate_all_demo_data():
         SUFSScholarshipType.AAA: (500, 1500)
     }
     
-    claim_periods = ["August 2025", "September 2025", "October 2025", "November 2025", "December 2025"]
+    # SUFS pays out every 2 months (bi-monthly) = 6 payments per year
+    # Claim periods are bi-monthly: Aug-Sep, Oct-Nov, Dec-Jan, Feb-Mar, Apr-May
+    claim_periods = ["Aug-Sep 2025", "Oct-Nov 2025", "Dec-Jan 2026", "Feb-Mar 2026", "Apr-May 2026"]
     
     for student in step_up_students:
         scholarship_type = random.choice(scholarship_types)
         min_award, max_award = award_amounts[scholarship_type]
         annual_amount = round(random.uniform(min_award, max_award), 2)
-        quarterly_amount = round(annual_amount / 4, 2)
+        bimonthly_amount = round(annual_amount / 6, 2)  # 6 bi-monthly payments per year
         
         # Create scholarship record
         scholarship = SUFSScholarship(
@@ -1669,7 +1674,7 @@ def generate_all_demo_data():
             award_id=f"SUFS-{random.randint(100000, 999999)}",
             school_year="2025-2026",
             annual_award_amount=annual_amount,
-            quarterly_amount=quarterly_amount,
+            quarterly_amount=bimonthly_amount,  # Now bi-monthly (every 2 months)
             remaining_balance=round(annual_amount * random.uniform(0.3, 0.8), 2),
             start_date=date(2025, 8, 1),
             end_date=date(2026, 5, 31),
@@ -1682,18 +1687,25 @@ def generate_all_demo_data():
         )
         sufs_scholarships_db.append(scholarship)
         
-        # Create claims for this scholarship
+        # Create claims for this scholarship (bi-monthly = every 2 months)
         for period_idx, period in enumerate(claim_periods[:random.randint(2, 5)]):
-            claim_amount = round(annual_amount / 10, 2)  # Monthly claim
+            claim_amount = bimonthly_amount  # Bi-monthly claim (annual / 6)
+            
+            # Bi-monthly periods: Aug, Oct, Dec, Feb, Apr (every 2 months)
+            # period_idx 0 = Aug, 1 = Oct, 2 = Dec, 3 = Feb, 4 = Apr
+            claim_month = 8 + (period_idx * 2)  # 8, 10, 12, 14(Feb), 16(Apr)
+            claim_year = 2025 if claim_month <= 12 else 2026
+            if claim_month > 12:
+                claim_month = claim_month - 12  # Convert 14->2, 16->4
             
             # Determine claim status based on period
             if period_idx < 2:
                 status = SUFSClaimStatus.PAID
-                paid_date = date(2025, 8 + period_idx, 25)
+                paid_date = date(claim_year, claim_month, 25)
                 paid_amount = claim_amount
             elif period_idx == 2:
                 status = random.choice([SUFSClaimStatus.APPROVED, SUFSClaimStatus.PAID])
-                paid_date = date(2025, 10, 25) if status == SUFSClaimStatus.PAID else None
+                paid_date = date(claim_year, claim_month, 25) if status == SUFSClaimStatus.PAID else None
                 paid_amount = claim_amount if status == SUFSClaimStatus.PAID else None
             elif period_idx == 3:
                 status = random.choice([SUFSClaimStatus.SUBMITTED, SUFSClaimStatus.PENDING, SUFSClaimStatus.APPROVED])
@@ -1711,35 +1723,36 @@ def generate_all_demo_data():
                 family_id=student.family_id,
                 campus_id=student.campus_id,
                 claim_period=period,
-                claim_date=date(2025, 8 + period_idx, 1),
+                claim_date=date(claim_year, claim_month, 1),
                 amount_claimed=claim_amount,
                 tuition_amount=round(claim_amount * 0.9, 2),
                 fees_amount=round(claim_amount * 0.1, 2),
                 status=status,
-                submitted_date=date(2025, 8 + period_idx, 5) if status != SUFSClaimStatus.DRAFT else None,
-                approved_date=date(2025, 8 + period_idx, 15) if status in [SUFSClaimStatus.APPROVED, SUFSClaimStatus.PAID] else None,
+                submitted_date=date(claim_year, claim_month, 5) if status != SUFSClaimStatus.DRAFT else None,
+                approved_date=date(claim_year, claim_month, 15) if status in [SUFSClaimStatus.APPROVED, SUFSClaimStatus.PAID] else None,
                 paid_date=paid_date,
                 paid_amount=paid_amount,
                 denial_reason=None,
                 sufs_reference_number=f"SUFS-CLM-{random.randint(10000, 99999)}" if status != SUFSClaimStatus.DRAFT else None,
                 notes=None,
-                created_date=date(2025, 8 + period_idx, 1),
+                created_date=date(claim_year, claim_month, 1),
                 last_updated=today
             )
             sufs_claims_db.append(claim)
     
-    # Create bulk payments from SUFS
+    # Create bulk payments from SUFS (bi-monthly = every 2 months)
+    # Payment dates: end of Aug, Oct, Dec, Feb, Apr
     payment_dates = [
-        date(2025, 8, 28),
-        date(2025, 9, 28),
-        date(2025, 10, 28),
-        date(2025, 11, 28)
+        date(2025, 8, 28),   # Aug-Sep period
+        date(2025, 10, 28),  # Oct-Nov period
+        date(2025, 12, 28),  # Dec-Jan period
     ]
     
     for campus in campuses_db:
         campus_claims = [c for c in sufs_claims_db if c.campus_id == campus.campus_id and c.status == SUFSClaimStatus.PAID]
         
-        for pmt_idx, pmt_date in enumerate(payment_dates[:3]):  # First 3 months have payments
+        for pmt_idx, pmt_date in enumerate(payment_dates):  # Bi-monthly payments
+            # Match claims by the payment month (Aug, Oct, Dec)
             month_claims = [c for c in campus_claims if c.claim_date.month == pmt_date.month]
             if month_claims:
                 total_amount = sum(c.paid_amount or 0 for c in month_claims)
