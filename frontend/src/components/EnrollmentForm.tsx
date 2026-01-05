@@ -14,6 +14,7 @@ import {
   Check,
   Upload
 } from 'lucide-react';
+import { addEnrollmentSubmission } from './EnrollmentSubmissions';
 
 interface StudentInfo {
   id: string;
@@ -169,16 +170,20 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
     setAuthorizedPickups(authorizedPickups.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
-  const handleSubmit = () => {
-    const data: EnrollmentData = {
-      students,
-      parents,
-      authorizedPickups,
-      policyAgreements
+    const handleSubmit = () => {
+      const data: EnrollmentData = {
+        students,
+        parents,
+        authorizedPickups,
+        policyAgreements
+      };
+    
+      // Save the submission to the enrollment submissions store
+      addEnrollmentSubmission(data);
+    
+      onSubmit?.(data);
+      alert('Enrollment form submitted successfully! The school will review your application. You can view your submission status in the Documents tab.');
     };
-    onSubmit?.(data);
-    alert('Enrollment form submitted successfully! The school will review your application.');
-  };
 
   const canProceed = () => {
     switch (currentStep) {

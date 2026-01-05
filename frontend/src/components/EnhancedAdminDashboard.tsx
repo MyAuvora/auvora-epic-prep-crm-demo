@@ -27,6 +27,7 @@ import { StaffManagement } from './StaffManagement'
 import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
 import { FullAccountView } from './FullAccountView'
 import { DailyBibleVerse } from './DailyBibleVerse'
+import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -304,19 +305,19 @@ export function EnhancedAdminDashboard() {
             >
               Families & Finance
             </button>
-            <button
-              onClick={() => {
-                setView('admissions')
-                setSubView('main')
-              }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'admissions'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Admissions
-            </button>
+                        <button
+                          onClick={() => {
+                            setView('admissions')
+                            setSubView('pipeline')
+                          }}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${
+                            view === 'admissions'
+                              ? 'bg-red-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          Admissions
+                        </button>
             <button
               onClick={() => {
                 setView('academics')
@@ -774,15 +775,26 @@ export function EnhancedAdminDashboard() {
           </div>
         )}
 
-        {view === 'admissions' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900">Admissions</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
-            </div>
-            <AdmissionsPipeline selectedCampusId={selectedCampusId} />
-          </div>
-        )}
+                {view === 'admissions' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-3xl font-bold text-gray-900">Admissions</h2>
+                      <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+                    </div>
+                    <Tabs value={subView} onValueChange={setSubView} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="pipeline">Admissions Pipeline</TabsTrigger>
+                        <TabsTrigger value="enrollments">Enrollment Applications</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="pipeline" className="mt-6">
+                        <AdmissionsPipeline selectedCampusId={selectedCampusId} />
+                      </TabsContent>
+                      <TabsContent value="enrollments" className="mt-6">
+                        <AdminEnrollmentSubmissions />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                )}
 
         {view === 'academics' && (
           <div className="space-y-6">

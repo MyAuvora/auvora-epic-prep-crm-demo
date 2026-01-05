@@ -16,6 +16,7 @@ import { PaymentMethodStorage } from './PaymentMethodStorage'
 import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { EnrollmentForm } from './EnrollmentForm'
+import { ParentEnrollmentSubmissions } from './EnrollmentSubmissions'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -583,9 +584,12 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
           <EventsCalendar role="parent" userId={parentId} />
         )}
 
-        {view === 'documents' && (
-          <DocumentManagement role="parent" userId={parentId} />
-        )}
+                {view === 'documents' && (
+                  <div className="space-y-8">
+                    <ParentEnrollmentSubmissions parentEmail={parentData?.parent?.email} />
+                    <DocumentManagement role="parent" userId={parentId} />
+                  </div>
+                )}
 
         {view === 'store' && (
           <StoreComponent role="parent" userId={parentId} />
