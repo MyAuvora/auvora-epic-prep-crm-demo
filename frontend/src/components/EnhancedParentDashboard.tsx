@@ -15,6 +15,7 @@ import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { PaymentMethodStorage } from './PaymentMethodStorage'
 import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { DailyBibleVerse } from './DailyBibleVerse'
+import { EnrollmentForm } from './EnrollmentForm'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -60,7 +61,7 @@ interface EnhancedParentDashboardProps {
 }
 
 export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardProps) {
-  const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
+  const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health' | 'enrollment'>('home')
   const [parentData, setParentData] = useState<ParentData | null>(null)
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
   const [childGrades, setChildGrades] = useState<any[]>([])
@@ -239,17 +240,27 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
             >
               Messages
             </button>
-            <button
-              onClick={() => setView('health')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'health'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Health
-            </button>
-          </nav>
+                      <button
+                        onClick={() => setView('health')}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          view === 'health'
+                            ? 'bg-red-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        Health
+                      </button>
+                      <button
+                        onClick={() => setView('enrollment')}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          view === 'enrollment'
+                            ? 'bg-red-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        Enrollment
+                      </button>
+                    </nav>
         </div>
       </div>
 
@@ -588,10 +599,20 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
           <MessagingPlatform role="parent" userId={parentId} userType="Parent" />
         )}
 
-        {view === 'health' && (
-          <HealthRecords role="parent" userId={parentId} />
-        )}
-      </div>
+              {view === 'health' && (
+                <HealthRecords role="parent" userId={parentId} />
+              )}
+
+              {view === 'enrollment' && (
+                <EnrollmentForm 
+                  onSubmit={(data) => {
+                    console.log('Enrollment submitted:', data);
+                    setView('home');
+                  }}
+                  onCancel={() => setView('home')}
+                />
+              )}
+            </div>
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget onSearch={handleAskAuvora} />
