@@ -69,6 +69,33 @@ interface IXLSummary {
   last_active_date: string;
 }
 
+interface AcellusCourse {
+  course_id: string;
+  student_id: string;
+  course_name: string;
+  subject: string;
+  total_steps: number;
+  completed_steps: number;
+  completion_percentage: number;
+  current_grade: string;
+  grade_percentage: number;
+  status: string;
+  last_activity_date: string;
+  time_spent_hours: number;
+}
+
+interface AcellusSummary {
+  acellus_summary_id: string;
+  student_id: string;
+  total_courses: number;
+  courses_on_track: number;
+  courses_behind: number;
+  overall_gpa: number;
+  total_time_spent_hours: number;
+  last_active_date: string;
+  overall_status: string;
+}
+
 interface Invoice {
   invoice_id: string;
   invoice_date: string;
@@ -117,6 +144,8 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [ixl, setIxl] = useState<IXLSummary | null>(null);
+  const [acellus, setAcellus] = useState<AcellusSummary | null>(null);
+  const [acellusCourses, setAcellusCourses] = useState<AcellusCourse[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [scholarships, setScholarships] = useState<SUFSScholarship[]>([]);
@@ -216,10 +245,38 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
           const gradesData = await gradesRes.json();
           setGrades(gradesData);
 
-          // Fetch IXL data
-          const ixlRes = await fetch(`${API_URL}/api/ixl/${id}`);
-          const ixlData = await ixlRes.json();
-          setIxl(ixlData);
+          // Fetch IXL data (for K-8 students)
+          try {
+            const ixlRes = await fetch(`${API_URL}/api/ixl/${id}`);
+            if (ixlRes.ok) {
+              const ixlData = await ixlRes.json();
+              setIxl(ixlData);
+            }
+          } catch (e) {
+            console.log('IXL data not available');
+          }
+
+          // Fetch Acellus data (for 9-12 students)
+          try {
+            const acellusRes = await fetch(`${API_URL}/api/acellus/${id}`);
+            if (acellusRes.ok) {
+              const acellusData = await acellusRes.json();
+              setAcellus(acellusData);
+            }
+          } catch (e) {
+            console.log('Acellus data not available');
+          }
+
+          // Fetch Acellus courses
+          try {
+            const coursesRes = await fetch(`${API_URL}/api/acellus/${id}/courses`);
+            if (coursesRes.ok) {
+              const coursesData = await coursesRes.json();
+              setAcellusCourses(coursesData);
+            }
+          } catch (e) {
+            console.log('Acellus courses not available');
+          }
 
           // Fetch SUFS scholarships for this student
           try {
@@ -1425,7 +1482,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="academics">Academics</TabsTrigger>
               <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="ixl">IXL Progress</TabsTrigger>
+              <TabsTrigger value="learning">Learning Progress</TabsTrigger>
               <TabsTrigger value="family">Family</TabsTrigger>
             </TabsList>
 
@@ -1711,84 +1768,257 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               </Card>
             </TabsContent>
 
-            <TabsContent value="ixl" className="mt-6 space-y-6">
-              {ixl ? (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-sm text-gray-600">Weekly Hours</p>
-                        <p className="text-4xl font-bold text-blue-600">{ixl.weekly_hours}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-sm text-gray-600">Skills Practiced</p>
-                        <p className="text-4xl font-bold text-blue-600">{ixl.skills_practiced_this_week}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-sm text-gray-600">Total Mastered</p>
-                        <p className="text-4xl font-bold text-green-600">{ixl.skills_mastered_total}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-sm text-gray-600">Last Active</p>
-                        <p className="text-lg font-bold">{new Date(ixl.last_active_date).toLocaleDateString()}</p>
-                      </CardContent>
-                    </Card>
+            <TabsContent value="learning" className="mt-6 space-y-6">
+              {/* Platform Header with Deep Link */}
+              <Card className="bg-gradient-to-r from-[#0A2463] to-[#163B9A] text-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold">
+                        {selectedStudent && parseInt(selectedStudent.grade) >= 9 ? 'Acellus Learning Platform' : 'IXL Learning Platform'}
+                      </h3>
+                      <p className="text-blue-100 text-sm mt-1">
+                        {selectedStudent && parseInt(selectedStudent.grade) >= 9 
+                          ? 'High School Curriculum (Grades 9-12)' 
+                          : 'K-8 Math & Language Arts Practice'}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const url = selectedStudent && parseInt(selectedStudent.grade) >= 9 
+                          ? 'https://www.acellus.com/student/' 
+                          : 'https://www.ixl.com/signin/';
+                        window.open(url, '_blank');
+                      }}
+                      className="bg-white text-[#0A2463] hover:bg-blue-50"
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      {selectedStudent && parseInt(selectedStudent.grade) >= 9 ? 'Open Acellus' : 'Open IXL'}
+                    </Button>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Proficiency Levels</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-sm text-gray-600">Math Proficiency</p>
-                          <p className={`text-2xl font-bold ${
-                            ixl.math_proficiency === 'Needs attention' ? 'text-yellow-600' : 'text-green-600'
-                          }`}>
-                            {ixl.math_proficiency}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">ELA Proficiency</p>
-                          <p className={`text-2xl font-bold ${
-                            ixl.ela_proficiency === 'Needs attention' ? 'text-yellow-600' : 'text-green-600'
-                          }`}>
-                            {ixl.ela_proficiency}
-                          </p>
-                        </div>
+              {/* IXL Content for K-8 Students */}
+              {selectedStudent && parseInt(selectedStudent.grade) < 9 && (
+                <>
+                  {ixl ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Weekly Hours</p>
+                            <p className="text-4xl font-bold text-blue-600">{ixl.weekly_hours}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Skills Practiced</p>
+                            <p className="text-4xl font-bold text-blue-600">{ixl.skills_practiced_this_week}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Total Mastered</p>
+                            <p className="text-4xl font-bold text-green-600">{ixl.skills_mastered_total}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Last Active</p>
+                            <p className="text-lg font-bold">{new Date(ixl.last_active_date).toLocaleDateString()}</p>
+                          </CardContent>
+                        </Card>
                       </div>
-                    </CardContent>
-                  </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Recent Skills</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {ixl.recent_skills.map((skill, index) => (
-                          <span key={index} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Proficiency Levels</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-6">
+                            <div>
+                              <p className="text-sm text-gray-600">Math Proficiency</p>
+                              <p className={`text-2xl font-bold ${
+                                ixl.math_proficiency === 'Needs attention' ? 'text-yellow-600' : 'text-green-600'
+                              }`}>
+                                {ixl.math_proficiency}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">ELA Proficiency</p>
+                              <p className={`text-2xl font-bold ${
+                                ixl.ela_proficiency === 'Needs attention' ? 'text-yellow-600' : 'text-green-600'
+                              }`}>
+                                {ixl.ela_proficiency}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Recent Skills</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {ixl.recent_skills.map((skill, index) => (
+                              <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-gray-500">No IXL data available</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <p className="text-gray-500">No IXL data available</p>
-                  </CardContent>
-                </Card>
               )}
+
+              {/* Acellus Content for 9-12 Students */}
+              {selectedStudent && parseInt(selectedStudent.grade) >= 9 && (
+                <>
+                  {acellus ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Overall GPA</p>
+                            <p className="text-4xl font-bold text-blue-600">{acellus.overall_gpa.toFixed(2)}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Total Courses</p>
+                            <p className="text-4xl font-bold text-blue-600">{acellus.total_courses}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">On Track</p>
+                            <p className="text-4xl font-bold text-green-600">{acellus.courses_on_track}</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-6">
+                            <p className="text-sm text-gray-600">Time Spent</p>
+                            <p className="text-2xl font-bold">{acellus.total_time_spent_hours.toFixed(1)} hrs</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <CardTitle>Overall Status</CardTitle>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            acellus.overall_status === 'On track' ? 'bg-green-100 text-green-800' :
+                            acellus.overall_status === 'Behind' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {acellus.overall_status}
+                          </span>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-3 gap-6">
+                            <div>
+                              <p className="text-sm text-gray-600">Courses On Track</p>
+                              <p className="text-2xl font-bold text-green-600">{acellus.courses_on_track}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Courses Behind</p>
+                              <p className="text-2xl font-bold text-yellow-600">{acellus.courses_behind}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Last Active</p>
+                              <p className="text-lg font-bold">{new Date(acellus.last_active_date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Course Progress</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50 border-b">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {acellusCourses.map((course) => (
+                                  <tr key={course.course_id}>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{course.course_name}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{course.subject}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                          <div 
+                                            className="bg-blue-600 h-2 rounded-full" 
+                                            style={{ width: `${course.completion_percentage}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm text-gray-600">{course.completion_percentage.toFixed(0)}%</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <span className={`text-lg font-bold ${
+                                        course.current_grade === 'A' ? 'text-green-600' :
+                                        course.current_grade === 'B' ? 'text-blue-600' :
+                                        course.current_grade === 'C' ? 'text-yellow-600' :
+                                        'text-red-600'
+                                      }`}>
+                                        {course.current_grade}
+                                      </span>
+                                      <span className="text-xs text-gray-500 ml-1">({course.grade_percentage.toFixed(0)}%)</span>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                        course.status === 'On track' ? 'bg-green-100 text-green-800' :
+                                        course.status === 'Behind' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                      }`}>
+                                        {course.status}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{course.time_spent_hours.toFixed(1)} hrs</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <p className="text-gray-500">No Acellus data available</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Data Source Info */}
+              <div className="text-center text-sm text-gray-500">
+                <p>Data last updated: {new Date().toLocaleDateString()} | Source: {selectedStudent && parseInt(selectedStudent.grade) >= 9 ? 'Acellus' : 'IXL'} Learning Platform</p>
+              </div>
             </TabsContent>
 
             <TabsContent value="family" className="mt-6">

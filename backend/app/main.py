@@ -54,6 +54,11 @@ class IXLStatus(str, Enum):
     ON_TRACK = "On track"
     NEEDS_ATTENTION = "Needs attention"
 
+class AcellusStatus(str, Enum):
+    ON_TRACK = "On track"
+    BEHIND = "Behind"
+    AT_RISK = "At risk"
+
 class RiskFlag(str, Enum):
     NONE = "None"
     WATCH = "Watch"
@@ -292,6 +297,31 @@ class IXLSummary(BaseModel):
     ela_proficiency: IXLStatus
     last_active_date: date
     recent_skills: List[str]
+
+class AcellusCourse(BaseModel):
+    course_id: str
+    student_id: str
+    course_name: str
+    subject: str
+    total_steps: int
+    completed_steps: int
+    completion_percentage: float
+    current_grade: str
+    grade_percentage: float
+    status: AcellusStatus
+    last_activity_date: date
+    time_spent_hours: float
+
+class AcellusSummary(BaseModel):
+    acellus_summary_id: str
+    student_id: str
+    total_courses: int
+    courses_on_track: int
+    courses_behind: int
+    overall_gpa: float
+    total_time_spent_hours: float
+    last_active_date: date
+    overall_status: AcellusStatus
 
 class BillingRecord(BaseModel):
     billing_record_id: str
@@ -989,6 +1019,8 @@ grade_records_db: List[GradeRecord] = []
 behavior_notes_db: List[BehaviorNote] = []
 attendance_records_db: List[AttendanceRecord] = []
 ixl_summaries_db: List[IXLSummary] = []
+acellus_summaries_db: List[AcellusSummary] = []
+acellus_courses_db: List[AcellusCourse] = []
 billing_records_db: List[BillingRecord] = []
 conferences_db: List[Conference] = []
 messages_db: List[Message] = []
@@ -1036,6 +1068,7 @@ def generate_demo_data():
     global organizations_db, campuses_db, users_db, audit_logs_db
     global students_db, families_db, parents_db, staff_db, grade_records_db
     global behavior_notes_db, attendance_records_db, ixl_summaries_db
+    global acellus_summaries_db, acellus_courses_db
     global billing_records_db, conferences_db, messages_db
     global events_db, event_rsvps_db, documents_db, document_signatures_db
     global products_db, orders_db, photo_albums_db, incidents_db, health_records_db
@@ -1063,6 +1096,8 @@ def generate_demo_data():
     behavior_notes_db = data["behavior_notes"]
     attendance_records_db = data["attendance_records"]
     ixl_summaries_db = data["ixl_summaries"]
+    acellus_summaries_db = data["acellus_summaries"]
+    acellus_courses_db = data["acellus_courses"]
     billing_records_db = data["billing_records"]
     conferences_db = data["conferences"]
     messages_db = data["messages"]
@@ -1351,6 +1386,25 @@ async def get_ixl_summary(student_id: str):
 @app.get("/api/ixl", response_model=List[IXLSummary])
 async def get_all_ixl():
     return ixl_summaries_db
+
+@app.get("/api/acellus/{student_id}", response_model=AcellusSummary)
+async def get_acellus_summary(student_id: str):
+    acellus = next((a for a in acellus_summaries_db if a.student_id == student_id), None)
+    if not acellus:
+        raise HTTPException(status_code=404, detail="Acellus summary not found")
+    return acellus
+
+@app.get("/api/acellus", response_model=List[AcellusSummary])
+async def get_all_acellus():
+    return acellus_summaries_db
+
+@app.get("/api/acellus/{student_id}/courses", response_model=List[AcellusCourse])
+async def get_acellus_courses(student_id: str):
+    return [c for c in acellus_courses_db if c.student_id == student_id]
+
+@app.get("/api/acellus-courses", response_model=List[AcellusCourse])
+async def get_all_acellus_courses():
+    return acellus_courses_db
 
 @app.get("/api/billing/{family_id}", response_model=List[BillingRecord])
 async def get_billing_records(family_id: str):

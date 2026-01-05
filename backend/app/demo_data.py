@@ -4,7 +4,7 @@ from typing import List
 from .main import (
     Organization, Campus, User, AuditLog,
     Student, Family, Parent, Staff, GradeRecord, BehaviorNote,
-    AttendanceRecord, IXLSummary, BillingRecord, Conference, Message,
+    AttendanceRecord, IXLSummary, AcellusCourse, AcellusSummary, BillingRecord, Conference, Message,
     Event, EventRSVP, Document, DocumentSignature, Product, Order,
     PhotoAlbum, Incident, HealthRecord,
     Invoice, InvoiceLineItem, PaymentPlan, PaymentSchedule,
@@ -16,7 +16,7 @@ from .main import (
     Assignment, GradeEntry, Announcement, AnnouncementRead, EventWorkflow,
     SUFSScholarship, SUFSClaim, SUFSPayment, SUFSPaymentAllocation,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
-    GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
+    GradeFlag, IXLStatus, AcellusStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
     DocumentType, DocumentStatus, ProductCategory, OrderStatus,
     PhotoAlbumStatus, IncidentType, IncidentSeverity,
@@ -107,6 +107,8 @@ def generate_all_demo_data():
     behavior_notes_db = []
     attendance_records_db = []
     ixl_summaries_db = []
+    acellus_summaries_db = []
+    acellus_courses_db = []
     billing_records_db = []
     conferences_db = []
     messages_db = []
@@ -390,6 +392,106 @@ def generate_all_demo_data():
                 recent_skills=random.sample(ixl_skills, 3)
             )
             ixl_summaries_db.append(ixl_summary)
+            
+            if grade_level >= 9:
+                acellus_courses_list = [
+                    {"name": "Algebra I", "subject": "Math"},
+                    {"name": "Algebra II", "subject": "Math"},
+                    {"name": "Geometry", "subject": "Math"},
+                    {"name": "Pre-Calculus", "subject": "Math"},
+                    {"name": "English 9", "subject": "English"},
+                    {"name": "English 10", "subject": "English"},
+                    {"name": "English 11", "subject": "English"},
+                    {"name": "English 12", "subject": "English"},
+                    {"name": "Biology", "subject": "Science"},
+                    {"name": "Chemistry", "subject": "Science"},
+                    {"name": "Physics", "subject": "Science"},
+                    {"name": "World History", "subject": "Social Studies"},
+                    {"name": "US History", "subject": "Social Studies"},
+                    {"name": "Government", "subject": "Social Studies"},
+                    {"name": "Economics", "subject": "Social Studies"},
+                ]
+                
+                num_courses = random.randint(4, 6)
+                selected_courses = random.sample(acellus_courses_list, num_courses)
+                student_courses = []
+                total_time = 0
+                courses_on_track = 0
+                courses_behind = 0
+                
+                for course_idx, course_info in enumerate(selected_courses):
+                    total_steps = random.randint(150, 300)
+                    completed_steps = random.randint(int(total_steps * 0.3), total_steps)
+                    completion_pct = round((completed_steps / total_steps) * 100, 1)
+                    grade_pct = round(random.uniform(60, 100), 1)
+                    time_spent = round(random.uniform(10, 50), 1)
+                    total_time += time_spent
+                    
+                    if grade_pct >= 90:
+                        current_grade = "A"
+                    elif grade_pct >= 80:
+                        current_grade = "B"
+                    elif grade_pct >= 70:
+                        current_grade = "C"
+                    elif grade_pct >= 60:
+                        current_grade = "D"
+                    else:
+                        current_grade = "F"
+                    
+                    if completion_pct >= 70:
+                        course_status = AcellusStatus.ON_TRACK
+                        courses_on_track += 1
+                    elif completion_pct >= 50:
+                        course_status = AcellusStatus.BEHIND
+                        courses_behind += 1
+                    else:
+                        course_status = AcellusStatus.AT_RISK
+                        courses_behind += 1
+                    
+                    acellus_course = AcellusCourse(
+                        course_id=f"acellus_course_{student_id}_{course_idx}",
+                        student_id=student_id,
+                        course_name=course_info["name"],
+                        subject=course_info["subject"],
+                        total_steps=total_steps,
+                        completed_steps=completed_steps,
+                        completion_percentage=completion_pct,
+                        current_grade=current_grade,
+                        grade_percentage=grade_pct,
+                        status=course_status,
+                        last_activity_date=date.today() - timedelta(days=random.randint(0, 7)),
+                        time_spent_hours=time_spent
+                    )
+                    acellus_courses_db.append(acellus_course)
+                    student_courses.append(acellus_course)
+                
+                overall_gpa = round(sum([
+                    4.0 if c.current_grade == "A" else
+                    3.0 if c.current_grade == "B" else
+                    2.0 if c.current_grade == "C" else
+                    1.0 if c.current_grade == "D" else 0.0
+                    for c in student_courses
+                ]) / len(student_courses), 2)
+                
+                if courses_behind == 0:
+                    overall_status = AcellusStatus.ON_TRACK
+                elif courses_behind <= 1:
+                    overall_status = AcellusStatus.BEHIND
+                else:
+                    overall_status = AcellusStatus.AT_RISK
+                
+                acellus_summary = AcellusSummary(
+                    acellus_summary_id=f"acellus_{student_id}",
+                    student_id=student_id,
+                    total_courses=num_courses,
+                    courses_on_track=courses_on_track,
+                    courses_behind=courses_behind,
+                    overall_gpa=overall_gpa,
+                    total_time_spent_hours=round(total_time, 1),
+                    last_active_date=date.today() - timedelta(days=random.randint(0, 7)),
+                    overall_status=overall_status
+                )
+                acellus_summaries_db.append(acellus_summary)
         
         for parent in family_parents:
             parent.student_ids = family_student_ids
@@ -1803,6 +1905,8 @@ def generate_all_demo_data():
         "behavior_notes": behavior_notes_db,
         "attendance_records": attendance_records_db,
         "ixl_summaries": ixl_summaries_db,
+        "acellus_summaries": acellus_summaries_db,
+        "acellus_courses": acellus_courses_db,
         "billing_records": billing_records_db,
         "conferences": conferences_db,
         "messages": messages_db,
