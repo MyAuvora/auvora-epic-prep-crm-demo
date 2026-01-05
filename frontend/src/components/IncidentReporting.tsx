@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Clock, User, FileText, Plus } from 'lucide-react';
+import { AlertTriangle, Clock, User, FileText, Plus, CheckCircle, XCircle, Send } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ interface Incident {
   action_taken: string;
   parent_notified: boolean;
   followup_required: boolean;
+  status: 'pending_review' | 'approved' | 'denied' | 'sent_to_parent';
+  admin_notes?: string;
 }
 
 interface IncidentReportingProps {
@@ -73,16 +75,22 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
     
     try {
       const now = new Date();
+      const newIncidentData = {
+        incident_id: `inc_${Date.now()}`,
+        reported_by_staff_id: userId,
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0].substring(0, 5),
+        status: 'pending_review' as const,
+        ...newIncident
+      };
+      
+      // Add to local state immediately for demo
+      setIncidents(prev => [newIncidentData as Incident, ...prev]);
+      
       await fetch(`${API_URL}/api/incidents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          incident_id: `inc_${Date.now()}`,
-          reported_by_staff_id: userId,
-          date: now.toISOString().split('T')[0],
-          time: now.toTimeString().split(' ')[0].substring(0, 5),
-          ...newIncident
-        })
+        body: JSON.stringify(newIncidentData)
       });
       
       setShowAddModal(false);
@@ -95,10 +103,61 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
         parent_notified: false,
         followup_required: false
       });
-      fetchIncidents();
+      alert('Incident report submitted! It will be reviewed by an administrator.');
     } catch (error) {
       console.error('Error adding incident:', error);
     }
+  };
+
+  // Admin action handlers
+  const handleApproveIncident = (incidentId: string) => {
+    setIncidents(prev => prev.map(inc => 
+      inc.incident_id === incidentId 
+        ? { ...inc, status: 'approved' as const }
+        : inc
+    ));
+    setSelectedIncident(null);
+    alert('Incident report approved.');
+  };
+
+  const handleDenyIncident = (incidentId: string) => {
+    setIncidents(prev => prev.map(inc => 
+      inc.incident_id === incidentId 
+        ? { ...inc, status: 'denied' as const }
+        : inc
+    ));
+    setSelectedIncident(null);
+    alert('Incident report denied.');
+  };
+
+  const handleSendToParent = (incidentId: string) => {
+    setIncidents(prev => prev.map(inc => 
+      inc.incident_id === incidentId 
+        ? { ...inc, status: 'sent_to_parent' as const, parent_notified: true }
+        : inc
+    ));
+    setSelectedIncident(null);
+    alert('Incident report has been sent to the parent.');
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'pending_review': 'bg-yellow-100 text-yellow-800',
+      'approved': 'bg-green-100 text-green-800',
+      'denied': 'bg-red-100 text-red-800',
+      'sent_to_parent': 'bg-blue-100 text-blue-800'
+    };
+    return colors[status] || colors['pending_review'];
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'pending_review': 'Pending Review',
+      'approved': 'Approved',
+      'denied': 'Denied',
+      'sent_to_parent': 'Sent to Parent'
+    };
+    return labels[status] || 'Pending Review';
   };
 
   const getSeverityColor = (severity: string) => {
@@ -138,7 +197,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
         <h2 className="text-2xl font-bold">Incident Reports</h2>
         <div className="flex gap-2">
           {(role === 'admin' || role === 'teacher') && (
-            <Button onClick={() => setShowAddModal(true)} className="bg-amber-600 hover:bg-amber-700">
+            <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Incident
             </Button>
@@ -180,6 +239,9 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                   <div className="space-y-2 text-sm">
                     <p className="text-gray-700 line-clamp-2">{incident.description}</p>
                     <div className="flex flex-wrap gap-2 mt-3">
+                      <Badge className={getStatusColor(incident.status || 'pending_review')}>
+                        {getStatusLabel(incident.status || 'pending_review')}
+                      </Badge>
                       {incident.parent_notified && (
                         <Badge variant="outline" className="text-xs">Parent Notified</Badge>
                       )}
@@ -223,6 +285,9 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                   <div className="space-y-2 text-sm">
                     <p className="text-gray-700 line-clamp-2">{incident.description}</p>
                     <div className="flex flex-wrap gap-2 mt-3">
+                      <Badge className={getStatusColor(incident.status || 'pending_review')}>
+                        {getStatusLabel(incident.status || 'pending_review')}
+                      </Badge>
                       {incident.parent_notified && (
                         <Badge variant="outline" className="text-xs">Parent Notified</Badge>
                       )}
@@ -295,6 +360,14 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                   <p className="text-gray-700">{selectedIncident.action_taken}</p>
                 </div>
 
+                {/* Status Section */}
+                <div className="bg-gray-100 p-4 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Report Status</p>
+                  <Badge className={`${getStatusColor(selectedIncident.status || 'pending_review')} text-sm`}>
+                    {getStatusLabel(selectedIncident.status || 'pending_review')}
+                  </Badge>
+                </div>
+
                 <div className="flex gap-4">
                   <div className={`flex-1 p-4 rounded-lg ${selectedIncident.parent_notified ? 'bg-green-50' : 'bg-gray-50'}`}>
                     <p className="text-sm font-medium mb-1">Parent Notification</p>
@@ -309,6 +382,51 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                     </p>
                   </div>
                 </div>
+
+                {/* Admin Action Buttons */}
+                {role === 'admin' && (selectedIncident.status === 'pending_review' || !selectedIncident.status) && (
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm font-medium mb-3">Admin Actions</p>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleApproveIncident(selectedIncident.incident_id)}
+                        className="bg-green-600 hover:bg-green-700 flex-1"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => handleDenyIncident(selectedIncident.incident_id)}
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50 flex-1"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Deny
+                      </Button>
+                      <Button
+                        onClick={() => handleSendToParent(selectedIncident.incident_id)}
+                        className="bg-blue-600 hover:bg-blue-700 flex-1"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Send to Parent
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show action buttons for approved incidents that haven't been sent to parent */}
+                {role === 'admin' && selectedIncident.status === 'approved' && !selectedIncident.parent_notified && (
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm font-medium mb-3">Admin Actions</p>
+                    <Button
+                      onClick={() => handleSendToParent(selectedIncident.incident_id)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Send to Parent
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -421,7 +539,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
             </Button>
             <Button 
               onClick={handleAddIncident}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-red-600 hover:bg-red-700"
               disabled={!newIncident.student_id || !newIncident.description || !newIncident.action_taken}
             >
               Report Incident

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -127,6 +127,15 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [paymentSchedules, setPaymentSchedules] = useState<PaymentSchedule[]>([]);
   const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
   const [showNewScheduleModal, setShowNewScheduleModal] = useState(false);
+  
+  // Re-enrollment state
+  const [reEnrollmentStatus, setReEnrollmentStatus] = useState<Record<string, { enrolled: boolean; year: string }>>({});
+  
+  // Authorized Pick Up state
+  const [authorizedPickups, setAuthorizedPickups] = useState<Record<string, Array<{ id: string; name: string; relationship: string; phone: string }>>>({});
+  const [showAddPickupModal, setShowAddPickupModal] = useState(false);
+  const [newPickup, setNewPickup] = useState({ name: '', relationship: '', phone: '' });
+  const [currentStudentForPickup, setCurrentStudentForPickup] = useState<string | null>(null);
   const [newInvoice, setNewInvoice] = useState({
     description: '',
     amount: '',
@@ -419,6 +428,61 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     }
   };
 
+  // Re-enrollment handlers
+  const handleReEnroll = (studentId: string) => {
+    const nextYear = new Date().getFullYear() + 1;
+    const schoolYear = `${nextYear}-${nextYear + 1}`;
+    setReEnrollmentStatus(prev => ({
+      ...prev,
+      [studentId]: { enrolled: true, year: schoolYear }
+    }));
+    alert(`Student has been re-enrolled for the ${schoolYear} school year!`);
+  };
+
+  const handleCancelReEnrollment = (studentId: string) => {
+    setReEnrollmentStatus(prev => {
+      const newStatus = { ...prev };
+      delete newStatus[studentId];
+      return newStatus;
+    });
+  };
+
+  // Authorized Pick Up handlers
+  const handleAddPickup = () => {
+    if (!newPickup.name || !newPickup.relationship || !newPickup.phone || !currentStudentForPickup) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    const pickup = {
+      id: `pickup_${Date.now()}`,
+      name: newPickup.name,
+      relationship: newPickup.relationship,
+      phone: newPickup.phone
+    };
+
+    setAuthorizedPickups(prev => ({
+      ...prev,
+      [currentStudentForPickup]: [...(prev[currentStudentForPickup] || []), pickup]
+    }));
+
+    setNewPickup({ name: '', relationship: '', phone: '' });
+    setShowAddPickupModal(false);
+    setCurrentStudentForPickup(null);
+  };
+
+  const handleRemovePickup = (studentId: string, pickupId: string) => {
+    setAuthorizedPickups(prev => ({
+      ...prev,
+      [studentId]: (prev[studentId] || []).filter(p => p.id !== pickupId)
+    }));
+  };
+
+  const openAddPickupModal = (studentId: string) => {
+    setCurrentStudentForPickup(studentId);
+    setShowAddPickupModal(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -444,7 +508,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   variant="ghost"
                   size="sm"
                   onClick={onBack}
-                  className="text-white hover:bg-amber-700"
+                  className="text-white hover:bg-red-700"
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
                   Back
@@ -480,7 +544,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Students</CardTitle>
-                    <Users className="h-4 w-4 text-amber-600" />
+                    <Users className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{students.length}</div>
@@ -491,7 +555,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Monthly Tuition</CardTitle>
-                    <DollarSign className="h-4 w-4 text-amber-600" />
+                    <DollarSign className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">${(family.monthly_tuition_amount || 0).toFixed(2)}</div>
@@ -502,7 +566,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
-                    <DollarSign className="h-4 w-4 text-amber-600" />
+                    <DollarSign className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                                         <div className={`text-2xl font-bold ${(family.current_balance || 0) > 100 ? 'text-red-600' : 'text-green-600'}`}>
@@ -515,7 +579,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Last Payment</CardTitle>
-                    <Calendar className="h-4 w-4 text-amber-600" />
+                    <Calendar className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
@@ -647,7 +711,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     <CardTitle className="text-sm">Monthly Tuition</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-amber-600">${(family.monthly_tuition_amount || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold text-blue-600">${(family.monthly_tuition_amount || 0).toFixed(2)}</div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -680,7 +744,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   <div className="flex gap-2">
                     <Button 
                       onClick={() => setShowNewInvoiceModal(true)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      className="bg-red-600 hover:bg-red-700 text-white"
                       size="sm"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -948,7 +1012,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
                       <Button variant="outline" onClick={() => setShowNewInvoiceModal(false)}>Cancel</Button>
-                      <Button onClick={handleCreateInvoice} className="bg-amber-600 hover:bg-amber-700 text-white">
+                      <Button onClick={handleCreateInvoice} className="bg-red-600 hover:bg-red-700 text-white">
                         Create Invoice
                       </Button>
                     </div>
@@ -1037,7 +1101,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
                       <Button variant="outline" onClick={() => setShowNewScheduleModal(false)}>Cancel</Button>
-                      <Button onClick={handleCreateSchedule} className="bg-amber-600 hover:bg-amber-700 text-white">
+                      <Button onClick={handleCreateSchedule} className="bg-red-600 hover:bg-red-700 text-white">
                         Create Schedule
                       </Button>
                     </div>
@@ -1071,7 +1135,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                       </div>
                     </div>
                     <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                      <div className="text-sm text-amber-600 mb-1">Scholarship Remaining</div>
+                      <div className="text-sm text-blue-600 mb-1">Scholarship Remaining</div>
                       <div className="text-2xl font-bold text-amber-700">
                         ${scholarships.reduce((sum, s) => sum + (s.remaining_balance || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </div>
@@ -1140,7 +1204,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                     ${(isEditing ? (ANNUAL_TUITION - parseFloat(editAwardAmount || '0')) : parentResponsibility).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-600">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
                                   ${(scholarship.remaining_balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -1175,7 +1239,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleEditScholarship(scholarship)}
-                                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                      className="text-blue-600 hover:text-amber-700 hover:bg-amber-50"
                                     >
                                       <Edit2 className="h-4 w-4 mr-1" />
                                       Edit
@@ -1204,7 +1268,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                       <CardContent className="p-4 flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-amber-600" />
+                        <FileText className="h-8 w-8 text-blue-600" />
                         <div>
                           <p className="font-medium">Enrollment Agreement</p>
                           <p className="text-sm text-gray-500">Signed 08/15/2025</p>
@@ -1213,7 +1277,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     </Card>
                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                       <CardContent className="p-4 flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-amber-600" />
+                        <FileText className="h-8 w-8 text-blue-600" />
                         <div>
                           <p className="font-medium">Emergency Contact Form</p>
                           <p className="text-sm text-gray-500">Updated 09/01/2025</p>
@@ -1222,7 +1286,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     </Card>
                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                       <CardContent className="p-4 flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-amber-600" />
+                        <FileText className="h-8 w-8 text-blue-600" />
                         <div>
                           <p className="font-medium">Photo Release</p>
                           <p className="text-sm text-gray-500">Signed 08/15/2025</p>
@@ -1239,12 +1303,95 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     );
   }
 
+  // Add Authorized Pick Up Modal
+  const AddPickupModal = () => (
+    showAddPickupModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Add Authorized Pick Up Person</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowAddPickupModal(false);
+                setCurrentStudentForPickup(null);
+                setNewPickup({ name: '', relationship: '', phone: '' });
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={newPickup.name}
+                onChange={(e) => setNewPickup(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Relationship to Student</label>
+              <select
+                value={newPickup.relationship}
+                onChange={(e) => setNewPickup(prev => ({ ...prev, relationship: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select relationship</option>
+                <option value="Grandparent">Grandparent</option>
+                <option value="Aunt/Uncle">Aunt/Uncle</option>
+                <option value="Sibling (18+)">Sibling (18+)</option>
+                <option value="Family Friend">Family Friend</option>
+                <option value="Nanny/Caregiver">Nanny/Caregiver</option>
+                <option value="Neighbor">Neighbor</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input
+                type="tel"
+                value={newPickup.phone}
+                onChange={(e) => setNewPickup(prev => ({ ...prev, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddPickupModal(false);
+                setCurrentStudentForPickup(null);
+                setNewPickup({ name: '', relationship: '', phone: '' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddPickup}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Add Person
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   // Student Account View
   if (type === 'student' && selectedStudent) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
+      <>
+        <AddPickupModal />
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -1252,7 +1399,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   variant="ghost"
                   size="sm"
                   onClick={onBack}
-                  className="text-white hover:bg-amber-700"
+                  className="text-white hover:bg-red-700"
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
                   Back
@@ -1288,7 +1435,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Grade Level</CardTitle>
-                    <BookOpen className="h-4 w-4 text-amber-600" />
+                    <BookOpen className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{selectedStudent.grade}</div>
@@ -1299,7 +1446,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-                    <Calendar className="h-4 w-4 text-amber-600" />
+                    <Calendar className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
@@ -1312,7 +1459,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Academic Status</CardTitle>
-                    <BookOpen className="h-4 w-4 text-amber-600" />
+                    <BookOpen className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className={`text-2xl font-bold ${
@@ -1329,7 +1476,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">IXL Status</CardTitle>
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTriangle className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className={`text-2xl font-bold ${
@@ -1353,11 +1500,107 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                       <Card key={index}>
                         <CardContent className="p-4">
                           <p className="text-sm text-gray-600">{grade.subject}</p>
-                          <p className="text-3xl font-bold text-amber-600">{grade.grade_value}</p>
+                          <p className="text-3xl font-bold text-blue-600">{grade.grade_value}</p>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Re-Enrollment Section */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5 text-blue-600" />
+                    Re-Enrollment for Next Year
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {reEnrollmentStatus[selectedStudent.student_id]?.enrolled ? (
+                    <div className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200">
+                      <div>
+                        <p className="font-semibold text-green-800">
+                          Re-enrolled for {reEnrollmentStatus[selectedStudent.student_id].year}
+                        </p>
+                        <p className="text-sm text-green-600">Student is confirmed for the next school year</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelReEnrollment(selectedStudent.student_id)}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-700">Not yet enrolled for next year</p>
+                        <p className="text-sm text-gray-500">Click to re-enroll this student for the upcoming school year</p>
+                      </div>
+                      <Button
+                        onClick={() => handleReEnroll(selectedStudent.student_id)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Re-Enroll for {new Date().getFullYear() + 1}-{new Date().getFullYear() + 2}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Authorized Pick Up List */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-blue-600" />
+                    Authorized Pick Up List
+                  </CardTitle>
+                  <Button
+                    onClick={() => openAddPickupModal(selectedStudent.student_id)}
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Person
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {(authorizedPickups[selectedStudent.student_id] || []).length > 0 ? (
+                    <div className="space-y-3">
+                      {(authorizedPickups[selectedStudent.student_id] || []).map((pickup) => (
+                        <div key={pickup.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <UserCheck className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{pickup.name}</p>
+                              <p className="text-sm text-gray-500">{pickup.relationship} - {pickup.phone}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemovePickup(selectedStudent.student_id, pickup.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <UserCheck className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <p>No authorized pick up persons added yet</p>
+                      <p className="text-sm">Add people who are allowed to pick up this student</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1404,7 +1647,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                         {grades.map((grade, index) => (
                           <tr key={index}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{grade.subject}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-2xl font-bold text-amber-600">{grade.grade_value}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-2xl font-bold text-blue-600">{grade.grade_value}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                 ['A', 'B'].includes(grade.grade_value) ? 'bg-green-100 text-green-800' :
@@ -1475,7 +1718,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     <Card>
                       <CardContent className="p-6">
                         <p className="text-sm text-gray-600">Weekly Hours</p>
-                        <p className="text-4xl font-bold text-amber-600">{ixl.weekly_hours}</p>
+                        <p className="text-4xl font-bold text-blue-600">{ixl.weekly_hours}</p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -1576,7 +1819,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-amber-600 mt-4 font-medium">Click to view full family account →</p>
+                    <p className="text-sm text-blue-600 mt-4 font-medium">Click to view full family account →</p>
                   </CardContent>
                 </Card>
               )}
@@ -1584,16 +1827,20 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
           </Tabs>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Account not found</p>
+    <>
+      <AddPickupModal />
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Account not found</p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

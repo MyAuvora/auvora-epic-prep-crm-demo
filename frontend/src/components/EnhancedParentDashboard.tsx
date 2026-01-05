@@ -14,6 +14,7 @@ import { ParentAnnouncementFeed } from './ParentAnnouncementFeed'
 import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { PaymentMethodStorage } from './PaymentMethodStorage'
 import { AttendanceCalendarModal } from './AttendanceCalendarModal'
+import { DailyBibleVerse } from './DailyBibleVerse'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -152,7 +153,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('home')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'home'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -162,7 +163,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('announcements')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'announcements'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -172,7 +173,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('billing')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'billing'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -182,7 +183,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('conferences')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'conferences'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -192,7 +193,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('events')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'events'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -202,7 +203,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('documents')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'documents'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -212,7 +213,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('store')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'store'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -222,7 +223,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('photos')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'photos'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -232,7 +233,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('messages')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'messages'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -242,7 +243,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               onClick={() => setView('health')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'health'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -255,14 +256,18 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'home' && (
           <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900">
-                Welcome, {parentData.parent.first_name} {parentData.parent.last_name}
-              </h2>
-              <p className="text-gray-600 mt-2">Parent Dashboard</p>
-            </div>
+                        <div className="mb-8">
+                          <h2 className="text-3xl font-bold text-gray-900">
+                            Welcome, {parentData.parent.first_name} {parentData.parent.last_name}
+                          </h2>
+                          <p className="text-gray-600 mt-2">Parent Dashboard</p>
+                        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <div className="mb-8">
+                          <DailyBibleVerse />
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>My Children</CardTitle>
@@ -274,14 +279,14 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                         key={child.student_id}
                         className={`cursor-pointer transition-all ${
                           selectedChild?.student_id === child.student_id
-                            ? 'ring-2 ring-amber-600'
+                            ? 'ring-2 ring-red-600'
                             : 'hover:shadow-lg'
                         }`}
                         onClick={() => setSelectedChild(child)}
                       >
                         <CardContent className="pt-6">
                           <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center">
+                            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
                               <User className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1">
@@ -322,7 +327,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-amber-600" />
+                    <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
                     Billing Summary
                   </CardTitle>
                 </CardHeader>
@@ -376,7 +381,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                           studentId: selectedChild.student_id,
                           studentName: `${selectedChild.first_name} ${selectedChild.last_name}`
                         })}
-                        className="text-amber-600 hover:text-amber-700 transition-colors"
+                        className="text-blue-600 hover:text-amber-700 transition-colors"
                         title="View attendance calendar"
                       >
                         <Calendar className="h-4 w-4" />
@@ -403,7 +408,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Overall Grades</CardTitle>
-                      <GraduationCap className="h-4 w-4 text-amber-600" />
+                      <GraduationCap className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold mb-2">
@@ -422,7 +427,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">IXL Status</CardTitle>
-                      <BookOpen className="h-4 w-4 text-amber-600" />
+                      <BookOpen className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold mb-2">

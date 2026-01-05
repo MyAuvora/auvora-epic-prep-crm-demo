@@ -125,14 +125,14 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
                     key={child.student_id}
                     className={`cursor-pointer transition-all ${
                       selectedChild?.student_id === child.student_id
-                        ? 'ring-2 ring-amber-600'
+                        ? 'ring-2 ring-red-600'
                         : 'hover:shadow-lg'
                     }`}
                     onClick={() => setSelectedChild(child)}
                   >
                     <CardContent className="pt-6">
                       <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
                           <User className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
@@ -173,7 +173,7 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <DollarSign className="h-5 w-5 mr-2 text-amber-600" />
+                <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
                 Billing Summary
               </CardTitle>
             </CardHeader>
@@ -221,7 +221,7 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-                  <Calendar className="h-4 w-4 text-amber-600" />
+                  <Calendar className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -244,7 +244,7 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Overall Grades</CardTitle>
-                  <GraduationCap className="h-4 w-4 text-amber-600" />
+                  <GraduationCap className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold mb-2">
@@ -263,7 +263,7 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">IXL Status</CardTitle>
-                  <BookOpen className="h-4 w-4 text-amber-600" />
+                  <BookOpen className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold mb-2">

@@ -69,7 +69,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         category: newAnnouncement.category,
         status: role === 'admin' ? 'Published' : 'Pending Approval',
         created_by: userId,
-        created_by_role: role === 'admin' ? 'Admin' : 'Teacher',
+        created_by_role: role === 'admin' ? 'Admin' : 'Coach',
         approved_by: role === 'admin' ? userId : null,
         approved_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,
         published_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,
@@ -157,7 +157,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         </div>
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-amber-600 hover:bg-amber-700">
+            <Button className="bg-red-600 hover:bg-red-700">
               <Plus className="mr-2 h-4 w-4" />
               Create Announcement
             </Button>
@@ -226,7 +226,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
                   </p>
                 </div>
               )}
-              <Button onClick={handleCreateAnnouncement} className="w-full bg-amber-600 hover:bg-amber-700">
+              <Button onClick={handleCreateAnnouncement} className="w-full bg-red-600 hover:bg-red-700">
                 {role === 'admin' ? 'Publish Announcement' : 'Submit for Approval'}
               </Button>
             </div>
@@ -238,7 +238,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Published</CardTitle>
-            <Eye className="h-4 w-4 text-amber-600" />
+            <Eye className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{publishedAnnouncements.length}</div>
@@ -250,7 +250,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-              <Bell className="h-4 w-4 text-amber-600" />
+              <Bell className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{pendingAnnouncements.length}</div>
@@ -262,7 +262,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pinned</CardTitle>
-            <Pin className="h-4 w-4 text-amber-600" />
+            <Pin className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -326,7 +326,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         {announcement.is_pinned && (
-                          <Pin className="h-4 w-4 text-amber-600" />
+                          <Pin className="h-4 w-4 text-blue-600" />
                         )}
                         <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
                       </div>

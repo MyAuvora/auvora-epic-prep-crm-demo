@@ -148,7 +148,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
     if (isMessageFromMe(message)) {
       return 'You';
     }
-    return message.sender_type === 'Parent' ? 'Parent' : 'Teacher';
+    return message.sender_type === 'Parent' ? 'Parent' : 'Coach';
   };
 
   const sentMessages = messages.filter(m => isMessageFromMe(m));

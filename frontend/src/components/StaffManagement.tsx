@@ -32,7 +32,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   const [newStaff, setNewStaff] = useState({
     first_name: '',
     last_name: '',
-    role: 'Teacher',
+    role: 'Coach',
     email: '',
     phone: '',
     assigned_rooms: [] as string[],
@@ -73,7 +73,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       setNewStaff({
         first_name: '',
         last_name: '',
-        role: 'Teacher',
+        role: 'Coach',
         email: '',
         phone: '',
         assigned_rooms: [],
@@ -91,16 +91,16 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       'Director': 'bg-blue-100 text-blue-800',
       'Manager': 'bg-green-100 text-green-800',
       'Admin': 'bg-amber-100 text-amber-800',
-      'Teacher': 'bg-teal-100 text-teal-800',
+      'Coach': 'bg-teal-100 text-teal-800',
       'Assistant': 'bg-gray-100 text-gray-800'
     };
-    return colors[role] || colors['Teacher'];
+    return colors[role] || colors['Coach'];
   };
 
   const groupedStaff = {
     leadership: staff.filter(s => ['Owner', 'Director', 'Manager'].includes(s.role)),
     admin: staff.filter(s => s.role === 'Admin'),
-    teachers: staff.filter(s => s.role === 'Teacher'),
+    teachers: staff.filter(s => s.role === 'Coach'),
     assistants: staff.filter(s => s.role === 'Assistant')
   };
 
@@ -113,9 +113,9 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Staff Management</h2>
-          <p className="text-gray-600 mt-1">Manage teachers and staff members</p>
+          <p className="text-gray-600 mt-1">Manage coaches and staff members</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-amber-600 hover:bg-amber-700">
+        <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
           <UserPlus className="w-4 h-4 mr-2" />
           Add Staff Member
         </Button>
@@ -136,7 +136,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Administrators</CardTitle>
-            <Briefcase className="h-4 w-4 text-amber-600" />
+            <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{groupedStaff.admin.length}</div>
@@ -146,12 +146,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Teachers</CardTitle>
+            <CardTitle className="text-sm font-medium">Coaches</CardTitle>
             <Users className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{groupedStaff.teachers.length}</div>
-            <p className="text-xs text-gray-500">Teaching staff</p>
+            <p className="text-xs text-gray-500">Coaching staff</p>
           </CardContent>
         </Card>
 
@@ -202,10 +202,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         </div>
       )}
 
-      {/* Teachers Section */}
-      {groupedStaff.teachers.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Teachers</h3>
+            {/* Coaches Section */}
+            {groupedStaff.teachers.length > 0 && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Coaches</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {groupedStaff.teachers.map((teacher) => (
               <Card key={teacher.staff_id} className="hover:shadow-lg transition-shadow">
@@ -283,7 +283,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           <DialogHeader>
             <DialogTitle>Add New Staff Member</DialogTitle>
             <DialogDescription>
-              Add a new teacher or staff member to the system
+              Add a new coach or staff member to the system
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -319,7 +319,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                   <SelectItem value="Director">Director</SelectItem>
                   <SelectItem value="Manager">Manager</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Teacher">Teacher</SelectItem>
+                  <SelectItem value="Coach">Coach</SelectItem>
                   <SelectItem value="Assistant">Assistant</SelectItem>
                 </SelectContent>
               </Select>
@@ -353,7 +353,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
             </Button>
             <Button 
               onClick={handleAddStaff}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-red-600 hover:bg-red-700"
               disabled={!newStaff.first_name || !newStaff.last_name || !newStaff.email}
             >
               Add Staff Member

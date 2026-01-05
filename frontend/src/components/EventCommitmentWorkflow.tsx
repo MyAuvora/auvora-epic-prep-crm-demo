@@ -264,7 +264,7 @@ export function EventCommitmentWorkflow({
                 <div className="flex flex-col items-center">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     status === 'complete' ? 'bg-green-500 text-white' :
-                    status === 'active' ? 'bg-amber-600 text-white' :
+                    status === 'active' ? 'bg-red-600 text-white' :
                     'bg-gray-200 text-gray-500'
                   }`}>
                     {status === 'complete' ? <Check className="h-5 w-5" /> : stepNum}
@@ -294,7 +294,7 @@ export function EventCommitmentWorkflow({
                   key={student.student_id}
                   className={`cursor-pointer transition-all ${
                     selectedStudents.has(student.student_id)
-                      ? 'border-amber-600 bg-amber-50'
+                      ? 'border-red-600 bg-amber-50'
                       : 'hover:border-amber-300'
                   }`}
                   onClick={() => handleStudentToggle(student.student_id)}
@@ -326,7 +326,7 @@ export function EventCommitmentWorkflow({
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
                   <p className="font-medium">Total Cost:</p>
-                  <p className="text-xl font-bold text-amber-600">${totalCost.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-blue-600">${totalCost.toFixed(2)}</p>
                 </div>
               </div>
             )}
@@ -334,7 +334,7 @@ export function EventCommitmentWorkflow({
             <Button
               onClick={handleNextStep}
               disabled={selectedStudents.size === 0}
-              className="w-full bg-amber-600 hover:bg-amber-700"
+              className="w-full bg-red-600 hover:bg-red-700"
             >
               Continue
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -404,7 +404,7 @@ Email: ${parent?.email || ''}`}
             <Button
               onClick={handleNextStep}
               disabled={!signature.trim() || !agreedToTerms}
-              className="w-full bg-amber-600 hover:bg-amber-700"
+              className="w-full bg-red-600 hover:bg-red-700"
             >
               Sign & Continue
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -436,7 +436,7 @@ Email: ${parent?.email || ''}`}
               <div className="border-t border-amber-300 mt-2 pt-2">
                 <div className="flex justify-between items-center">
                   <p className="text-lg font-bold">Total Amount:</p>
-                  <p className="text-2xl font-bold text-amber-600">${totalCost.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-blue-600">${totalCost.toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -448,14 +448,14 @@ Email: ${parent?.email || ''}`}
                   <Button
                     variant={paymentMethod === 'card' ? 'default' : 'outline'}
                     onClick={() => setPaymentMethod('card')}
-                    className={paymentMethod === 'card' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                    className={paymentMethod === 'card' ? 'bg-red-600 hover:bg-red-700' : ''}
                   >
                     Credit/Debit Card
                   </Button>
                   <Button
                     variant={paymentMethod === 'account' ? 'default' : 'outline'}
                     onClick={() => setPaymentMethod('account')}
-                    className={paymentMethod === 'account' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                    className={paymentMethod === 'account' ? 'bg-red-600 hover:bg-red-700' : ''}
                   >
                     Account Balance
                   </Button>

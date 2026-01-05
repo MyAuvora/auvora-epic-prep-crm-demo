@@ -101,7 +101,7 @@ export function StudentDetailsModal({ studentId, onClose }: StudentDetailsModalP
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-white hover:bg-amber-700"
+              className="text-white hover:bg-red-700"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -167,7 +167,7 @@ export function StudentDetailsModal({ studentId, onClose }: StudentDetailsModalP
                 <Card key={index}>
                   <CardContent className="p-4">
                     <p className="text-sm text-gray-600">{grade.subject}</p>
-                    <p className="text-3xl font-bold text-amber-600">{grade.grade_value}</p>
+                    <p className="text-3xl font-bold text-blue-600">{grade.grade_value}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -192,7 +192,7 @@ export function StudentDetailsModal({ studentId, onClose }: StudentDetailsModalP
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-sm text-gray-600">Weekly Hours</p>
-                    <p className="text-2xl font-bold text-amber-600">{ixl.weekly_hours}</p>
+                    <p className="text-2xl font-bold text-blue-600">{ixl.weekly_hours}</p>
                   </CardContent>
                 </Card>
                 <Card>

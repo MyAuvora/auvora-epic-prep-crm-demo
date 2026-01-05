@@ -15,6 +15,7 @@ import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { TeacherGradebook } from './TeacherGradebook'
 import { AnnouncementManagement } from './AnnouncementManagement'
+import { DailyBibleVerse } from './DailyBibleVerse'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -138,7 +139,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('rooms')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'rooms'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -148,7 +149,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('gradebook')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'gradebook'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -158,7 +159,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('announcements')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'announcements'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -168,7 +169,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('events')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'events'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -178,7 +179,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('documents')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'documents'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -188,7 +189,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('photos')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'photos'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -198,7 +199,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('messages')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'messages'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -208,7 +209,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('incidents')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'incidents'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -218,7 +219,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               onClick={() => setView('health')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'health'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -231,18 +232,22 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'rooms' && (
           <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900">
-                Welcome, {teacherData.staff.first_name} {teacherData.staff.last_name}
-              </h2>
-              <p className="text-gray-600 mt-2">Teacher Dashboard</p>
-            </div>
+                        <div className="mb-8">
+                          <h2 className="text-3xl font-bold text-gray-900">
+                            Welcome, {teacherData.staff.first_name} {teacherData.staff.last_name}
+                          </h2>
+                          <p className="text-gray-600 mt-2">Coach Dashboard</p>
+                        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="mb-8">
+                          <DailyBibleVerse />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">My Rooms</CardTitle>
-              <Users className="h-4 w-4 text-amber-600" />
+              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{teacherData.rooms.length}</div>
@@ -253,7 +258,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-              <Users className="h-4 w-4 text-amber-600" />
+              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -266,7 +271,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">At-Risk Students</CardTitle>
-              <Calendar className="h-4 w-4 text-amber-600" />
+              <Calendar className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
@@ -286,7 +291,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
               <Card
                 key={index}
                 className={`cursor-pointer transition-all ${
-                  selectedRoom === room ? 'ring-2 ring-amber-600' : 'hover:shadow-lg'
+                  selectedRoom === room ? 'ring-2 ring-red-600' : 'hover:shadow-lg'
                 }`}
                 onClick={() => setSelectedRoom(room)}
               >
@@ -300,7 +305,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
                       <div className="text-2xl font-bold">{room.student_count}</div>
                       <p className="text-xs text-gray-500">Students</p>
                     </div>
-                    <BookOpen className="h-8 w-8 text-amber-600" />
+                    <BookOpen className="h-8 w-8 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -320,7 +325,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
                 </div>
                 <Button 
                   onClick={() => setIsAttendanceModalOpen(true)}
-                  className="bg-amber-600 hover:bg-amber-700"
+                  className="bg-red-600 hover:bg-red-700"
                 >
                   <ClipboardCheck className="mr-2 h-4 w-4" />
                   Take Attendance
@@ -403,7 +408,7 @@ export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
             <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No Room Selected</h3>
             <p className="mt-1 text-sm text-gray-500">Please select a room from the "My Rooms" tab to access the gradebook.</p>
-            <Button onClick={() => setView('rooms')} className="mt-4 bg-amber-600 hover:bg-amber-700">
+            <Button onClick={() => setView('rooms')} className="mt-4 bg-red-600 hover:bg-red-700">
               Go to My Rooms
             </Button>
           </div>

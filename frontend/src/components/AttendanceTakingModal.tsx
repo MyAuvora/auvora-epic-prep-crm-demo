@@ -154,7 +154,7 @@ export function AttendanceTakingModal({
           <Button 
             onClick={handleSubmit} 
             disabled={isSubmitting}
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-red-600 hover:bg-red-700"
           >
             {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
           </Button>

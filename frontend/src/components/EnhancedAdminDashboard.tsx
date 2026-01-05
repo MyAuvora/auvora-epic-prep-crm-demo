@@ -26,6 +26,7 @@ import { AnnouncementManagement } from './AnnouncementManagement'
 import { StaffManagement } from './StaffManagement'
 import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
 import { FullAccountView } from './FullAccountView'
+import { DailyBibleVerse } from './DailyBibleVerse'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -265,7 +266,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'dashboard'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -281,7 +282,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'students'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -297,7 +298,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'families-finance'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -310,7 +311,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'admissions'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -323,7 +324,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'academics'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -336,7 +337,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'student-support'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -349,7 +350,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'communications'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -362,7 +363,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'operations'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -375,7 +376,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'documents'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -388,7 +389,7 @@ export function EnhancedAdminDashboard() {
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'analytics'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -401,7 +402,7 @@ export function EnhancedAdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'dashboard' && isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
             <p className="text-gray-600 text-lg">Loading dashboard...</p>
             <p className="text-gray-400 text-sm mt-2">This may take a moment if the server is waking up</p>
           </div>
@@ -418,7 +419,7 @@ export function EnhancedAdminDashboard() {
             <p className="text-gray-600 text-center max-w-md mb-4">{loadError}</p>
             <button
               onClick={fetchDashboardData}
-              className="bg-amber-600 text-white px-6 py-2 rounded-md hover:bg-amber-700 transition-colors font-medium"
+              className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
             >
               Try Again
             </button>
@@ -427,16 +428,18 @@ export function EnhancedAdminDashboard() {
         
         {view === 'dashboard' && dashboardData && !isLoading && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
-            </div>
+                        <div className="flex justify-between items-center">
+                          <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
+                          <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
+                        </div>
+
+                        <DailyBibleVerse />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                  <Users className="h-4 w-4 text-amber-600" />
+                  <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.total_students}</div>
@@ -449,7 +452,7 @@ export function EnhancedAdminDashboard() {
               <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Families</CardTitle>
-                  <Users className="h-4 w-4 text-amber-600" />
+                  <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.total_families}</div>
@@ -458,26 +461,26 @@ export function EnhancedAdminDashboard() {
               </Card>
 
               <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer hover:border-amber-600"
+                className="hover:shadow-lg transition-shadow cursor-pointer hover:border-red-600"
                 onClick={handleOutstandingBalanceClick}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
-                  <DollarSign className="h-4 w-4 text-amber-600" />
+                  <DollarSign className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">${dashboardData.billing_summary.total_balance.toFixed(2)}</div>
                   <p className="text-xs text-gray-500">
                     {dashboardData.billing_summary.red} families overdue
                   </p>
-                  <p className="text-xs text-amber-600 mt-1 font-medium">Click to view details →</p>
+                  <p className="text-xs text-blue-600 mt-1 font-medium">Click to view details →</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
-                  <Calendar className="h-4 w-4 text-amber-600" />
+                  <Calendar className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.attendance_today.present}</div>
@@ -588,7 +591,7 @@ export function EnhancedAdminDashboard() {
                 />
                 <Button
                   onClick={() => setShowAddStudentModal(true)}
-                  className="bg-amber-600 hover:bg-amber-700"
+                  className="bg-red-600 hover:bg-red-700"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
                   Add Student

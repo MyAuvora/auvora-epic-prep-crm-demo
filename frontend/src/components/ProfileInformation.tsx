@@ -35,9 +35,9 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
           lastName: 'Riffle',
           email: 'priffle@epicprep.com',
           phone: '(850) 555-0102',
-          address: '456 Teacher Ave, Pace, FL 32571',
+          address: '456 Coach Ave, Pace, FL 32571',
           campus: 'Pace Campus',
-          role: 'Teacher',
+          role: 'Coach',
           department: 'Elementary Education',
           emergencyContact: 'John Riffle',
           emergencyPhone: '(850) 555-0199'
@@ -96,7 +96,7 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
         <div className="space-y-6 mt-4">
           {/* Profile Photo */}
           <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-amber-600 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center">
               <User className="w-10 h-10 text-white" />
             </div>
             {isEditing && (

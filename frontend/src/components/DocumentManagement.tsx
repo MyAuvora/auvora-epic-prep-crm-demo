@@ -196,7 +196,7 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
             <h2 className="text-2xl font-bold">Document Management</h2>
             <p className="text-gray-600 mt-1">Upload and manage forms for parents to sign</p>
           </div>
-          <Button onClick={() => setShowUploadModal(true)} className="bg-amber-600 hover:bg-amber-700">
+          <Button onClick={() => setShowUploadModal(true)} className="bg-red-600 hover:bg-red-700">
             <FileText className="w-4 h-4 mr-2" />
             Upload Document
           </Button>
@@ -430,7 +430,7 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
             </Button>
             <Button 
               onClick={handleCreateDocument}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-red-600 hover:bg-red-700"
               disabled={!newDocument.title || !newDocument.description}
             >
               Upload Document

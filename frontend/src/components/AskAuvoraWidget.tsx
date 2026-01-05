@@ -34,7 +34,7 @@ export function AskAuvoraWidget({ onSearch }: AskAuvoraWidgetProps) {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
-        <Card className="w-96 shadow-2xl border-amber-600">
+        <Card className="w-96 shadow-2xl border-red-600">
           <CardHeader className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -45,7 +45,7 @@ export function AskAuvoraWidget({ onSearch }: AskAuvoraWidgetProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-amber-700"
+                className="text-white hover:bg-red-700"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -60,7 +60,7 @@ export function AskAuvoraWidget({ onSearch }: AskAuvoraWidgetProps) {
                   placeholder="Ask a question..."
                   className="flex-1"
                 />
-                <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
+                <Button type="submit" className="bg-red-600 hover:bg-red-700">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

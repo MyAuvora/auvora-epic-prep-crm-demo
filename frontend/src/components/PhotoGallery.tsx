@@ -113,7 +113,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Photo Gallery</h2>
         {(role === 'admin' || role === 'teacher') && (
-          <Button onClick={() => setShowUploadModal(true)} className="bg-amber-600 hover:bg-amber-700">
+          <Button onClick={() => setShowUploadModal(true)} className="bg-red-600 hover:bg-red-700">
             <Upload className="w-4 h-4 mr-2" />
             Upload Photos
           </Button>
@@ -289,7 +289,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
             </Button>
             <Button 
               onClick={handleCreateAlbum}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-red-600 hover:bg-red-700"
               disabled={!newAlbum.title || !newAlbum.description}
             >
               Create Album

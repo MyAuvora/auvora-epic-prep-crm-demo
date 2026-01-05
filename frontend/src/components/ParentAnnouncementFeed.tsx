@@ -130,7 +130,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Announcements</CardTitle>
-            <Bell className="h-4 w-4 text-amber-600" />
+            <Bell className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{announcements.length}</div>
@@ -141,7 +141,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unread</CardTitle>
-            <Eye className="h-4 w-4 text-amber-600" />
+            <Eye className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{unreadCount}</div>
@@ -152,7 +152,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pinned</CardTitle>
-            <Pin className="h-4 w-4 text-amber-600" />
+            <Pin className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pinnedAnnouncements.length}</div>
@@ -165,7 +165,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
         <Card className="border-amber-300 bg-amber-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Pin className="h-5 w-5 text-amber-600" />
+              <Pin className="h-5 w-5 text-blue-600" />
               Pinned Announcements
             </CardTitle>
           </CardHeader>
@@ -201,7 +201,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
                       {new Date(announcement.published_date || '').toLocaleDateString()}
                     </div>
                     {expandedAnnouncement !== announcement.announcement_id && (
-                      <Button variant="link" size="sm" className="h-auto p-0 text-amber-600">
+                      <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
                         Read more
                       </Button>
                     )}
@@ -257,7 +257,7 @@ export function ParentAnnouncementFeed({ userId, campusId }: ParentAnnouncementF
                       </div>
                     )}
                     {expandedAnnouncement !== announcement.announcement_id && (
-                      <Button variant="link" size="sm" className="h-auto p-0 text-amber-600">
+                      <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
                         Read more
                       </Button>
                     )}

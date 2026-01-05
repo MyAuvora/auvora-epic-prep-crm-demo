@@ -145,7 +145,7 @@ export const PaymentMethodStorage: React.FC<PaymentMethodStorageProps> = ({ fami
           <h3 className="text-xl font-semibold">Payment Methods</h3>
           <p className="text-sm text-gray-600 mt-1">Manage your saved payment methods for extra expenses</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-amber-600 hover:bg-amber-700">
+        <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
           <Plus className="w-4 h-4 mr-2" />
           Add Card
         </Button>
@@ -336,7 +336,7 @@ export const PaymentMethodStorage: React.FC<PaymentMethodStorageProps> = ({ fami
             </Button>
             <Button 
               onClick={handleAddCard}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-red-600 hover:bg-red-700"
               disabled={
                 !newCard.card_number || 
                 newCard.card_number.length < 13 ||

@@ -58,7 +58,7 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
         const staffData = await staffRes.json();
 
         setConferences(conferencesData);
-        setStaff(staffData.filter((s: Staff) => s.role === 'Teacher'));
+        setStaff(staffData.filter((s: Staff) => s.role === 'Coach'));
       } catch (error) {
         console.error('Error fetching conference data:', error);
       } finally {
@@ -94,10 +94,10 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
     <div className="space-y-6">
       {/* Schedule New Conference Button */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Parent-Teacher Conferences</h2>
+        <h2 className="text-2xl font-bold">Parent-Coach Conferences</h2>
         <Button
           onClick={() => setShowScheduleForm(!showScheduleForm)}
-          className="bg-amber-600 hover:bg-amber-700"
+          className="bg-red-600 hover:bg-red-700"
         >
           {showScheduleForm ? 'Cancel' : 'Schedule New Conference'}
         </Button>
@@ -105,7 +105,7 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
 
       {/* Schedule Form */}
       {showScheduleForm && (
-        <Card className="border-amber-600">
+        <Card className="border-red-600">
           <CardHeader className="bg-amber-50">
             <CardTitle>Schedule a Conference</CardTitle>
           </CardHeader>
@@ -127,13 +127,13 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Select Teacher</label>
-              <select
-                value={selectedTeacher}
-                onChange={(e) => setSelectedTeacher(e.target.value)}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Choose a teacher...</option>
+                            <label className="block text-sm font-medium mb-2">Select Coach</label>
+                            <select
+                              value={selectedTeacher}
+                              onChange={(e) => setSelectedTeacher(e.target.value)}
+                              className="w-full p-2 border rounded"
+                            >
+                              <option value="">Choose a coach...</option>
                 {staff.map(teacher => (
                   <option key={teacher.staff_id} value={teacher.staff_id}>
                     {teacher.first_name} {teacher.last_name}
@@ -188,7 +188,7 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
 
             <Button
               onClick={handleScheduleConference}
-              className="w-full bg-amber-600 hover:bg-amber-700"
+              className="w-full bg-red-600 hover:bg-red-700"
             >
               Schedule Conference
             </Button>
@@ -217,7 +217,7 @@ export function ConferenceScheduling({ parentId, students }: ConferenceSchedulin
                     <div className="flex justify-between items-start">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <User className="h-5 w-5 text-amber-600" />
+                          <User className="h-5 w-5 text-blue-600" />
                           <span className="font-semibold">
                             {student?.first_name} {student?.last_name}
                           </span>

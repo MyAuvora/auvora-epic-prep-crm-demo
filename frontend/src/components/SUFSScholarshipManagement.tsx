@@ -349,7 +349,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
       </div>
     )
   }
@@ -379,7 +379,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
                 <Card className="border-l-4 border-amber-500">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Scholarship Students</CardTitle>
-                    <Users className="h-4 w-4 text-amber-600" />
+                    <Users className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboard.summary.total_scholarship_students}</div>
@@ -607,7 +607,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <Button variant="outline" onClick={() => setShowNewScholarshipModal(false)}>Cancel</Button>
-                  <Button onClick={handleCreateScholarship} className="bg-amber-600 hover:bg-amber-700 text-white">
+                  <Button onClick={handleCreateScholarship} className="bg-red-600 hover:bg-red-700 text-white">
                     Create Scholarship
                   </Button>
                 </div>
@@ -619,7 +619,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Active Scholarships</CardTitle>
               <div className="flex gap-2">
-                <Button onClick={() => setShowNewScholarshipModal(true)} className="bg-amber-600 hover:bg-amber-700 text-white" size="sm">
+                <Button onClick={() => setShowNewScholarshipModal(true)} className="bg-red-600 hover:bg-red-700 text-white" size="sm">
                   <Plus className="w-4 h-4 mr-2" />
                   New Scholarship
                 </Button>
@@ -704,7 +704,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
                               ${parentPays.toLocaleString()}
                             </span>
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-amber-600">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600">
                             ${scholarship.remaining_balance.toLocaleString()}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
@@ -746,7 +746,7 @@ export function SUFSScholarshipManagement({ campusId }: { campusId?: string | nu
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleEditScholarship(scholarship)}
-                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                className="text-blue-600 hover:text-amber-700 hover:bg-amber-50"
                               >
                                 <Edit2 className="h-4 w-4 mr-1" />
                                 Edit

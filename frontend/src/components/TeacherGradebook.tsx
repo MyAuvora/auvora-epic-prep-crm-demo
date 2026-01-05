@@ -263,7 +263,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         </div>
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-amber-600 hover:bg-amber-700">
+            <Button className="bg-red-600 hover:bg-red-700">
               <Plus className="mr-2 h-4 w-4" />
               Create Assignment
             </Button>
@@ -338,7 +338,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
                   />
                 </div>
               </div>
-              <Button onClick={handleCreateAssignment} className="w-full bg-amber-600 hover:bg-amber-700">
+              <Button onClick={handleCreateAssignment} className="w-full bg-red-600 hover:bg-red-700">
                 Create Assignment
               </Button>
             </div>
@@ -350,7 +350,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
-            <BookOpen className="h-4 w-4 text-amber-600" />
+            <BookOpen className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{assignments.length}</div>
@@ -361,7 +361,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Draft Assignments</CardTitle>
-            <Eye className="h-4 w-4 text-amber-600" />
+            <Eye className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{draftAssignments.length}</div>
@@ -372,7 +372,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Students</CardTitle>
-            <Calendar className="h-4 w-4 text-amber-600" />
+            <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{students.length}</div>
@@ -395,7 +395,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
                   key={assignment.assignment_id}
                   className={`p-4 border rounded-lg cursor-pointer transition-all ${
                     selectedAssignment?.assignment_id === assignment.assignment_id
-                      ? 'border-amber-600 bg-amber-50'
+                      ? 'border-red-600 bg-amber-50'
                       : 'border-gray-200 hover:border-amber-300'
                   }`}
                   onClick={() => setSelectedAssignment(assignment)}
@@ -437,7 +437,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
                   {isSaving ? 'Saving...' : 'Save Grades'}
                 </Button>
                 {selectedAssignment.status === 'Draft' && (
-                  <Button onClick={handlePublishAssignment} className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={handlePublishAssignment} className="bg-red-600 hover:bg-red-700">
                     <Eye className="mr-2 h-4 w-4" />
                     Publish
                   </Button>

@@ -77,7 +77,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
             onClick={() => setActiveTab('password')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'password'
-                ? 'border-amber-600 text-amber-600'
+                ? 'border-red-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -87,7 +87,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
             onClick={() => setActiveTab('notifications')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'notifications'
-                ? 'border-amber-600 text-amber-600'
+                ? 'border-red-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -97,7 +97,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
             onClick={() => setActiveTab('preferences')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'preferences'
-                ? 'border-amber-600 text-amber-600'
+                ? 'border-red-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
