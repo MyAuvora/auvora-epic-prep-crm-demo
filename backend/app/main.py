@@ -871,6 +871,112 @@ class EventWorkflow(BaseModel):
     created_date: date
     completed_date: Optional[date]
 
+# Step Up for Students Scholarship Models
+class SUFSScholarshipType(str, Enum):
+    FES_UA = "FES-UA"  # Family Empowerment Scholarship - Unique Abilities
+    FES_EO = "FES-EO"  # Family Empowerment Scholarship - Educational Options
+    FTC = "FTC"  # Florida Tax Credit Scholarship
+    HOPE = "Hope"  # Hope Scholarship
+    NEW_WORLDS = "New Worlds"  # New Worlds Scholarship
+    AAA = "AAA"  # Reading Scholarship Accounts
+
+class SUFSClaimStatus(str, Enum):
+    DRAFT = "Draft"
+    SUBMITTED = "Submitted"
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    PAID = "Paid"
+    DENIED = "Denied"
+    PARTIAL = "Partial"
+
+class SUFSPaymentStatus(str, Enum):
+    PENDING = "Pending"
+    RECEIVED = "Received"
+    RECONCILED = "Reconciled"
+    DISCREPANCY = "Discrepancy"
+
+class SUFSScholarship(BaseModel):
+    scholarship_id: str
+    student_id: str
+    family_id: str
+    campus_id: str
+    scholarship_type: SUFSScholarshipType
+    award_id: Optional[str] = None  # SUFS Award ID if known
+    school_year: str  # e.g., "2025-2026"
+    annual_award_amount: float
+    quarterly_amount: float
+    remaining_balance: float
+    start_date: date
+    end_date: Optional[date] = None
+    status: str = "Active"  # Active, Inactive, Pending
+    eligibility_verified: bool = False
+    eligibility_verified_date: Optional[date] = None
+    notes: Optional[str] = None
+    created_date: date
+    last_updated: date
+
+class SUFSClaim(BaseModel):
+    claim_id: str
+    scholarship_id: str
+    student_id: str
+    family_id: str
+    campus_id: str
+    claim_period: str  # e.g., "Q1 2025-2026", "October 2025"
+    claim_date: date
+    amount_claimed: float
+    tuition_amount: float
+    fees_amount: float
+    status: SUFSClaimStatus
+    submitted_date: Optional[date] = None
+    approved_date: Optional[date] = None
+    paid_date: Optional[date] = None
+    paid_amount: Optional[float] = None
+    denial_reason: Optional[str] = None
+    sufs_reference_number: Optional[str] = None
+    notes: Optional[str] = None
+    created_date: date
+    last_updated: date
+
+class SUFSPayment(BaseModel):
+    payment_id: str
+    campus_id: str
+    payment_date: date
+    deposit_date: Optional[date] = None
+    total_amount: float
+    sufs_reference_number: Optional[str] = None
+    bank_reference: Optional[str] = None
+    status: SUFSPaymentStatus
+    reconciled_date: Optional[date] = None
+    reconciled_by: Optional[str] = None
+    notes: Optional[str] = None
+    created_date: date
+
+class SUFSPaymentAllocation(BaseModel):
+    allocation_id: str
+    payment_id: str
+    claim_id: str
+    student_id: str
+    family_id: str
+    amount: float
+    status: str  # "Matched", "Discrepancy", "Manual"
+    discrepancy_amount: Optional[float] = None
+    discrepancy_reason: Optional[str] = None
+    created_date: date
+
+class SUFSReconciliationReport(BaseModel):
+    report_id: str
+    campus_id: str
+    report_period: str  # e.g., "October 2025"
+    generated_date: date
+    total_claims_submitted: float
+    total_payments_received: float
+    total_outstanding: float
+    total_discrepancies: float
+    claims_count: int
+    payments_count: int
+    reconciled_count: int
+    discrepancy_count: int
+
 organizations_db: List[Organization] = []
 campuses_db: List[Campus] = []
 users_db: List[User] = []
@@ -920,6 +1026,10 @@ grade_entries_db: List[GradeEntry] = []
 announcements_db: List[Announcement] = []
 announcement_reads_db: List[AnnouncementRead] = []
 event_workflows_db: List[EventWorkflow] = []
+sufs_scholarships_db: List[SUFSScholarship] = []
+sufs_claims_db: List[SUFSClaim] = []
+sufs_payments_db: List[SUFSPayment] = []
+sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
 
 def generate_demo_data():
     """Generate demo data and populate in-memory databases"""
@@ -936,6 +1046,7 @@ def generate_demo_data():
     global intervention_plans_db, intervention_progress_db
     global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
     global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
+    global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     
     from .demo_data import generate_all_demo_data
     
@@ -989,6 +1100,10 @@ def generate_demo_data():
     announcements_db = data.get("announcements", [])
     announcement_reads_db = data.get("announcement_reads", [])
     event_workflows_db = data.get("event_workflows", [])
+    sufs_scholarships_db = data.get("sufs_scholarships", [])
+    sufs_claims_db = data.get("sufs_claims", [])
+    sufs_payments_db = data.get("sufs_payments", [])
+    sufs_payment_allocations_db = data.get("sufs_payment_allocations", [])
 
 @app.on_event("startup")
 async def startup_event():
@@ -2954,3 +3069,416 @@ async def delete_payment_method(payment_method_id: str):
     global payment_methods_db
     payment_methods_db = [pm for pm in payment_methods_db if pm['payment_method_id'] != payment_method_id]
     return {"status": "success"}
+
+# ==================== STEP UP FOR STUDENTS (SUFS) SCHOLARSHIP ENDPOINTS ====================
+
+@app.get("/api/sufs/scholarships")
+async def get_sufs_scholarships(
+    campus_id: Optional[str] = None,
+    student_id: Optional[str] = None,
+    family_id: Optional[str] = None,
+    scholarship_type: Optional[SUFSScholarshipType] = None,
+    status: Optional[str] = None
+):
+    """Get all SUFS scholarships with optional filters"""
+    filtered = sufs_scholarships_db
+    if campus_id:
+        filtered = [s for s in filtered if s.campus_id == campus_id]
+    if student_id:
+        filtered = [s for s in filtered if s.student_id == student_id]
+    if family_id:
+        filtered = [s for s in filtered if s.family_id == family_id]
+    if scholarship_type:
+        filtered = [s for s in filtered if s.scholarship_type == scholarship_type]
+    if status:
+        filtered = [s for s in filtered if s.status == status]
+    return filtered
+
+@app.get("/api/sufs/scholarships/{scholarship_id}")
+async def get_sufs_scholarship(scholarship_id: str):
+    """Get a specific SUFS scholarship"""
+    scholarship = next((s for s in sufs_scholarships_db if s.scholarship_id == scholarship_id), None)
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    return scholarship
+
+@app.post("/api/sufs/scholarships")
+async def create_sufs_scholarship(scholarship_data: dict):
+    """Create a new SUFS scholarship record"""
+    global sufs_scholarships_db
+    new_scholarship = SUFSScholarship(
+        scholarship_id=scholarship_data.get('scholarship_id', f"sufs_sch_{len(sufs_scholarships_db)+1}"),
+        student_id=scholarship_data['student_id'],
+        family_id=scholarship_data['family_id'],
+        campus_id=scholarship_data['campus_id'],
+        scholarship_type=SUFSScholarshipType(scholarship_data['scholarship_type']),
+        award_id=scholarship_data.get('award_id'),
+        school_year=scholarship_data['school_year'],
+        annual_award_amount=scholarship_data['annual_award_amount'],
+        quarterly_amount=scholarship_data.get('quarterly_amount', scholarship_data['annual_award_amount'] / 4),
+        remaining_balance=scholarship_data.get('remaining_balance', scholarship_data['annual_award_amount']),
+        start_date=date.fromisoformat(scholarship_data['start_date']),
+        end_date=date.fromisoformat(scholarship_data['end_date']) if scholarship_data.get('end_date') else None,
+        status=scholarship_data.get('status', 'Active'),
+        eligibility_verified=scholarship_data.get('eligibility_verified', False),
+        eligibility_verified_date=date.fromisoformat(scholarship_data['eligibility_verified_date']) if scholarship_data.get('eligibility_verified_date') else None,
+        notes=scholarship_data.get('notes'),
+        created_date=date.today(),
+        last_updated=date.today()
+    )
+    sufs_scholarships_db.append(new_scholarship)
+    return {"status": "success", "scholarship_id": new_scholarship.scholarship_id}
+
+@app.put("/api/sufs/scholarships/{scholarship_id}")
+async def update_sufs_scholarship(scholarship_id: str, scholarship_data: dict):
+    """Update a SUFS scholarship record"""
+    for i, s in enumerate(sufs_scholarships_db):
+        if s.scholarship_id == scholarship_id:
+            updated = s.model_copy(update={
+                **scholarship_data,
+                'last_updated': date.today()
+            })
+            sufs_scholarships_db[i] = updated
+            return {"status": "success"}
+    raise HTTPException(status_code=404, detail="Scholarship not found")
+
+@app.get("/api/sufs/claims")
+async def get_sufs_claims(
+    campus_id: Optional[str] = None,
+    student_id: Optional[str] = None,
+    family_id: Optional[str] = None,
+    scholarship_id: Optional[str] = None,
+    status: Optional[SUFSClaimStatus] = None,
+    claim_period: Optional[str] = None
+):
+    """Get all SUFS claims with optional filters"""
+    filtered = sufs_claims_db
+    if campus_id:
+        filtered = [c for c in filtered if c.campus_id == campus_id]
+    if student_id:
+        filtered = [c for c in filtered if c.student_id == student_id]
+    if family_id:
+        filtered = [c for c in filtered if c.family_id == family_id]
+    if scholarship_id:
+        filtered = [c for c in filtered if c.scholarship_id == scholarship_id]
+    if status:
+        filtered = [c for c in filtered if c.status == status]
+    if claim_period:
+        filtered = [c for c in filtered if c.claim_period == claim_period]
+    return filtered
+
+@app.get("/api/sufs/claims/{claim_id}")
+async def get_sufs_claim(claim_id: str):
+    """Get a specific SUFS claim"""
+    claim = next((c for c in sufs_claims_db if c.claim_id == claim_id), None)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    return claim
+
+@app.post("/api/sufs/claims")
+async def create_sufs_claim(claim_data: dict):
+    """Create a new SUFS claim"""
+    global sufs_claims_db
+    new_claim = SUFSClaim(
+        claim_id=claim_data.get('claim_id', f"sufs_claim_{len(sufs_claims_db)+1}"),
+        scholarship_id=claim_data['scholarship_id'],
+        student_id=claim_data['student_id'],
+        family_id=claim_data['family_id'],
+        campus_id=claim_data['campus_id'],
+        claim_period=claim_data['claim_period'],
+        claim_date=date.fromisoformat(claim_data['claim_date']) if claim_data.get('claim_date') else date.today(),
+        amount_claimed=claim_data['amount_claimed'],
+        tuition_amount=claim_data.get('tuition_amount', claim_data['amount_claimed']),
+        fees_amount=claim_data.get('fees_amount', 0),
+        status=SUFSClaimStatus(claim_data.get('status', 'Draft')),
+        submitted_date=date.fromisoformat(claim_data['submitted_date']) if claim_data.get('submitted_date') else None,
+        approved_date=date.fromisoformat(claim_data['approved_date']) if claim_data.get('approved_date') else None,
+        paid_date=date.fromisoformat(claim_data['paid_date']) if claim_data.get('paid_date') else None,
+        paid_amount=claim_data.get('paid_amount'),
+        denial_reason=claim_data.get('denial_reason'),
+        sufs_reference_number=claim_data.get('sufs_reference_number'),
+        notes=claim_data.get('notes'),
+        created_date=date.today(),
+        last_updated=date.today()
+    )
+    sufs_claims_db.append(new_claim)
+    return {"status": "success", "claim_id": new_claim.claim_id}
+
+@app.put("/api/sufs/claims/{claim_id}")
+async def update_sufs_claim(claim_id: str, claim_data: dict):
+    """Update a SUFS claim"""
+    for i, c in enumerate(sufs_claims_db):
+        if c.claim_id == claim_id:
+            updated = c.model_copy(update={
+                **claim_data,
+                'last_updated': date.today()
+            })
+            sufs_claims_db[i] = updated
+            return {"status": "success"}
+    raise HTTPException(status_code=404, detail="Claim not found")
+
+@app.put("/api/sufs/claims/{claim_id}/submit")
+async def submit_sufs_claim(claim_id: str):
+    """Submit a SUFS claim"""
+    for i, c in enumerate(sufs_claims_db):
+        if c.claim_id == claim_id:
+            updated = c.model_copy(update={
+                'status': SUFSClaimStatus.SUBMITTED,
+                'submitted_date': date.today(),
+                'last_updated': date.today()
+            })
+            sufs_claims_db[i] = updated
+            return {"status": "success", "message": "Claim submitted successfully"}
+    raise HTTPException(status_code=404, detail="Claim not found")
+
+@app.get("/api/sufs/payments")
+async def get_sufs_payments(
+    campus_id: Optional[str] = None,
+    status: Optional[SUFSPaymentStatus] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get all SUFS payments with optional filters"""
+    filtered = sufs_payments_db
+    if campus_id:
+        filtered = [p for p in filtered if p.campus_id == campus_id]
+    if status:
+        filtered = [p for p in filtered if p.status == status]
+    if start_date:
+        start = date.fromisoformat(start_date)
+        filtered = [p for p in filtered if p.payment_date >= start]
+    if end_date:
+        end = date.fromisoformat(end_date)
+        filtered = [p for p in filtered if p.payment_date <= end]
+    return filtered
+
+@app.get("/api/sufs/payments/{payment_id}")
+async def get_sufs_payment(payment_id: str):
+    """Get a specific SUFS payment"""
+    payment = next((p for p in sufs_payments_db if p.payment_id == payment_id), None)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return payment
+
+@app.post("/api/sufs/payments")
+async def create_sufs_payment(payment_data: dict):
+    """Record a new SUFS payment received"""
+    global sufs_payments_db
+    new_payment = SUFSPayment(
+        payment_id=payment_data.get('payment_id', f"sufs_pmt_{len(sufs_payments_db)+1}"),
+        campus_id=payment_data['campus_id'],
+        payment_date=date.fromisoformat(payment_data['payment_date']),
+        deposit_date=date.fromisoformat(payment_data['deposit_date']) if payment_data.get('deposit_date') else None,
+        total_amount=payment_data['total_amount'],
+        sufs_reference_number=payment_data.get('sufs_reference_number'),
+        bank_reference=payment_data.get('bank_reference'),
+        status=SUFSPaymentStatus(payment_data.get('status', 'Received')),
+        reconciled_date=date.fromisoformat(payment_data['reconciled_date']) if payment_data.get('reconciled_date') else None,
+        reconciled_by=payment_data.get('reconciled_by'),
+        notes=payment_data.get('notes'),
+        created_date=date.today()
+    )
+    sufs_payments_db.append(new_payment)
+    return {"status": "success", "payment_id": new_payment.payment_id}
+
+@app.get("/api/sufs/payment-allocations")
+async def get_sufs_payment_allocations(
+    payment_id: Optional[str] = None,
+    claim_id: Optional[str] = None,
+    student_id: Optional[str] = None
+):
+    """Get payment allocations"""
+    filtered = sufs_payment_allocations_db
+    if payment_id:
+        filtered = [a for a in filtered if a.payment_id == payment_id]
+    if claim_id:
+        filtered = [a for a in filtered if a.claim_id == claim_id]
+    if student_id:
+        filtered = [a for a in filtered if a.student_id == student_id]
+    return filtered
+
+@app.post("/api/sufs/payment-allocations")
+async def create_sufs_payment_allocation(allocation_data: dict):
+    """Create a payment allocation to match a payment to claims"""
+    global sufs_payment_allocations_db
+    new_allocation = SUFSPaymentAllocation(
+        allocation_id=allocation_data.get('allocation_id', f"sufs_alloc_{len(sufs_payment_allocations_db)+1}"),
+        payment_id=allocation_data['payment_id'],
+        claim_id=allocation_data['claim_id'],
+        student_id=allocation_data['student_id'],
+        family_id=allocation_data['family_id'],
+        amount=allocation_data['amount'],
+        status=allocation_data.get('status', 'Matched'),
+        discrepancy_amount=allocation_data.get('discrepancy_amount'),
+        discrepancy_reason=allocation_data.get('discrepancy_reason'),
+        created_date=date.today()
+    )
+    sufs_payment_allocations_db.append(new_allocation)
+    
+    # Update claim status to Paid if fully allocated
+    for i, c in enumerate(sufs_claims_db):
+        if c.claim_id == allocation_data['claim_id']:
+            updated = c.model_copy(update={
+                'status': SUFSClaimStatus.PAID,
+                'paid_date': date.today(),
+                'paid_amount': allocation_data['amount'],
+                'last_updated': date.today()
+            })
+            sufs_claims_db[i] = updated
+            break
+    
+    return {"status": "success", "allocation_id": new_allocation.allocation_id}
+
+@app.get("/api/sufs/dashboard")
+async def get_sufs_dashboard(campus_id: Optional[str] = None):
+    """Get SUFS scholarship dashboard summary"""
+    scholarships = sufs_scholarships_db
+    claims = sufs_claims_db
+    payments = sufs_payments_db
+    
+    if campus_id:
+        scholarships = [s for s in scholarships if s.campus_id == campus_id]
+        claims = [c for c in claims if c.campus_id == campus_id]
+        payments = [p for p in payments if p.campus_id == campus_id]
+    
+    active_scholarships = [s for s in scholarships if s.status == "Active"]
+    
+    # Calculate totals
+    total_annual_awards = sum(s.annual_award_amount for s in active_scholarships)
+    total_remaining = sum(s.remaining_balance for s in active_scholarships)
+    
+    # Claims by status
+    claims_by_status = {}
+    for status in SUFSClaimStatus:
+        status_claims = [c for c in claims if c.status == status]
+        claims_by_status[status.value] = {
+            "count": len(status_claims),
+            "amount": sum(c.amount_claimed for c in status_claims)
+        }
+    
+    # Payments summary
+    total_payments_received = sum(p.total_amount for p in payments)
+    pending_payments = [p for p in payments if p.status == SUFSPaymentStatus.PENDING]
+    reconciled_payments = [p for p in payments if p.status == SUFSPaymentStatus.RECONCILED]
+    
+    # Scholarship type breakdown
+    scholarship_by_type = {}
+    for sch_type in SUFSScholarshipType:
+        type_scholarships = [s for s in active_scholarships if s.scholarship_type == sch_type]
+        scholarship_by_type[sch_type.value] = {
+            "count": len(type_scholarships),
+            "total_amount": sum(s.annual_award_amount for s in type_scholarships)
+        }
+    
+    # Outstanding claims (submitted but not paid)
+    outstanding_claims = [c for c in claims if c.status in [SUFSClaimStatus.SUBMITTED, SUFSClaimStatus.PENDING, SUFSClaimStatus.APPROVED]]
+    total_outstanding = sum(c.amount_claimed for c in outstanding_claims)
+    
+    return {
+        "summary": {
+            "total_scholarship_students": len(active_scholarships),
+            "total_annual_awards": total_annual_awards,
+            "total_remaining_balance": total_remaining,
+            "total_payments_received": total_payments_received,
+            "total_outstanding_claims": total_outstanding,
+            "pending_reconciliation": sum(p.total_amount for p in pending_payments)
+        },
+        "claims_by_status": claims_by_status,
+        "scholarship_by_type": scholarship_by_type,
+        "recent_payments": [p.model_dump() for p in sorted(payments, key=lambda x: x.payment_date, reverse=True)[:5]],
+        "pending_claims": [c.model_dump() for c in outstanding_claims[:10]]
+    }
+
+@app.get("/api/sufs/reconciliation-report")
+async def get_sufs_reconciliation_report(
+    campus_id: Optional[str] = None,
+    period: Optional[str] = None
+):
+    """Generate a reconciliation report"""
+    claims = sufs_claims_db
+    payments = sufs_payments_db
+    allocations = sufs_payment_allocations_db
+    
+    if campus_id:
+        claims = [c for c in claims if c.campus_id == campus_id]
+        payments = [p for p in payments if p.campus_id == campus_id]
+    
+    if period:
+        claims = [c for c in claims if c.claim_period == period]
+    
+    total_claims_submitted = sum(c.amount_claimed for c in claims if c.status != SUFSClaimStatus.DRAFT)
+    total_payments_received = sum(p.total_amount for p in payments)
+    
+    # Find discrepancies
+    discrepancies = [a for a in allocations if a.status == "Discrepancy"]
+    total_discrepancies = sum(abs(a.discrepancy_amount or 0) for a in discrepancies)
+    
+    reconciled_claims = [c for c in claims if c.status == SUFSClaimStatus.PAID]
+    
+    return {
+        "report_period": period or "All Time",
+        "generated_date": date.today().isoformat(),
+        "total_claims_submitted": total_claims_submitted,
+        "total_payments_received": total_payments_received,
+        "total_outstanding": total_claims_submitted - sum(c.paid_amount or 0 for c in claims),
+        "total_discrepancies": total_discrepancies,
+        "claims_count": len(claims),
+        "payments_count": len(payments),
+        "reconciled_count": len(reconciled_claims),
+        "discrepancy_count": len(discrepancies),
+        "claims_detail": [c.model_dump() for c in claims],
+        "payments_detail": [p.model_dump() for p in payments],
+        "discrepancies_detail": [a.model_dump() for a in discrepancies]
+    }
+
+@app.get("/api/sufs/student-scholarship-summary/{student_id}")
+async def get_student_scholarship_summary(student_id: str):
+    """Get scholarship summary for a specific student"""
+    scholarships = [s for s in sufs_scholarships_db if s.student_id == student_id]
+    claims = [c for c in sufs_claims_db if c.student_id == student_id]
+    
+    if not scholarships:
+        return {
+            "has_scholarship": False,
+            "student_id": student_id
+        }
+    
+    active_scholarship = next((s for s in scholarships if s.status == "Active"), None)
+    
+    total_claimed = sum(c.amount_claimed for c in claims)
+    total_paid = sum(c.paid_amount or 0 for c in claims if c.status == SUFSClaimStatus.PAID)
+    pending_claims = [c for c in claims if c.status in [SUFSClaimStatus.SUBMITTED, SUFSClaimStatus.PENDING, SUFSClaimStatus.APPROVED]]
+    
+    return {
+        "has_scholarship": True,
+        "student_id": student_id,
+        "scholarship": active_scholarship.model_dump() if active_scholarship else None,
+        "all_scholarships": [s.model_dump() for s in scholarships],
+        "total_claimed": total_claimed,
+        "total_paid": total_paid,
+        "pending_amount": sum(c.amount_claimed for c in pending_claims),
+        "claims_history": [c.model_dump() for c in sorted(claims, key=lambda x: x.claim_date, reverse=True)]
+    }
+
+@app.get("/api/sufs/family-scholarship-summary/{family_id}")
+async def get_family_scholarship_summary(family_id: str):
+    """Get scholarship summary for a family (all children)"""
+    scholarships = [s for s in sufs_scholarships_db if s.family_id == family_id]
+    claims = [c for c in sufs_claims_db if c.family_id == family_id]
+    
+    students_with_scholarships = list(set(s.student_id for s in scholarships))
+    
+    total_annual_awards = sum(s.annual_award_amount for s in scholarships if s.status == "Active")
+    total_claimed = sum(c.amount_claimed for c in claims)
+    total_paid = sum(c.paid_amount or 0 for c in claims if c.status == SUFSClaimStatus.PAID)
+    
+    return {
+        "family_id": family_id,
+        "students_with_scholarships": len(students_with_scholarships),
+        "total_annual_awards": total_annual_awards,
+        "total_claimed": total_claimed,
+        "total_paid": total_paid,
+        "outstanding_balance": total_claimed - total_paid,
+        "scholarships": [s.model_dump() for s in scholarships],
+        "recent_claims": [c.model_dump() for c in sorted(claims, key=lambda x: x.claim_date, reverse=True)[:10]]
+    }

@@ -14,6 +14,7 @@ from .main import (
     InterventionPlan, InterventionProgress,
     AtRiskAssessment, RetentionPrediction, EnrollmentForecast,
     Assignment, GradeEntry, Announcement, AnnouncementRead, EventWorkflow,
+    SUFSScholarship, SUFSClaim, SUFSPayment, SUFSPaymentAllocation,
     Session, Room, StudentStatus, BillingStatus, AttendanceStatus,
     GradeFlag, IXLStatus, RiskFlag, StaffRole, BehaviorType,
     ConferenceStatus, MessageSenderType, EventType, RSVPStatus,
@@ -28,7 +29,8 @@ from .main import (
     RTITier, InterventionStatus,
     RiskCategory, RiskLevel,
     AssignmentType, AssignmentStatus, GradeEntryStatus,
-    AnnouncementCategory, AnnouncementStatus, WorkflowStatus
+    AnnouncementCategory, AnnouncementStatus, WorkflowStatus,
+    SUFSScholarshipType, SUFSClaimStatus, SUFSPaymentStatus
 )
 
 def generate_all_demo_data():
@@ -1623,6 +1625,158 @@ def generate_all_demo_data():
                     )
                     event_workflows_db.append(workflow)
     
+    # Generate Step Up for Students (SUFS) Scholarship Demo Data
+    sufs_scholarships_db = []
+    sufs_claims_db = []
+    sufs_payments_db = []
+    sufs_payment_allocations_db = []
+    
+    # Get students with Step-Up funding
+    step_up_students = [s for s in students_db if s.funding_source in [FundingSource.STEP_UP, FundingSource.MIXED]]
+    
+    scholarship_types = [
+        SUFSScholarshipType.FES_UA,
+        SUFSScholarshipType.FES_EO,
+        SUFSScholarshipType.FTC,
+        SUFSScholarshipType.HOPE
+    ]
+    
+    # Award amounts by scholarship type (annual)
+    award_amounts = {
+        SUFSScholarshipType.FES_UA: (8000, 12000),
+        SUFSScholarshipType.FES_EO: (7000, 9000),
+        SUFSScholarshipType.FTC: (6000, 8500),
+        SUFSScholarshipType.HOPE: (5000, 7000),
+        SUFSScholarshipType.NEW_WORLDS: (4000, 6000),
+        SUFSScholarshipType.AAA: (500, 1500)
+    }
+    
+    claim_periods = ["August 2025", "September 2025", "October 2025", "November 2025", "December 2025"]
+    
+    for student in step_up_students:
+        scholarship_type = random.choice(scholarship_types)
+        min_award, max_award = award_amounts[scholarship_type]
+        annual_amount = round(random.uniform(min_award, max_award), 2)
+        quarterly_amount = round(annual_amount / 4, 2)
+        
+        # Create scholarship record
+        scholarship = SUFSScholarship(
+            scholarship_id=f"sufs_sch_{student.student_id}",
+            student_id=student.student_id,
+            family_id=student.family_id,
+            campus_id=student.campus_id,
+            scholarship_type=scholarship_type,
+            award_id=f"SUFS-{random.randint(100000, 999999)}",
+            school_year="2025-2026",
+            annual_award_amount=annual_amount,
+            quarterly_amount=quarterly_amount,
+            remaining_balance=round(annual_amount * random.uniform(0.3, 0.8), 2),
+            start_date=date(2025, 8, 1),
+            end_date=date(2026, 5, 31),
+            status="Active",
+            eligibility_verified=True,
+            eligibility_verified_date=date(2025, 7, 15),
+            notes=None,
+            created_date=date(2025, 7, 1),
+            last_updated=today
+        )
+        sufs_scholarships_db.append(scholarship)
+        
+        # Create claims for this scholarship
+        for period_idx, period in enumerate(claim_periods[:random.randint(2, 5)]):
+            claim_amount = round(annual_amount / 10, 2)  # Monthly claim
+            
+            # Determine claim status based on period
+            if period_idx < 2:
+                status = SUFSClaimStatus.PAID
+                paid_date = date(2025, 8 + period_idx, 25)
+                paid_amount = claim_amount
+            elif period_idx == 2:
+                status = random.choice([SUFSClaimStatus.APPROVED, SUFSClaimStatus.PAID])
+                paid_date = date(2025, 10, 25) if status == SUFSClaimStatus.PAID else None
+                paid_amount = claim_amount if status == SUFSClaimStatus.PAID else None
+            elif period_idx == 3:
+                status = random.choice([SUFSClaimStatus.SUBMITTED, SUFSClaimStatus.PENDING, SUFSClaimStatus.APPROVED])
+                paid_date = None
+                paid_amount = None
+            else:
+                status = random.choice([SUFSClaimStatus.DRAFT, SUFSClaimStatus.SUBMITTED])
+                paid_date = None
+                paid_amount = None
+            
+            claim = SUFSClaim(
+                claim_id=f"sufs_claim_{student.student_id}_{period_idx}",
+                scholarship_id=scholarship.scholarship_id,
+                student_id=student.student_id,
+                family_id=student.family_id,
+                campus_id=student.campus_id,
+                claim_period=period,
+                claim_date=date(2025, 8 + period_idx, 1),
+                amount_claimed=claim_amount,
+                tuition_amount=round(claim_amount * 0.9, 2),
+                fees_amount=round(claim_amount * 0.1, 2),
+                status=status,
+                submitted_date=date(2025, 8 + period_idx, 5) if status != SUFSClaimStatus.DRAFT else None,
+                approved_date=date(2025, 8 + period_idx, 15) if status in [SUFSClaimStatus.APPROVED, SUFSClaimStatus.PAID] else None,
+                paid_date=paid_date,
+                paid_amount=paid_amount,
+                denial_reason=None,
+                sufs_reference_number=f"SUFS-CLM-{random.randint(10000, 99999)}" if status != SUFSClaimStatus.DRAFT else None,
+                notes=None,
+                created_date=date(2025, 8 + period_idx, 1),
+                last_updated=today
+            )
+            sufs_claims_db.append(claim)
+    
+    # Create bulk payments from SUFS
+    payment_dates = [
+        date(2025, 8, 28),
+        date(2025, 9, 28),
+        date(2025, 10, 28),
+        date(2025, 11, 28)
+    ]
+    
+    for campus in campuses_db:
+        campus_claims = [c for c in sufs_claims_db if c.campus_id == campus.campus_id and c.status == SUFSClaimStatus.PAID]
+        
+        for pmt_idx, pmt_date in enumerate(payment_dates[:3]):  # First 3 months have payments
+            month_claims = [c for c in campus_claims if c.claim_date.month == pmt_date.month]
+            if month_claims:
+                total_amount = sum(c.paid_amount or 0 for c in month_claims)
+                
+                payment = SUFSPayment(
+                    payment_id=f"sufs_pmt_{campus.campus_id}_{pmt_idx}",
+                    campus_id=campus.campus_id,
+                    payment_date=pmt_date,
+                    deposit_date=pmt_date + timedelta(days=2),
+                    total_amount=total_amount,
+                    sufs_reference_number=f"SUFS-PMT-{random.randint(100000, 999999)}",
+                    bank_reference=f"DEP-{pmt_date.strftime('%Y%m%d')}-{random.randint(1000, 9999)}",
+                    status=SUFSPaymentStatus.RECONCILED if pmt_idx < 2 else SUFSPaymentStatus.RECEIVED,
+                    reconciled_date=pmt_date + timedelta(days=5) if pmt_idx < 2 else None,
+                    reconciled_by="staff_1" if pmt_idx < 2 else None,
+                    notes=None,
+                    created_date=pmt_date
+                )
+                sufs_payments_db.append(payment)
+                
+                # Create allocations for reconciled payments
+                if payment.status == SUFSPaymentStatus.RECONCILED:
+                    for claim in month_claims:
+                        allocation = SUFSPaymentAllocation(
+                            allocation_id=f"sufs_alloc_{payment.payment_id}_{claim.claim_id}",
+                            payment_id=payment.payment_id,
+                            claim_id=claim.claim_id,
+                            student_id=claim.student_id,
+                            family_id=claim.family_id,
+                            amount=claim.paid_amount or 0,
+                            status="Matched",
+                            discrepancy_amount=None,
+                            discrepancy_reason=None,
+                            created_date=payment.reconciled_date or today
+                        )
+                        sufs_payment_allocations_db.append(allocation)
+    
     return {
         "organizations": organizations_db,
         "campuses": campuses_db,
@@ -1672,5 +1826,9 @@ def generate_all_demo_data():
         "grade_entries": grade_entries_db,
         "announcements": announcements_db,
         "announcement_reads": announcement_reads_db,
-        "event_workflows": event_workflows_db
+        "event_workflows": event_workflows_db,
+        "sufs_scholarships": sufs_scholarships_db,
+        "sufs_claims": sufs_claims_db,
+        "sufs_payments": sufs_payments_db,
+        "sufs_payment_allocations": sufs_payment_allocations_db
     }

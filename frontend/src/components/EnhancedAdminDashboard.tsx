@@ -24,6 +24,7 @@ import { InterventionManagement } from './InterventionManagement'
 import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { StaffManagement } from './StaffManagement'
+import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -706,9 +707,10 @@ export function EnhancedAdminDashboard() {
               <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="families">Families</TabsTrigger>
                 <TabsTrigger value="billing">Billing & Invoicing</TabsTrigger>
+                <TabsTrigger value="stepup">Step Up Scholarships</TabsTrigger>
                 <TabsTrigger value="revenue">Revenue & Reconciliation</TabsTrigger>
                 <TabsTrigger value="store">Store / POS</TabsTrigger>
               </TabsList>
@@ -765,6 +767,9 @@ export function EnhancedAdminDashboard() {
               </TabsContent>
               <TabsContent value="billing" className="mt-6">
                 <FinancialManagement selectedCampusId={selectedCampusId} />
+              </TabsContent>
+              <TabsContent value="stepup" className="mt-6">
+                <SUFSScholarshipManagement campusId={selectedCampusId} />
               </TabsContent>
               <TabsContent value="revenue" className="mt-6">
                 <AdminRevenueReports role="admin" />
