@@ -3,6 +3,7 @@ import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
 import { TeacherDashboard } from './components/TeacherDashboard'
 import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
 import { Header } from './components/Header'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 type Role = 'admin' | 'teacher' | 'parent'
 
@@ -22,18 +23,20 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
-        currentRole={currentRole} 
-        onRoleChange={handleRoleChange}
-      />
-      
-      <main>
-        {currentRole === 'admin' && <EnhancedAdminDashboard />}
-        {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} />}
-        {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
-      </main>
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <Header 
+          currentRole={currentRole} 
+          onRoleChange={handleRoleChange}
+        />
+        
+        <main>
+          {currentRole === 'admin' && <EnhancedAdminDashboard />}
+          {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} />}
+          {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
+        </main>
+      </div>
+    </ErrorBoundary>
   )
 }
 

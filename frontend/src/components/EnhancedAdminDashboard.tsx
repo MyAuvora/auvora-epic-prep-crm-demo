@@ -90,6 +90,8 @@ export function EnhancedAdminDashboard() {
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (view === 'dashboard') {
@@ -107,16 +109,40 @@ export function EnhancedAdminDashboard() {
     }
   }, [selectedCampusId])
 
+  const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+        const response = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeoutId)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        return response
+      } catch (error) {
+        if (i === retries - 1) throw error
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)))
+      }
+    }
+    throw new Error('Max retries exceeded')
+  }
+
   const fetchDashboardData = async () => {
+    setIsLoading(true)
+    setLoadError(null)
     try {
       const url = selectedCampusId 
         ? `${API_URL}/api/dashboard/admin?campus_id=${selectedCampusId}`
         : `${API_URL}/api/dashboard/admin`
-      const response = await fetch(url)
+      const response = await fetchWithRetry(url)
       const data = await response.json()
       setDashboardData(data)
+      setIsLoading(false)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      setLoadError('Unable to connect to the server. The server may be starting up.')
+      setIsLoading(false)
     }
   }
 
@@ -373,7 +399,33 @@ export function EnhancedAdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {view === 'dashboard' && dashboardData && (
+        {view === 'dashboard' && isLoading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
+            <p className="text-gray-600 text-lg">Loading dashboard...</p>
+            <p className="text-gray-400 text-sm mt-2">This may take a moment if the server is waking up</p>
+          </div>
+        )}
+        
+        {view === 'dashboard' && loadError && !isLoading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="bg-red-100 rounded-full p-4 mb-4">
+              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-gray-900 text-lg font-medium mb-2">Connection Error</p>
+            <p className="text-gray-600 text-center max-w-md mb-4">{loadError}</p>
+            <button
+              onClick={fetchDashboardData}
+              className="bg-amber-600 text-white px-6 py-2 rounded-md hover:bg-amber-700 transition-colors font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+        
+        {view === 'dashboard' && dashboardData && !isLoading && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
