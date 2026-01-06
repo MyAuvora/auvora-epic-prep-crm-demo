@@ -54,9 +54,15 @@ interface TeacherData {
 
 interface TeacherDashboardProps {
   staffId: string
+  searchNavigation?: { type: 'student' | 'family'; id: string } | null
+  onClearSearch?: () => void
 }
 
-export function TeacherDashboard({ staffId }: TeacherDashboardProps) {
+export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation, onClearSearch: _onClearSearch }: TeacherDashboardProps) {
+  // Note: searchNavigation and onClearSearch are passed for consistency but not used in Teacher dashboard
+  // Teachers use the student list in their rooms instead of global search navigation
+  void _searchNavigation
+  void _onClearSearch
   const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)

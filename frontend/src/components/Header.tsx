@@ -1,22 +1,108 @@
-import { useState } from 'react'
-import { User, ChevronDown, UserCircle, Settings, HelpCircle, Shield, LogOut, MapPin } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { User, ChevronDown, UserCircle, Settings, HelpCircle, Shield, LogOut, MapPin, Search, Users, Home, X } from 'lucide-react'
 import { ProfileInformation } from './ProfileInformation'
 import { AccountSettings } from './AccountSettings'
 import { HelpSupport } from './HelpSupport'
 import { PrivacySecurity } from './PrivacySecurity'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+interface SearchResult {
+  type: 'student' | 'family'
+  id: string
+  name: string
+  subtitle: string
+}
+
 interface HeaderProps {
   currentRole: 'admin' | 'teacher' | 'parent'
   onRoleChange: (role: 'admin' | 'teacher' | 'parent') => void
+  onSearchSelect?: (type: 'student' | 'family', id: string) => void
 }
 
-export function Header({ currentRole, onRoleChange }: HeaderProps) {
+export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
   const [showProfileInfo, setShowProfileInfo] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showHelpSupport, setShowHelpSupport] = useState(false)
   const [showPrivacySecurity, setShowPrivacySecurity] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const searchTimeout = setTimeout(async () => {
+      if (searchQuery.length >= 2) {
+        setIsSearching(true)
+        try {
+          const [studentsRes, familiesRes] = await Promise.all([
+            fetch(`${API_URL}/api/students`),
+            fetch(`${API_URL}/api/families`)
+          ])
+          const students = await studentsRes.json()
+          const families = await familiesRes.json()
+          
+          const query = searchQuery.toLowerCase()
+          const results: SearchResult[] = []
+          
+          students.forEach((s: any) => {
+            const fullName = `${s.first_name} ${s.last_name}`.toLowerCase()
+            if (fullName.includes(query)) {
+              results.push({
+                type: 'student',
+                id: s.student_id,
+                name: `${s.first_name} ${s.last_name}`,
+                subtitle: `Grade ${s.grade} - ${s.session} Session`
+              })
+            }
+          })
+          
+          families.forEach((f: any) => {
+            if (f.family_name.toLowerCase().includes(query)) {
+              results.push({
+                type: 'family',
+                id: f.family_id,
+                name: f.family_name,
+                subtitle: `${f.student_ids?.length || 0} student(s)`
+              })
+            }
+          })
+          
+          setSearchResults(results.slice(0, 8))
+          setShowSearchResults(true)
+        } catch (error) {
+          console.error('Search error:', error)
+        }
+        setIsSearching(false)
+      } else {
+        setSearchResults([])
+        setShowSearchResults(false)
+      }
+    }, 300)
+    
+    return () => clearTimeout(searchTimeout)
+  }, [searchQuery])
+
+  const handleSearchSelect = (result: SearchResult) => {
+    if (onSearchSelect) {
+      onSearchSelect(result.type, result.id)
+    }
+    setSearchQuery('')
+    setShowSearchResults(false)
+  }
 
   const getRoleLabel = (role: 'admin' | 'teacher' | 'parent') => {
     switch (role) {
@@ -70,9 +156,83 @@ export function Header({ currentRole, onRoleChange }: HeaderProps) {
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              {/* Role/Location Dropdown */}
-              <div className="relative">
+                        <div className="flex items-center space-x-4">
+                          {/* Global Search Bar */}
+                          {currentRole !== 'parent' && (
+                            <div ref={searchRef} className="relative">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                  type="text"
+                                  placeholder="Search students or families..."
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
+                                  className="w-64 pl-10 pr-8 py-2 rounded-lg text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  style={{ backgroundColor: 'rgba(255,255,255,0.95)' }}
+                                />
+                                {searchQuery && (
+                                  <button
+                                    onClick={() => {
+                                      setSearchQuery('')
+                                      setShowSearchResults(false)
+                                    }}
+                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                  
+                              {showSearchResults && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl z-30 max-h-96 overflow-y-auto">
+                                  {isSearching ? (
+                                    <div className="p-4 text-center text-gray-500">
+                                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                      Searching...
+                                    </div>
+                                  ) : searchResults.length > 0 ? (
+                                    <div className="py-2">
+                                      {searchResults.map((result) => (
+                                        <button
+                                          key={`${result.type}-${result.id}`}
+                                          onClick={() => handleSearchSelect(result)}
+                                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3 border-b border-gray-100 last:border-0"
+                                        >
+                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                            result.type === 'student' ? 'bg-blue-100' : 'bg-green-100'
+                                          }`}>
+                                            {result.type === 'student' ? (
+                                              <Users className="w-4 h-4 text-blue-600" />
+                                            ) : (
+                                              <Home className="w-4 h-4 text-green-600" />
+                                            )}
+                                          </div>
+                                          <div>
+                                            <p className="text-sm font-medium text-gray-900">{result.name}</p>
+                                            <p className="text-xs text-gray-500">{result.subtitle}</p>
+                                          </div>
+                                          <span className={`ml-auto text-xs px-2 py-1 rounded ${
+                                            result.type === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                          }`}>
+                                            {result.type === 'student' ? 'Student' : 'Family'}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : searchQuery.length >= 2 ? (
+                                    <div className="p-4 text-center text-gray-500">
+                                      <p className="text-sm">No results found for "{searchQuery}"</p>
+                                      <p className="text-xs mt-1">Try a different search term</p>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Role/Location Dropdown */}
+                          <div className="relative">
                 <button
                   onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                   className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"

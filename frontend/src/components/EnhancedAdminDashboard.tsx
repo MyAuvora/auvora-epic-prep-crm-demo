@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -80,7 +80,12 @@ interface Family {
   last_payment_date: string
 }
 
-export function EnhancedAdminDashboard() {
+interface EnhancedAdminDashboardProps {
+  searchNavigation?: { type: 'student' | 'family'; id: string } | null
+  onClearSearch?: () => void
+}
+
+export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
@@ -94,6 +99,14 @@ export function EnhancedAdminDashboard() {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Handle search navigation from header
+  useEffect(() => {
+    if (searchNavigation) {
+      setAccountView({ type: searchNavigation.type, id: searchNavigation.id })
+      if (onClearSearch) onClearSearch()
+    }
+  }, [searchNavigation, onClearSearch])
 
   useEffect(() => {
     if (view === 'dashboard') {
@@ -622,75 +635,122 @@ export function EnhancedAdminDashboard() {
               </div>
             </div>
             
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendance</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grades</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IXL</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {students.map((student) => (
-                                                <tr 
-                                                  key={student.student_id} 
-                                                  className="hover:bg-amber-50 cursor-pointer transition-colors"
-                                                  onClick={() => setAccountView({ type: 'student', id: student.student_id })}
-                                                >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {student.first_name} {student.last_name}
+                        <Card>
+                          <CardContent className="p-0">
+                            <div className="overflow-x-auto max-h-[600px]">
+                              <table className="w-full">
+                                <thead className="bg-gray-50 border-b sticky top-0 z-10">
+                                  <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Grade</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Session</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Room</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Attendance</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Grades</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">IXL</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Risk</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {students.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={9} className="px-6 py-12 text-center">
+                                        <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                                        <p className="text-gray-500 text-lg font-medium">No students found</p>
+                                        <p className="text-gray-400 text-sm mt-1">Try adjusting your filters or add a new student</p>
+                                      </td>
+                                    </tr>
+                                  ) : students.map((student) => (
+                                    <tr 
+                                      key={student.student_id} 
+                                      className="hover:bg-amber-50 transition-colors group"
+                                    >
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <button
+                                          onClick={() => setAccountView({ type: 'student', id: student.student_id })}
+                                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                        >
+                                          {student.first_name} {student.last_name}
+                                        </button>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {student.grade}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {student.session}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {student.room}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {student.attendance_present_count}P / {student.attendance_absent_count}A / {student.attendance_tardy_count}T
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                          student.overall_grade_flag === 'On track' ? 'bg-green-100 text-green-800' :
+                                          student.overall_grade_flag === 'Needs attention' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-red-100 text-red-800'
+                                        }`}>
+                                          {student.overall_grade_flag}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                          student.ixl_status_flag === 'On track' ? 'bg-green-100 text-green-800' :
+                                          'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                          {student.ixl_status_flag}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskFlagColor(student.overall_risk_flag)}`}>
+                                          {student.overall_risk_flag}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setAccountView({ type: 'student', id: student.student_id })
+                                            }}
+                                            className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                            title="View Profile"
+                                          >
+                                            <Eye className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setView('communications')
+                                              setSubView('messages')
+                                            }}
+                                            className="p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                            title="Send Message"
+                                          >
+                                            <MessageSquare className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setView('student-support')
+                                              setSubView('incidents')
+                                            }}
+                                            className="p-1.5 rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                            title="Log Incident"
+                                          >
+                                            <FileWarning className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.grade}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.session}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.room}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.attendance_present_count}P / {student.attendance_absent_count}A / {student.attendance_tardy_count}T
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              student.overall_grade_flag === 'On track' ? 'bg-green-100 text-green-800' :
-                              student.overall_grade_flag === 'Needs attention' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {student.overall_grade_flag}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              student.ixl_status_flag === 'On track' ? 'bg-green-100 text-green-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {student.ixl_status_flag}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskFlagColor(student.overall_risk_flag)}`}>
-                              {student.overall_risk_flag}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                          </CardContent>
+                        </Card>
           </div>
         )}
 

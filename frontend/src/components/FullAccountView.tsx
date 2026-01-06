@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2, ChevronRight, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -556,6 +556,30 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   if (type === 'family' && family) {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Breadcrumb Navigation */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <nav className="flex items-center space-x-2 text-sm">
+              <button
+                onClick={onBack}
+                className="flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <Home className="h-4 w-4 mr-1" />
+                Dashboard
+              </button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <button
+                onClick={onBack}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Families & Finance
+              </button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-900 font-medium">{family.family_name}</span>
+            </nav>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1447,6 +1471,30 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
       <>
         <AddPickupModal />
         <div className="min-h-screen bg-gray-50">
+          {/* Breadcrumb Navigation */}
+          <div className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <nav className="flex items-center space-x-2 text-sm">
+                <button
+                  onClick={onBack}
+                  className="flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <Home className="h-4 w-4 mr-1" />
+                  Dashboard
+                </button>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <button
+                  onClick={onBack}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Students
+                </button>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-900 font-medium">{selectedStudent.first_name} {selectedStudent.last_name}</span>
+              </nav>
+            </div>
+          </div>
+
           {/* Header */}
           <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
