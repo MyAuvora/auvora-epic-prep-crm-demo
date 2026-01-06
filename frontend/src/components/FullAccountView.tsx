@@ -581,7 +581,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
         </div>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
+        <div className="bg-gradient-to-r from-[#0A2463] to-[#163B9A] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -596,7 +596,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold">{family.family_name}</h1>
-                  <p className="text-amber-100">Family Account</p>
+                  <p className="text-blue-200">Family Account</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -713,7 +713,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     {students.map((student) => (
                       <Card 
                         key={student.student_id} 
-                        className="cursor-pointer hover:shadow-lg transition-shadow hover:border-amber-500"
+                        className="cursor-pointer hover:shadow-lg transition-shadow hover:border-blue-500"
                         onClick={() => onStudentClick?.(student.student_id)}
                       >
                         <CardContent className="p-4">
@@ -756,7 +756,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                         {students.map((student) => (
                           <tr 
                             key={student.student_id} 
-                            className="hover:bg-amber-50 cursor-pointer transition-colors"
+                            className="hover:bg-blue-50 cursor-pointer transition-colors"
                             onClick={() => onStudentClick?.(student.student_id)}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1215,9 +1215,9 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                         ${((students.length * ANNUAL_TUITION) - scholarships.reduce((sum, s) => sum + (s.annual_award_amount || 0), 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </div>
                     </div>
-                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <div className="text-sm text-blue-600 mb-1">Scholarship Remaining</div>
-                      <div className="text-2xl font-bold text-amber-700">
+                      <div className="text-2xl font-bold text-blue-700">
                         ${scholarships.reduce((sum, s) => sum + (s.remaining_balance || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </div>
                     </div>
@@ -1320,7 +1320,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleEditScholarship(scholarship)}
-                                      className="text-blue-600 hover:text-amber-700 hover:bg-amber-50"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                     >
                                       <Edit2 className="h-4 w-4 mr-1" />
                                       Edit
@@ -1496,7 +1496,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
           </div>
 
           {/* Header */}
-          <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
+          <div className="bg-gradient-to-r from-[#0A2463] to-[#163B9A] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -1511,7 +1511,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</h1>
-                  <p className="text-amber-100">Grade {selectedStudent.grade} - {selectedStudent.session} - Room {selectedStudent.room}</p>
+                  <p className="text-blue-200">Grade {selectedStudent.grade} - {selectedStudent.session} - Room {selectedStudent.room}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -1712,7 +1712,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               {/* Family Link */}
               {family && (
                 <Card 
-                  className="cursor-pointer hover:shadow-lg transition-shadow hover:border-amber-500"
+                  className="cursor-pointer hover:shadow-lg transition-shadow hover:border-blue-500"
                   onClick={() => onFamilyClick?.(family.family_id)}
                 >
                   <CardHeader>
@@ -2072,7 +2072,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             <TabsContent value="family" className="mt-6">
               {family && (
                 <Card 
-                  className="cursor-pointer hover:shadow-lg transition-shadow hover:border-amber-500"
+                  className="cursor-pointer hover:shadow-lg transition-shadow hover:border-blue-500"
                   onClick={() => onFamilyClick?.(family.family_id)}
                 >
                   <CardHeader>

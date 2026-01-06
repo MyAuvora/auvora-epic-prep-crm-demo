@@ -664,7 +664,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                                   ) : students.map((student) => (
                                     <tr 
                                       key={student.student_id} 
-                                      className="hover:bg-amber-50 transition-colors group"
+                                      className="hover:bg-blue-50 transition-colors group"
                                     >
                                       <td className="px-6 py-4 whitespace-nowrap">
                                         <button
@@ -789,7 +789,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {families.map((family) => (
-                                                            <tr key={family.family_id} className="hover:bg-amber-50 cursor-pointer transition-colors" onClick={() => setAccountView({ type: 'family', id: family.family_id })}>
+                                                            <tr key={family.family_id} className="hover:bg-blue-50 cursor-pointer transition-colors" onClick={() => setAccountView({ type: 'family', id: family.family_id })}>
                                                               <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="text-sm font-medium text-gray-900">{family.family_name}</div>
                                                               </td>
