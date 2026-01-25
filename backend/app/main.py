@@ -1,13 +1,17 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime, date, timedelta
 import random
+import os
 from enum import Enum
 import csv
 import io
+
+# Import AI agent
+from .ai_agent import chat_with_auvora
 
 app = FastAPI()
 
@@ -1604,6 +1608,90 @@ async def ask_auvora(query: str = Query(..., description="Natural language query
         "count": len(results),
         "results": results
     }
+
+
+# AI Chat Request/Response Models
+class AIChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+class AIChatRequest(BaseModel):
+    message: str
+    conversation_history: Optional[List[AIChatMessage]] = []
+    user_role: Optional[str] = "admin"
+
+class AIChatResponse(BaseModel):
+    response: str
+    functions_called: Optional[List[str]] = []
+    data_retrieved: Optional[bool] = False
+    error: Optional[str] = None
+
+
+@app.post("/api/ai/chat", response_model=AIChatResponse)
+async def ai_chat(request: AIChatRequest):
+    """
+    AI-powered chat endpoint using GPT-4 with function calling.
+    The AI can query business data and provide intelligent responses.
+    """
+    # Build data context with all database data
+    data_context = {
+        "students": students_db,
+        "families": families_db,
+        "parents": parents_db,
+        "staff": staff_db,
+        "billing_records": billing_records_db,
+        "attendance_records": attendance_records_db,
+        "ixl_summaries": ixl_summaries_db,
+        "acellus_summaries": acellus_summaries_db,
+        "acellus_courses": acellus_courses_db,
+        "grade_records": grade_records_db,
+        "behavior_notes": behavior_notes_db,
+        "events": events_db,
+        "incidents": incidents_db,
+        "leads": leads_db,
+        "sufs_scholarships": sufs_scholarships_db,
+        "sufs_claims": sufs_claims_db,
+        "sufs_payments": sufs_payments_db,
+    }
+    
+    # Convert conversation history to the format expected by the AI agent
+    history = [
+        {"role": msg.role, "content": msg.content}
+        for msg in (request.conversation_history or [])
+    ]
+    
+    # Call the AI agent
+    result = await chat_with_auvora(
+        user_message=request.message,
+        conversation_history=history,
+        data_context=data_context,
+        user_role=request.user_role or "admin"
+    )
+    
+    return AIChatResponse(
+        response=result.get("response", "I'm sorry, I couldn't process your request."),
+        functions_called=result.get("functions_called", []),
+        data_retrieved=result.get("data_retrieved", False),
+        error=result.get("error")
+    )
+
+
+@app.get("/api/ai/status")
+async def ai_status():
+    """Check if the AI agent is properly configured"""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    return {
+        "configured": api_key is not None and len(api_key) > 0,
+        "model": "gpt-4o",
+        "capabilities": [
+            "Natural language Q&A about students, families, staff",
+            "Billing and scholarship inquiries",
+            "Attendance and learning progress reports",
+            "Lead pipeline and enrollment tracking",
+            "Event and incident reporting"
+        ]
+    }
+
 
 @app.get("/api/events")
 async def get_events():
