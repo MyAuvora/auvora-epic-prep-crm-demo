@@ -129,10 +129,6 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     }
   }
 
-  const handleAskAuvora = async (query: string) => {
-    console.log('Parent Ask Auvora query:', query)
-  }
-
   const getBillingStatusColor = (status: string) => {
     switch (status) {
       case 'Green': return 'text-green-600 bg-green-100'
@@ -619,7 +615,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
             </div>
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget onSearch={handleAskAuvora} />
+      <AskAuvoraWidget />
 
       {/* Grade Breakdown Modal */}
       <GradeBreakdownModal

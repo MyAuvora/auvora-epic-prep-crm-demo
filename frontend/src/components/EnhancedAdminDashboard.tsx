@@ -217,24 +217,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
     fetchFamilies('billing_status=Red')
   }
 
-  const handleAskAuvora = async (query: string) => {
-    try {
-      const response = await fetch(`${API_URL}/api/ask-auvora?query=${encodeURIComponent(query)}`)
-      const data = await response.json()
-      setAskAuvoraResults(data)
-      
-      if (data.result_type === 'students') {
-        setView('students')
-        setStudents(data.results)
-      } else if (data.result_type === 'families') {
-        setView('families-finance')
-        setFamilies(data.results)
-      }
-    } catch (error) {
-      console.error('Error querying Ask Auvora:', error)
-    }
-  }
-
   const getBillingStatusColor = (status: string) => {
     switch (status) {
       case 'Green': return 'text-green-600 bg-green-100'
@@ -1003,7 +985,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
       />
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget onSearch={handleAskAuvora} />
+      <AskAuvoraWidget />
     </div>
   )
 }

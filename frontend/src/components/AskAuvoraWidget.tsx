@@ -15,11 +15,10 @@ interface Message {
 }
 
 interface AskAuvoraWidgetProps {
-  onSearch?: (query: string) => void;
   userRole?: string;
 }
 
-export function AskAuvoraWidget({ onSearch, userRole = 'admin' }: AskAuvoraWidgetProps) {
+export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -60,11 +59,6 @@ export function AskAuvoraWidget({ onSearch, userRole = 'admin' }: AskAuvoraWidge
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, newUserMessage]);
-
-    // Also trigger the old search callback if provided
-    if (onSearch) {
-      onSearch(userMessage);
-    }
 
     // Call AI endpoint
     setIsLoading(true);

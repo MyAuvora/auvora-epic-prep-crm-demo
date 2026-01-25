@@ -105,10 +105,6 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
     }
   }
 
-  const handleAskAuvora = async (query: string) => {
-    console.log('Teacher Ask Auvora query:', query)
-  }
-
   const handleAttendanceSuccess = () => {
     fetchTeacherData()
   }
@@ -454,7 +450,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       </div>
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget onSearch={handleAskAuvora} />
+      <AskAuvoraWidget />
 
       {/* Attendance Taking Modal */}
       {selectedRoom && (
