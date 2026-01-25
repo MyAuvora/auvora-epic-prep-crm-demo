@@ -3631,3 +3631,412 @@ async def get_family_scholarship_summary(family_id: str):
         "scholarships": [s.model_dump() for s in scholarships],
         "recent_claims": [c.model_dump() for c in sorted(claims, key=lambda x: x.claim_date, reverse=True)[:10]]
     }
+
+# ============================================
+# CSV Import Endpoints for IXL and Acellus
+# ============================================
+
+class CSVImportRequest(BaseModel):
+    csv_content: str
+    platform: str  # "ixl" or "acellus"
+
+class CSVImportResult(BaseModel):
+    success: bool
+    records_processed: int
+    records_updated: int
+    records_failed: int
+    errors: List[str]
+    updated_students: List[str]
+
+def match_student_by_name(first_name: str, last_name: str) -> Optional[Student]:
+    """Find a student by first and last name (case-insensitive)"""
+    for student in students_db:
+        if (student.first_name.lower() == first_name.lower() and 
+            student.last_name.lower() == last_name.lower()):
+            return student
+    return None
+
+@app.post("/api/import/ixl", response_model=CSVImportResult)
+async def import_ixl_csv(request: CSVImportRequest):
+    """
+    Import IXL progress data from CSV.
+    Expected columns: Student Name (or First Name, Last Name), Skills Mastered, 
+    Time Spent (hours), Math Score, ELA Score, Last Active Date
+    """
+    errors = []
+    records_processed = 0
+    records_updated = 0
+    updated_students = []
+    
+    try:
+        reader = csv.DictReader(io.StringIO(request.csv_content))
+        rows = list(reader)
+        
+        for row in rows:
+            records_processed += 1
+            try:
+                # Try to extract student name
+                first_name = None
+                last_name = None
+                
+                if 'First Name' in row and 'Last Name' in row:
+                    first_name = row['First Name'].strip()
+                    last_name = row['Last Name'].strip()
+                elif 'Student Name' in row:
+                    name_parts = row['Student Name'].strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = ' '.join(name_parts[1:])
+                elif 'Name' in row:
+                    name_parts = row['Name'].strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = ' '.join(name_parts[1:])
+                
+                if not first_name or not last_name:
+                    errors.append(f"Row {records_processed}: Could not extract student name")
+                    continue
+                
+                student = match_student_by_name(first_name, last_name)
+                if not student:
+                    errors.append(f"Row {records_processed}: Student '{first_name} {last_name}' not found in system")
+                    continue
+                
+                # Extract IXL data with flexible column names
+                skills_mastered = 0
+                time_spent = 0.0
+                math_score = None
+                ela_score = None
+                
+                # Skills mastered
+                for col in ['Skills Mastered', 'Total Skills', 'Skills', 'Mastered']:
+                    if col in row and row[col]:
+                        try:
+                            skills_mastered = int(row[col].replace(',', ''))
+                            break
+                        except ValueError:
+                            pass
+                
+                # Time spent
+                for col in ['Time Spent', 'Hours', 'Time (hours)', 'Total Time', 'Time Spent (hours)']:
+                    if col in row and row[col]:
+                        try:
+                            time_spent = float(row[col].replace(',', '').replace('h', '').strip())
+                            break
+                        except ValueError:
+                            pass
+                
+                # Math score/proficiency
+                for col in ['Math Score', 'Math', 'Math Proficiency', 'Math %']:
+                    if col in row and row[col]:
+                        math_score = row[col].strip()
+                        break
+                
+                # ELA score/proficiency
+                for col in ['ELA Score', 'ELA', 'ELA Proficiency', 'Reading', 'Language Arts', 'ELA %']:
+                    if col in row and row[col]:
+                        ela_score = row[col].strip()
+                        break
+                
+                # Determine proficiency status
+                def get_ixl_status(score_str):
+                    if not score_str:
+                        return IXLStatus.ON_TRACK
+                    score_str = score_str.lower()
+                    if any(x in score_str for x in ['behind', 'needs', 'attention', 'low', 'at risk']):
+                        return IXLStatus.NEEDS_ATTENTION
+                    try:
+                        score = float(score_str.replace('%', ''))
+                        return IXLStatus.NEEDS_ATTENTION if score < 70 else IXLStatus.ON_TRACK
+                    except ValueError:
+                        return IXLStatus.ON_TRACK
+                
+                # Find or create IXL summary for this student
+                existing_summary = None
+                for summary in ixl_summaries_db:
+                    if summary.student_id == student.student_id:
+                        existing_summary = summary
+                        break
+                
+                if existing_summary:
+                    # Update existing summary
+                    existing_summary.skills_mastered_total = skills_mastered
+                    existing_summary.weekly_hours = time_spent
+                    existing_summary.math_proficiency = get_ixl_status(math_score)
+                    existing_summary.ela_proficiency = get_ixl_status(ela_score)
+                    existing_summary.last_active_date = date.today()
+                else:
+                    # Create new summary
+                    new_summary = IXLSummary(
+                        ixl_summary_id=f"ixl_import_{student.student_id}_{date.today().isoformat()}",
+                        student_id=student.student_id,
+                        week_start_date=date.today() - timedelta(days=date.today().weekday()),
+                        weekly_hours=time_spent,
+                        skills_practiced_this_week=min(skills_mastered, 50),
+                        skills_mastered_total=skills_mastered,
+                        math_proficiency=get_ixl_status(math_score),
+                        ela_proficiency=get_ixl_status(ela_score),
+                        last_active_date=date.today(),
+                        recent_skills=["Imported from CSV"]
+                    )
+                    ixl_summaries_db.append(new_summary)
+                
+                # Update student's IXL status flag
+                math_status = get_ixl_status(math_score)
+                ela_status = get_ixl_status(ela_score)
+                if math_status == IXLStatus.NEEDS_ATTENTION or ela_status == IXLStatus.NEEDS_ATTENTION:
+                    student.ixl_status_flag = IXLStatus.NEEDS_ATTENTION
+                else:
+                    student.ixl_status_flag = IXLStatus.ON_TRACK
+                
+                records_updated += 1
+                updated_students.append(f"{first_name} {last_name}")
+                
+            except Exception as e:
+                errors.append(f"Row {records_processed}: Error processing - {str(e)}")
+        
+    except Exception as e:
+        errors.append(f"CSV parsing error: {str(e)}")
+    
+    return CSVImportResult(
+        success=records_updated > 0,
+        records_processed=records_processed,
+        records_updated=records_updated,
+        records_failed=records_processed - records_updated,
+        errors=errors[:20],  # Limit errors to first 20
+        updated_students=updated_students
+    )
+
+@app.post("/api/import/acellus", response_model=CSVImportResult)
+async def import_acellus_csv(request: CSVImportRequest):
+    """
+    Import Acellus progress data from CSV.
+    Expected columns: Student Name (or First Name, Last Name), Course Name,
+    Progress %, Grade %, Time Spent, Status
+    """
+    errors = []
+    records_processed = 0
+    records_updated = 0
+    updated_students = []
+    students_updated_set = set()
+    
+    try:
+        reader = csv.DictReader(io.StringIO(request.csv_content))
+        rows = list(reader)
+        
+        for row in rows:
+            records_processed += 1
+            try:
+                # Try to extract student name
+                first_name = None
+                last_name = None
+                
+                if 'First Name' in row and 'Last Name' in row:
+                    first_name = row['First Name'].strip()
+                    last_name = row['Last Name'].strip()
+                elif 'Student Name' in row:
+                    name_parts = row['Student Name'].strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = ' '.join(name_parts[1:])
+                elif 'Name' in row:
+                    name_parts = row['Name'].strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = ' '.join(name_parts[1:])
+                
+                if not first_name or not last_name:
+                    errors.append(f"Row {records_processed}: Could not extract student name")
+                    continue
+                
+                student = match_student_by_name(first_name, last_name)
+                if not student:
+                    errors.append(f"Row {records_processed}: Student '{first_name} {last_name}' not found in system")
+                    continue
+                
+                # Extract course data
+                course_name = None
+                for col in ['Course Name', 'Course', 'Subject', 'Class']:
+                    if col in row and row[col]:
+                        course_name = row[col].strip()
+                        break
+                
+                if not course_name:
+                    course_name = "General Studies"
+                
+                # Extract progress percentage
+                progress_pct = 0.0
+                for col in ['Progress %', 'Progress', 'Completion %', 'Completion', 'Steps Completed %']:
+                    if col in row and row[col]:
+                        try:
+                            progress_pct = float(row[col].replace('%', '').replace(',', '').strip())
+                            break
+                        except ValueError:
+                            pass
+                
+                # Extract grade percentage
+                grade_pct = 0.0
+                for col in ['Grade %', 'Grade', 'Score', 'Average', 'Current Grade']:
+                    if col in row and row[col]:
+                        try:
+                            val = row[col].replace('%', '').replace(',', '').strip()
+                            # Handle letter grades
+                            letter_grades = {'A': 95, 'B': 85, 'C': 75, 'D': 65, 'F': 55}
+                            if val.upper() in letter_grades:
+                                grade_pct = letter_grades[val.upper()]
+                            else:
+                                grade_pct = float(val)
+                            break
+                        except ValueError:
+                            pass
+                
+                # Extract time spent
+                time_spent = 0.0
+                for col in ['Time Spent', 'Hours', 'Time (hours)', 'Total Time']:
+                    if col in row and row[col]:
+                        try:
+                            time_spent = float(row[col].replace(',', '').replace('h', '').strip())
+                            break
+                        except ValueError:
+                            pass
+                
+                # Determine status
+                def get_acellus_status(progress, grade):
+                    if progress < 50 or grade < 60:
+                        return AcellusStatus.AT_RISK
+                    elif progress < 75 or grade < 70:
+                        return AcellusStatus.BEHIND
+                    return AcellusStatus.ON_TRACK
+                
+                status = get_acellus_status(progress_pct, grade_pct)
+                
+                # Convert grade percentage to letter grade
+                def pct_to_letter(pct):
+                    if pct >= 90: return 'A'
+                    if pct >= 80: return 'B'
+                    if pct >= 70: return 'C'
+                    if pct >= 60: return 'D'
+                    return 'F'
+                
+                # Find or create Acellus course for this student
+                existing_course = None
+                for course in acellus_courses_db:
+                    if course.student_id == student.student_id and course.course_name == course_name:
+                        existing_course = course
+                        break
+                
+                if existing_course:
+                    # Update existing course
+                    existing_course.completion_percentage = progress_pct
+                    existing_course.grade_percentage = grade_pct
+                    existing_course.current_grade = pct_to_letter(grade_pct)
+                    existing_course.time_spent_hours = time_spent
+                    existing_course.status = status
+                    existing_course.last_activity_date = date.today()
+                else:
+                    # Create new course
+                    new_course = AcellusCourse(
+                        course_id=f"acellus_import_{student.student_id}_{course_name.replace(' ', '_')}_{date.today().isoformat()}",
+                        student_id=student.student_id,
+                        course_name=course_name,
+                        subject=course_name.split()[0] if course_name else "General",
+                        total_steps=100,
+                        completed_steps=int(progress_pct),
+                        completion_percentage=progress_pct,
+                        current_grade=pct_to_letter(grade_pct),
+                        grade_percentage=grade_pct,
+                        status=status,
+                        last_activity_date=date.today(),
+                        time_spent_hours=time_spent
+                    )
+                    acellus_courses_db.append(new_course)
+                
+                # Update or create Acellus summary for this student
+                existing_summary = None
+                for summary in acellus_summaries_db:
+                    if summary.student_id == student.student_id:
+                        existing_summary = summary
+                        break
+                
+                # Recalculate summary based on all courses for this student
+                student_courses = [c for c in acellus_courses_db if c.student_id == student.student_id]
+                total_courses = len(student_courses)
+                courses_on_track = len([c for c in student_courses if c.status == AcellusStatus.ON_TRACK])
+                courses_behind = len([c for c in student_courses if c.status in [AcellusStatus.BEHIND, AcellusStatus.AT_RISK]])
+                avg_gpa = sum(c.grade_percentage for c in student_courses) / total_courses if total_courses > 0 else 0
+                total_time = sum(c.time_spent_hours for c in student_courses)
+                
+                # Determine overall status
+                if courses_behind > total_courses / 2:
+                    overall_status = AcellusStatus.AT_RISK
+                elif courses_behind > 0:
+                    overall_status = AcellusStatus.BEHIND
+                else:
+                    overall_status = AcellusStatus.ON_TRACK
+                
+                if existing_summary:
+                    existing_summary.total_courses = total_courses
+                    existing_summary.courses_on_track = courses_on_track
+                    existing_summary.courses_behind = courses_behind
+                    existing_summary.overall_gpa = avg_gpa / 25  # Convert to 4.0 scale
+                    existing_summary.total_time_spent_hours = total_time
+                    existing_summary.last_active_date = date.today()
+                    existing_summary.overall_status = overall_status
+                else:
+                    new_summary = AcellusSummary(
+                        acellus_summary_id=f"acellus_summary_{student.student_id}_{date.today().isoformat()}",
+                        student_id=student.student_id,
+                        total_courses=total_courses,
+                        courses_on_track=courses_on_track,
+                        courses_behind=courses_behind,
+                        overall_gpa=avg_gpa / 25,
+                        total_time_spent_hours=total_time,
+                        last_active_date=date.today(),
+                        overall_status=overall_status
+                    )
+                    acellus_summaries_db.append(new_summary)
+                
+                records_updated += 1
+                if student.student_id not in students_updated_set:
+                    students_updated_set.add(student.student_id)
+                    updated_students.append(f"{first_name} {last_name}")
+                
+            except Exception as e:
+                errors.append(f"Row {records_processed}: Error processing - {str(e)}")
+        
+    except Exception as e:
+        errors.append(f"CSV parsing error: {str(e)}")
+    
+    return CSVImportResult(
+        success=records_updated > 0,
+        records_processed=records_processed,
+        records_updated=records_updated,
+        records_failed=records_processed - records_updated,
+        errors=errors[:20],
+        updated_students=updated_students
+    )
+
+@app.get("/api/import/template/{platform}")
+async def get_import_template(platform: str):
+    """Get a CSV template for importing data"""
+    if platform == "ixl":
+        template = "First Name,Last Name,Skills Mastered,Time Spent (hours),Math Score,ELA Score\n"
+        template += "John,Smith,150,25.5,85%,78%\n"
+        template += "Jane,Doe,200,30.0,On track,Needs attention\n"
+        return StreamingResponse(
+            io.StringIO(template),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=ixl_import_template.csv"}
+        )
+    elif platform == "acellus":
+        template = "First Name,Last Name,Course Name,Progress %,Grade %,Time Spent (hours)\n"
+        template += "John,Smith,Algebra 1,75,82,45.5\n"
+        template += "John,Smith,English 9,80,88,38.0\n"
+        template += "Jane,Doe,Biology,65,71,52.0\n"
+        return StreamingResponse(
+            io.StringIO(template),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=acellus_import_template.csv"}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid platform. Use 'ixl' or 'acellus'")

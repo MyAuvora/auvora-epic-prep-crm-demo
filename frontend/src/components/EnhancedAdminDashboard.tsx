@@ -28,6 +28,7 @@ import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
 import { FullAccountView } from './FullAccountView'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
+import { LearningProgressImport } from './LearningProgressImport'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -854,11 +855,28 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               </TabsContent>
               <TabsContent value="assessments" className="mt-6">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Assessments & Progress Reports</CardTitle>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Learning Progress Import</CardTitle>
+                    <LearningProgressImport />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-500">Assessment tracking and progress reports coming soon...</p>
+                    <p className="text-gray-600 mb-4">
+                      Import student progress data from IXL (K-8) and Acellus (9-12) to keep learning records up to date.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <h4 className="font-semibold text-[#0A2463]">IXL (K-8)</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Import skills mastered, time spent, and proficiency scores for elementary and middle school students.
+                        </p>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <h4 className="font-semibold text-green-800">Acellus (9-12)</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Import course progress, grades, and completion status for high school students.
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
