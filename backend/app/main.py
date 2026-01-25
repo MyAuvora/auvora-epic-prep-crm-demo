@@ -10,6 +10,10 @@ from enum import Enum
 import csv
 import io
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Import AI agent
 from .ai_agent import chat_with_auvora
 
