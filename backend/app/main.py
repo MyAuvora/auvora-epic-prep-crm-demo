@@ -4082,7 +4082,7 @@ async def get_family_billing_summary(family_id: str):
     parent_paid_ytd = 0
     
     for record in billing_records_db:
-        if record.family_id == family_id and record.category == BillingCategory.PAYMENT:
+        if record.family_id == family_id and record.type == "Payment":
             if record.source == PaymentSource.STEP_UP:
                 scholarship_received_ytd += abs(record.amount)
             elif record.source == PaymentSource.OUT_OF_POCKET:
@@ -4293,13 +4293,10 @@ async def mark_sufs_payment_received(scholarship_id: str, amount: Optional[float
             student_id=scholarship.student_id,
             campus_id=scholarship.campus_id,
             date=today,
+            type="Payment",
             description=f"SUFS Scholarship Payment - {scholarship.scholarship_type}",
             amount=-amount,  # Negative for payment/credit
-            category=BillingCategory.PAYMENT,
-            source=PaymentSource.STEP_UP,
-            reference_number=new_claim.sufs_reference_number,
-            notes="Auto-recorded via one-click payment",
-            created_date=today
+            source=PaymentSource.STEP_UP
         )
         billing_records_db.append(new_billing)
         
