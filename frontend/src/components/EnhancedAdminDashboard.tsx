@@ -25,6 +25,7 @@ import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { StaffManagement } from './StaffManagement'
 import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
+import { SUFSPaymentQueue } from './SUFSPaymentQueue'
 import { FullAccountView } from './FullAccountView'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
@@ -805,9 +806,20 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               <TabsContent value="billing" className="mt-6">
                 <FinancialManagement selectedCampusId={selectedCampusId} />
               </TabsContent>
-              <TabsContent value="stepup" className="mt-6">
-                <SUFSScholarshipManagement campusId={selectedCampusId} />
-              </TabsContent>
+                            <TabsContent value="stepup" className="mt-6">
+                              <Tabs defaultValue="queue" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 mb-4">
+                                  <TabsTrigger value="queue">Payment Queue</TabsTrigger>
+                                  <TabsTrigger value="scholarships">Scholarship Management</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="queue">
+                                  <SUFSPaymentQueue campusId={selectedCampusId} />
+                                </TabsContent>
+                                <TabsContent value="scholarships">
+                                  <SUFSScholarshipManagement campusId={selectedCampusId} />
+                                </TabsContent>
+                              </Tabs>
+                            </TabsContent>
               <TabsContent value="revenue" className="mt-6">
                 <AdminRevenueReports role="admin" />
               </TabsContent>

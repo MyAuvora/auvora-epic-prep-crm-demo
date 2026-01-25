@@ -17,6 +17,7 @@ import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { EnrollmentForm } from './EnrollmentForm'
 import { ParentEnrollmentSubmissions } from './EnrollmentSubmissions'
+import { SimplifiedBillingSummary } from './SimplifiedBillingSummary'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -571,12 +572,13 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
           />
         )}
 
-        {view === 'billing' && (
-          <div className="space-y-6">
-            <PaymentMethodStorage familyId={parentData.family.family_id} />
-            <ParentTuitionHistory familyId={parentData.family.family_id} />
-          </div>
-        )}
+                {view === 'billing' && (
+                  <div className="space-y-6">
+                    <SimplifiedBillingSummary familyId={parentData.family.family_id} />
+                    <PaymentMethodStorage familyId={parentData.family.family_id} />
+                    <ParentTuitionHistory familyId={parentData.family.family_id} />
+                  </div>
+                )}
 
         {view === 'conferences' && (
           <ConferenceScheduling 

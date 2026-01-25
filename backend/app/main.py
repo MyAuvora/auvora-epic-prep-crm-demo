@@ -4040,3 +4040,275 @@ async def get_import_template(platform: str):
         )
     else:
         raise HTTPException(status_code=400, detail="Invalid platform. Use 'ixl' or 'acellus'")
+
+# ============================================
+# Simplified Billing Summary Endpoint
+# ============================================
+
+@app.get("/api/families/{family_id}/billing-summary")
+async def get_family_billing_summary(family_id: str):
+    """Get simplified billing summary for a family showing scholarship vs parent responsibility"""
+    
+    # Find the family
+    family = None
+    for f in families_db:
+        if f.family_id == family_id:
+            family = f
+            break
+    
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    # Get students in this family
+    family_students = [s for s in students_db if s.family_id == family_id]
+    num_students = len(family_students)
+    
+    # Calculate annual tuition (assuming $10,000 per student per year)
+    annual_tuition_per_student = 10000
+    annual_tuition = annual_tuition_per_student * num_students
+    
+    # Get scholarship amounts for this family's students
+    total_scholarship = 0
+    for scholarship in sufs_scholarships_db:
+        if scholarship.family_id == family_id and scholarship.status == "Active":
+            total_scholarship += scholarship.annual_award_amount
+    
+    # Calculate parent responsibility
+    parent_responsibility = max(0, annual_tuition - total_scholarship)
+    monthly_parent_payment = parent_responsibility / 12
+    
+    # Calculate year-to-date payments
+    scholarship_received_ytd = 0
+    parent_paid_ytd = 0
+    
+    for record in billing_records_db:
+        if record.family_id == family_id and record.category == BillingCategory.PAYMENT:
+            if record.source == PaymentSource.STEP_UP:
+                scholarship_received_ytd += abs(record.amount)
+            elif record.source == PaymentSource.OUT_OF_POCKET:
+                parent_paid_ytd += abs(record.amount)
+    
+    total_paid_ytd = scholarship_received_ytd + parent_paid_ytd
+    
+    # Generate payment schedule (next 6 months)
+    payment_schedule = []
+    today = date.today()
+    
+    # Parent payments (monthly on the 1st)
+    for i in range(6):
+        month_offset = i + 1
+        payment_date = date(today.year, today.month, 1) + timedelta(days=30 * month_offset)
+        payment_schedule.append({
+            "due_date": payment_date.isoformat(),
+            "amount": monthly_parent_payment,
+            "type": "parent",
+            "status": "pending"
+        })
+    
+    # Scholarship payments (every 2 months)
+    bi_monthly_scholarship = total_scholarship / 6  # 6 payments per year
+    for i in range(3):
+        month_offset = (i + 1) * 2
+        payment_date = date(today.year, today.month, 15) + timedelta(days=30 * month_offset)
+        payment_schedule.append({
+            "due_date": payment_date.isoformat(),
+            "amount": bi_monthly_scholarship,
+            "type": "scholarship",
+            "status": "pending"
+        })
+    
+    # Sort by date
+    payment_schedule.sort(key=lambda x: x["due_date"])
+    
+    # Calculate next payment due
+    next_payment_due = payment_schedule[0]["due_date"] if payment_schedule else today.isoformat()
+    next_payment_amount = monthly_parent_payment
+    
+    return {
+        "family_id": family_id,
+        "family_name": family.family_name,
+        "annual_tuition": annual_tuition,
+        "scholarship_amount": total_scholarship,
+        "parent_responsibility": parent_responsibility,
+        "monthly_parent_payment": monthly_parent_payment,
+        "total_paid_ytd": total_paid_ytd,
+        "scholarship_received_ytd": scholarship_received_ytd,
+        "parent_paid_ytd": parent_paid_ytd,
+        "current_balance": family.current_balance,
+        "next_payment_due": next_payment_due,
+        "next_payment_amount": next_payment_amount,
+        "payment_schedule": payment_schedule
+    }
+
+# ============================================
+# SUFS Payment Queue Endpoint
+# ============================================
+
+@app.get("/api/sufs/payment-queue")
+async def get_sufs_payment_queue(campus_id: Optional[str] = None):
+    """Get expected SUFS payments queue for admins"""
+    
+    today = date.today()
+    
+    # Get all active scholarships
+    active_scholarships = [s for s in sufs_scholarships_db if s.status == "Active"]
+    if campus_id:
+        active_scholarships = [s for s in active_scholarships if s.campus_id == campus_id]
+    
+    # Calculate expected payments (bi-monthly schedule)
+    expected_payments = []
+    
+    # SUFS pays every 2 months: Aug, Oct, Dec, Feb, Apr, Jun
+    payment_months = [8, 10, 12, 2, 4, 6]
+    current_month = today.month
+    
+    # Find next payment month
+    next_payment_month = None
+    for month in payment_months:
+        if month >= current_month:
+            next_payment_month = month
+            break
+    if not next_payment_month:
+        next_payment_month = payment_months[0]  # Next year
+    
+    # Generate expected payments for each scholarship
+    for scholarship in active_scholarships:
+        # Get student info
+        student = None
+        for s in students_db:
+            if s.student_id == scholarship.student_id:
+                student = s
+                break
+        
+        # Get family info
+        family = None
+        for f in families_db:
+            if f.family_id == scholarship.family_id:
+                family = f
+                break
+        
+        if not student or not family:
+            continue
+        
+        # Calculate bi-monthly payment amount
+        bi_monthly_amount = scholarship.annual_award_amount / 6
+        
+        # Check if this payment has already been received
+        already_received = False
+        for claim in sufs_claims_db:
+            if (claim.scholarship_id == scholarship.scholarship_id and 
+                claim.status == "Paid" and
+                claim.claim_period == f"{today.year}-{next_payment_month:02d}"):
+                already_received = True
+                break
+        
+        expected_payments.append({
+            "scholarship_id": scholarship.scholarship_id,
+            "student_id": scholarship.student_id,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "family_id": scholarship.family_id,
+            "family_name": family.family_name,
+            "scholarship_type": scholarship.scholarship_type,
+            "expected_amount": bi_monthly_amount,
+            "expected_date": f"{today.year}-{next_payment_month:02d}-15",
+            "status": "received" if already_received else "expected",
+            "remaining_balance": scholarship.remaining_balance
+        })
+    
+    # Sort by family name
+    expected_payments.sort(key=lambda x: x["family_name"])
+    
+    # Calculate totals
+    total_expected = sum(p["expected_amount"] for p in expected_payments if p["status"] == "expected")
+    total_received = sum(p["expected_amount"] for p in expected_payments if p["status"] == "received")
+    
+    return {
+        "payment_period": f"{today.year}-{next_payment_month:02d}",
+        "total_scholarships": len(expected_payments),
+        "total_expected_amount": total_expected,
+        "total_received_amount": total_received,
+        "payments": expected_payments
+    }
+
+@app.post("/api/sufs/mark-received/{scholarship_id}")
+async def mark_sufs_payment_received(scholarship_id: str, amount: Optional[float] = None):
+    """One-click mark SUFS payment as received"""
+    
+    # Find the scholarship
+    scholarship = None
+    for s in sufs_scholarships_db:
+        if s.scholarship_id == scholarship_id:
+            scholarship = s
+            break
+    
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    
+    # Calculate expected amount if not provided
+    if amount is None:
+        amount = scholarship.annual_award_amount / 6  # Bi-monthly payment
+    
+    today = date.today()
+    
+    # Create a claim record
+    new_claim = SUFSClaim(
+        claim_id=f"claim_{scholarship_id}_{today.isoformat()}",
+        scholarship_id=scholarship_id,
+        student_id=scholarship.student_id,
+        family_id=scholarship.family_id,
+        campus_id=scholarship.campus_id,
+        claim_period=f"{today.year}-{today.month:02d}",
+        claim_date=today,
+        amount_claimed=amount,
+        tuition_amount=amount,
+        fees_amount=0,
+        status="Paid",
+        submitted_date=today,
+        approved_date=today,
+        paid_date=today,
+        paid_amount=amount,
+        denial_reason="",
+        sufs_reference_number=f"SUFS-{today.strftime('%Y%m%d')}-{scholarship_id[-4:]}",
+        notes="Marked as received via one-click",
+        created_date=today,
+        last_updated=today
+    )
+    sufs_claims_db.append(new_claim)
+    
+    # Update scholarship remaining balance
+    scholarship.remaining_balance = max(0, scholarship.remaining_balance - amount)
+    
+    # Create a billing record for the family
+    family = None
+    for f in families_db:
+        if f.family_id == scholarship.family_id:
+            family = f
+            break
+    
+    if family:
+        # Create payment record
+        new_billing = BillingRecord(
+            billing_record_id=f"billing_sufs_{today.isoformat()}_{scholarship_id[-4:]}",
+            family_id=scholarship.family_id,
+            student_id=scholarship.student_id,
+            campus_id=scholarship.campus_id,
+            date=today,
+            description=f"SUFS Scholarship Payment - {scholarship.scholarship_type}",
+            amount=-amount,  # Negative for payment/credit
+            category=BillingCategory.PAYMENT,
+            source=PaymentSource.STEP_UP,
+            reference_number=new_claim.sufs_reference_number,
+            notes="Auto-recorded via one-click payment",
+            created_date=today
+        )
+        billing_records_db.append(new_billing)
+        
+        # Update family balance
+        family.current_balance = max(0, family.current_balance - amount)
+    
+    return {
+        "success": True,
+        "message": f"Payment of ${amount:,.2f} marked as received",
+        "claim_id": new_claim.claim_id,
+        "new_remaining_balance": scholarship.remaining_balance
+    }
