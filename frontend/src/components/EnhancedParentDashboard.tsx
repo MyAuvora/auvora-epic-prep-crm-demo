@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConferenceScheduling } from './ConferenceScheduling'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
@@ -488,8 +488,17 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
 
                   {childIXL && (
                     <Card>
-                      <CardHeader>
+                      <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>IXL Progress</CardTitle>
+                        <a
+                          href="https://www.ixl.com/signin"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-[#0A2463] hover:bg-[#163B9A] rounded-md transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open IXL
+                        </a>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
