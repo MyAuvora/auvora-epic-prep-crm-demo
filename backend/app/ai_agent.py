@@ -342,6 +342,51 @@ AVAILABLE_FUNCTIONS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_export_report",
+            "description": "Create a downloadable report file (spreadsheet or document) with data from the CRM. Use this when the user asks for a report, spreadsheet, CSV, Excel file, PDF, or downloadable document. Available datasets: students, families, billing_records, scholarships, attendance, staff, leads.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "dataset": {
+                        "type": "string",
+                        "enum": ["students", "families", "billing_records", "scholarships", "attendance", "staff", "leads"],
+                        "description": "The dataset to export"
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["csv", "xlsx", "pdf"],
+                        "description": "Output format: csv (spreadsheet), xlsx (Excel), or pdf (document)"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Title for the report (e.g., 'Student Roster', 'Outstanding Balances Report')"
+                    },
+                    "columns": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Specific columns to include. For students: student_id, first_name, last_name, grade, status, funding_source, attendance_present_count, attendance_absent_count, attendance_tardy_count, overall_grade_flag, overall_risk_flag, ixl_status_flag. For families: family_id, family_name, billing_status, current_balance, annual_tuition, primary_email, primary_phone. For billing_records: billing_record_id, family_id, date, type, description, amount, source. For scholarships: scholarship_id, student_id, family_id, scholarship_type, status, annual_award_amount, remaining_balance. For attendance: attendance_id, student_id, date, status, check_in_time, check_out_time. For staff: staff_id, first_name, last_name, role, email, phone, status. For leads: lead_id, parent_name, student_name, grade_interest, stage, source, created_date."
+                    },
+                    "filters": {
+                        "type": "object",
+                        "description": "Optional filters to apply (e.g., {\"billing_status\": \"Red\"} for families with overdue balances)"
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "description": "Column to sort by"
+                    },
+                    "sort_order": {
+                        "type": "string",
+                        "enum": ["asc", "desc"],
+                        "description": "Sort order (ascending or descending)"
+                    }
+                },
+                "required": ["dataset", "format", "title"]
+            }
+        }
     }
 ]
 
@@ -926,6 +971,38 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             "re_enrolled": re_enrolled,
             "pending": not_re_enrolled,
             "re_enrollment_rate": f"{round(re_enrolled / len(active_students) * 100, 1)}%" if active_students else "0%"
+        }
+    
+    elif function_name == "create_export_report":
+        # Import the exports module
+        from app.exports import create_export, ExportSpec
+        
+        # Build the export specification
+        spec = ExportSpec(
+            dataset=arguments.get("dataset", "students"),
+            columns=arguments.get("columns", []),
+            format=arguments.get("format", "csv"),
+            title=arguments.get("title", "Export"),
+            filters=arguments.get("filters"),
+            sort_by=arguments.get("sort_by"),
+            sort_order=arguments.get("sort_order", "asc"),
+            max_rows=1000
+        )
+        
+        # Create the export
+        result = create_export(spec, data_context)
+        
+        if "error" in result:
+            return result
+        
+        return {
+            "success": True,
+            "message": f"Report created successfully with {result['row_count']} records.",
+            "filename": result["filename"],
+            "download_url": result["download_url"],
+            "format": spec.format,
+            "expires_at": result["expires_at"],
+            "row_count": result["row_count"]
         }
     
     return {"error": f"Unknown function: {function_name}"}

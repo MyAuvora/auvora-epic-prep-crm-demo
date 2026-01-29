@@ -4309,3 +4309,25 @@ async def mark_sufs_payment_received(scholarship_id: str, amount: Optional[float
         "claim_id": new_claim.claim_id,
         "new_remaining_balance": scholarship.remaining_balance
     }
+
+
+# ============== Export Download Endpoint ==============
+
+@app.get("/api/exports/{export_id}")
+async def download_export(export_id: str):
+    """Download a generated export file (CSV, Excel, or PDF)"""
+    from app.exports import get_export
+    
+    export = get_export(export_id)
+    
+    if not export:
+        raise HTTPException(status_code=404, detail="Export not found or has expired")
+    
+    # Return the file as a streaming response
+    return StreamingResponse(
+        io.BytesIO(export["file_bytes"]),
+        media_type=export["mime_type"],
+        headers={
+            "Content-Disposition": f'attachment; filename="{export["filename"]}"'
+        }
+    )

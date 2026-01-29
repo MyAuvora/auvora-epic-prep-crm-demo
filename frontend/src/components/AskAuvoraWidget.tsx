@@ -1,11 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles, Bot, User } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles, Bot, User, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Helper to extract download links from AI response
+function extractDownloadLinks(content: string): { text: string; downloads: Array<{ url: string; filename: string; format: string }> } {
+  const downloads: Array<{ url: string; filename: string; format: string }> = [];
+  
+  // Look for download URL patterns in the response
+  // Pattern: /api/exports/UUID
+  const urlPattern = /\/api\/exports\/[a-f0-9-]+/gi;
+  const matches = content.match(urlPattern);
+  
+  if (matches) {
+    matches.forEach((url) => {
+      // Try to extract filename from context
+      const filenameMatch = content.match(/filename[:\s]*["']?([^"'\n,]+\.(csv|xlsx|pdf))["']?/i);
+      const formatMatch = content.match(/format[:\s]*["']?(csv|xlsx|pdf)["']?/i);
+      
+      downloads.push({
+        url: `${API_BASE_URL}${url}`,
+        filename: filenameMatch ? filenameMatch[1] : 'report',
+        format: formatMatch ? formatMatch[1] : 'csv'
+      });
+    });
+  }
+  
+  return { text: content, downloads };
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -111,8 +137,11 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
   };
 
   const formatMessage = (content: string) => {
+    // Extract download links from the content
+    const { downloads } = extractDownloadLinks(content);
+    
     // Convert markdown-like formatting to HTML
-    return content
+    const formattedContent = content
       .split('\n')
       .map((line, i) => {
         // Handle bullet points
@@ -138,6 +167,35 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
         }
         return <br key={i} />;
       });
+    
+    // If there are downloads, add download buttons
+    if (downloads.length > 0) {
+      return (
+        <>
+          {formattedContent}
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            {downloads.map((download, idx) => (
+              <a
+                key={idx}
+                href={download.url}
+                download={download.filename}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-[#0A2463] text-white rounded-lg hover:bg-[#163B9A] transition-colors text-sm mr-2 mb-2"
+              >
+                {download.format === 'pdf' ? (
+                  <FileText className="h-4 w-4" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4" />
+                )}
+                <Download className="h-3 w-3" />
+                Download {download.format.toUpperCase()}
+              </a>
+            ))}
+          </div>
+        </>
+      );
+    }
+    
+    return formattedContent;
   };
 
   return (
