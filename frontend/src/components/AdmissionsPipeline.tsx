@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, TrendingUp, Calendar, Phone, Mail } from 'lucide-react';
 import { AddLeadModal } from './AddLeadModal';
+import { LeadDetailModal } from './LeadDetailModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -45,6 +46,9 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
   const [selectedStage, setSelectedStage] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadModalMode, setLeadModalMode] = useState<'view' | 'update-stage'>('view');
+  const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -217,8 +221,27 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
                           </div>
 
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">View</Button>
-                            <Button size="sm">Update Stage</Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setLeadModalMode('view');
+                                setShowLeadDetailModal(true);
+                              }}
+                            >
+                              View
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setLeadModalMode('update-stage');
+                                setShowLeadDetailModal(true);
+                              }}
+                            >
+                              Update Stage
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -240,6 +263,20 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
           setSelectedStage('all');
         }}
         selectedCampusId={selectedCampusId}
+      />
+
+      <LeadDetailModal
+        open={showLeadDetailModal}
+        onClose={() => {
+          setShowLeadDetailModal(false);
+          setSelectedLead(null);
+        }}
+        lead={selectedLead}
+        mode={leadModalMode}
+        onLeadUpdated={() => {
+          fetchLeads();
+          fetchSummary();
+        }}
       />
     </div>
   );
