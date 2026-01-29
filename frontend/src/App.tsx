@@ -4,13 +4,17 @@ import { TeacherDashboard } from './components/TeacherDashboard'
 import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
 import { Header } from './components/Header'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { TermsOfService } from './components/TermsOfService'
+import { PrivacyPolicy } from './components/PrivacyPolicy'
 
 type Role = 'admin' | 'teacher' | 'parent'
+type Page = 'dashboard' | 'terms' | 'privacy'
 
 function App() {
   const [currentRole, setCurrentRole] = useState<Role>('admin')
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
 
   const handleRoleChange = (role: Role) => {
     setCurrentRole(role)
@@ -28,20 +32,63 @@ function App() {
     setSearchNavigation({ type, id })
   }
 
+  // Render Terms of Service page
+  if (currentPage === 'terms') {
+    return (
+      <ErrorBoundary>
+        <TermsOfService onBack={() => setCurrentPage('dashboard')} />
+      </ErrorBoundary>
+    );
+  }
+
+  // Render Privacy Policy page
+  if (currentPage === 'privacy') {
+    return (
+      <ErrorBoundary>
+        <PrivacyPolicy onBack={() => setCurrentPage('dashboard')} />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header 
           currentRole={currentRole} 
           onRoleChange={handleRoleChange}
           onSearchSelect={handleSearchSelect}
         />
         
-        <main>
+        <main className="flex-1">
           {currentRole === 'admin' && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
           {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
           {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
         </main>
+
+        {/* Footer with Terms and Privacy links */}
+        <footer className="bg-white border-t border-gray-200 py-4 mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+              <p className="text-sm text-gray-500">
+                &copy; {new Date().getFullYear()} Auvora LLC. All rights reserved.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setCurrentPage('terms')}
+                  className="text-sm text-gray-500 hover:text-[#0A2463] transition-colors"
+                >
+                  Terms of Service
+                </button>
+                <button
+                  onClick={() => setCurrentPage('privacy')}
+                  className="text-sm text-gray-500 hover:text-[#0A2463] transition-colors"
+                >
+                  Privacy Policy
+                </button>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </ErrorBoundary>
   )
