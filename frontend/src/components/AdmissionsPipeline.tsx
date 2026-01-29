@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, TrendingUp, Calendar, Phone, Mail } from 'lucide-react';
+import { AddLeadModal } from './AddLeadModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -43,6 +44,7 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
   const [summary, setSummary] = useState<PipelineSummary | null>(null);
   const [selectedStage, setSelectedStage] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -107,7 +109,7 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
           <h2 className="text-3xl font-bold">Admissions Pipeline</h2>
           <p className="text-gray-500">Track leads from inquiry to enrollment</p>
         </div>
-        <Button>Add New Lead</Button>
+        <Button onClick={() => setShowAddLeadModal(true)}>Add New Lead</Button>
       </div>
 
       {summary && (
@@ -228,6 +230,17 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
           </Tabs>
         </CardContent>
       </Card>
+
+      <AddLeadModal
+        open={showAddLeadModal}
+        onClose={() => setShowAddLeadModal(false)}
+        onLeadAdded={() => {
+          fetchLeads();
+          fetchSummary();
+          setSelectedStage('all');
+        }}
+        selectedCampusId={selectedCampusId}
+      />
     </div>
   );
 }
