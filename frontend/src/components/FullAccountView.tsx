@@ -487,8 +487,8 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
 
   // Re-enrollment handlers
   const handleReEnroll = (studentId: string) => {
-    const nextYear = new Date().getFullYear() + 1;
-    const schoolYear = `${nextYear}-${nextYear + 1}`;
+    const currentYear = new Date().getFullYear();
+    const schoolYear = `${currentYear}-${currentYear + 1}`;
     setReEnrollmentStatus(prev => ({
       ...prev,
       [studentId]: { enrolled: true, year: schoolYear }
@@ -1651,7 +1651,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                         className="bg-blue-600 hover:bg-blue-700"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
-                        Re-Enroll for {new Date().getFullYear() + 1}-{new Date().getFullYear() + 2}
+                        Re-Enroll for {new Date().getFullYear()}-{new Date().getFullYear() + 1}
                       </Button>
                     </div>
                   )}

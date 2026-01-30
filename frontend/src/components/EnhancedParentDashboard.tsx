@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConferenceScheduling } from './ConferenceScheduling'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
@@ -90,6 +90,10 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     studentName: ''
   })
 
+  const [reEnrollmentStatus, setReEnrollmentStatus] = useState<{
+    [studentId: string]: { enrolled: boolean; year: string }
+  }>({})
+
   useEffect(() => {
     fetchParentData()
   }, [parentId])
@@ -138,6 +142,25 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
       default: return 'text-gray-600 bg-gray-100'
     }
   }
+
+  // Re-enrollment handlers
+  const handleReEnroll = (studentId: string) => {
+    const currentYear = new Date().getFullYear();
+    const schoolYear = `${currentYear}-${currentYear + 1}`;
+    setReEnrollmentStatus(prev => ({
+      ...prev,
+      [studentId]: { enrolled: true, year: schoolYear }
+    }));
+    alert(`Your child has been re-enrolled for the ${schoolYear} school year!`);
+  };
+
+  const handleCancelReEnrollment = (studentId: string) => {
+    setReEnrollmentStatus(prev => {
+      const newStatus = { ...prev };
+      delete newStatus[studentId];
+      return newStatus;
+    });
+  };
 
   if (!parentData) {
     return <div className="p-8">Loading...</div>
@@ -560,6 +583,49 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                     </Card>
                   )}
                 </div>
+
+                {/* Re-Enrollment Section */}
+                <Card className="mt-6">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <RefreshCw className="h-5 w-5 text-blue-600" />
+                      Re-Enrollment for Next Year
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {reEnrollmentStatus[selectedChild.student_id]?.enrolled ? (
+                      <div className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div>
+                          <p className="font-semibold text-green-800">
+                            Re-enrolled for {reEnrollmentStatus[selectedChild.student_id].year}
+                          </p>
+                          <p className="text-sm text-green-600">{selectedChild.first_name} is confirmed for the next school year</p>
+                        </div>
+                        <button
+                          onClick={() => handleCancelReEnrollment(selectedChild.student_id)}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-700">Not yet enrolled for next year</p>
+                          <p className="text-sm text-gray-500">Click to re-enroll {selectedChild.first_name} for the upcoming school year</p>
+                        </div>
+                        <button
+                          onClick={() => handleReEnroll(selectedChild.student_id)}
+                          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Re-Enroll for {new Date().getFullYear()}-{new Date().getFullYear() + 1}
+                        </button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </>
