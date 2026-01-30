@@ -7,7 +7,6 @@ import { StudentDetailsModal } from './StudentDetailsModal'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
 import { DocumentManagement } from './DocumentManagement'
-import { StoreComponent } from './StoreComponent'
 import { PhotoGallery } from './PhotoGallery'
 import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
@@ -30,6 +29,7 @@ import { FullAccountView } from './FullAccountView'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { LearningProgressImport } from './LearningProgressImport'
+import { FeeProductManagement } from './FeeProductManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -824,7 +824,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 <AdminRevenueReports role="admin" />
               </TabsContent>
               <TabsContent value="store" className="mt-6">
-                <StoreComponent role="admin" />
+                <FeeProductManagement campusId={selectedCampusId} />
               </TabsContent>
             </Tabs>
           </div>

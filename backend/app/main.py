@@ -1778,6 +1778,30 @@ async def get_product(product_id: str):
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
+@app.post("/api/products")
+async def create_product(product: Product):
+    products_db.append(product)
+    return product
+
+@app.put("/api/products/{product_id}")
+async def update_product(product_id: str, product_data: dict):
+    product = next((p for p in products_db if p.product_id == product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    for key, value in product_data.items():
+        if hasattr(product, key):
+            setattr(product, key, value)
+    return product
+
+@app.delete("/api/products/{product_id}")
+async def delete_product(product_id: str):
+    global products_db
+    product = next((p for p in products_db if p.product_id == product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    products_db = [p for p in products_db if p.product_id != product_id]
+    return {"message": "Product deleted successfully"}
+
 @app.get("/api/orders")
 async def get_orders(family_id: Optional[str] = None):
     if family_id:
