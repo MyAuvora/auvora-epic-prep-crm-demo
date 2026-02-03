@@ -112,7 +112,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   })
 
   // Enrollment fee from admin settings (fetched from API)
-  const [enrollmentFee, setEnrollmentFee] = useState<number>(250) // Default fallback
+  const [enrollmentFee, setEnrollmentFee] = useState<number>(500) // Default fallback
   const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
 
   useEffect(() => {
