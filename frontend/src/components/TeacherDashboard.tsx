@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Calendar, BookOpen, ClipboardCheck } from 'lucide-react'
+import { Users, Calendar, BookOpen, ClipboardCheck, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -16,6 +16,7 @@ import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { TeacherGradebook } from './TeacherGradebook'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { DailyBibleVerse } from './DailyBibleVerse'
+import { FullAccountView } from './FullAccountView'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -72,6 +73,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isAttendanceCalendarOpen, setIsAttendanceCalendarOpen] = useState(false)
   const [isGradeBreakdownOpen, setIsGradeBreakdownOpen] = useState(false)
+  const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
 
   useEffect(() => {
     fetchTeacherData()
@@ -128,8 +130,26 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
     return 'Math'
   }
 
+  const handleViewFullAccount = (studentId: string) => {
+    setIsStudentModalOpen(false)
+    setAccountView({ type: 'student', id: studentId })
+  }
+
   if (!teacherData) {
     return <div className="p-8">Loading...</div>
+  }
+
+  // If viewing a full account, show the FullAccountView instead
+  if (accountView) {
+    return (
+      <FullAccountView
+        type={accountView.type}
+        id={accountView.id}
+        onBack={() => setAccountView(null)}
+        onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
+        onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
+      />
+    );
   }
 
   return (
@@ -553,6 +573,17 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
                 >
                   <BookOpen className="mr-1 h-3 w-3" />
                   View Grade Breakdown
+                </Button>
+              </div>
+
+              <div className="border-t pt-3">
+                <Button
+                  onClick={() => handleViewFullAccount(selectedStudent.student_id)}
+                  className="w-full bg-[#0A2463] hover:bg-[#0A2463]/90"
+                  size="sm"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Full Student & Family Account
                 </Button>
               </div>
             </div>
