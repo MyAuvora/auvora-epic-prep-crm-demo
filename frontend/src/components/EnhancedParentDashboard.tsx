@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X, CreditCard, CheckCircle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { ConferenceScheduling } from './ConferenceScheduling'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
 import { EventsCalendar } from './EventsCalendar'
@@ -94,6 +96,24 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     [studentId: string]: { enrolled: boolean; year: string }
   }>({})
 
+  // Re-enrollment payment modal state
+  const [reEnrollmentPaymentModal, setReEnrollmentPaymentModal] = useState<{
+    isOpen: boolean;
+    studentId: string;
+    studentName: string;
+    isProcessing: boolean;
+    paymentComplete: boolean;
+  }>({
+    isOpen: false,
+    studentId: '',
+    studentName: '',
+    isProcessing: false,
+    paymentComplete: false
+  })
+
+  // Enrollment fee constant (can be fetched from API in production)
+  const ENROLLMENT_FEE = 250
+
   useEffect(() => {
     fetchParentData()
   }, [parentId])
@@ -143,15 +163,49 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     }
   }
 
-  // Re-enrollment handlers
-  const handleReEnroll = (studentId: string) => {
+  // Re-enrollment handlers - opens payment modal for parents
+  const handleReEnroll = (studentId: string, studentName: string) => {
+    setReEnrollmentPaymentModal({
+      isOpen: true,
+      studentId,
+      studentName,
+      isProcessing: false,
+      paymentComplete: false
+    });
+  };
+
+  // Process enrollment payment
+  const handleEnrollmentPayment = async () => {
+    setReEnrollmentPaymentModal(prev => ({ ...prev, isProcessing: true }));
+    
+    // Simulate payment processing (will be replaced with Stripe integration)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     const currentYear = new Date().getFullYear();
     const schoolYear = `${currentYear}-${currentYear + 1}`;
+    
+    // Mark as enrolled after payment
     setReEnrollmentStatus(prev => ({
       ...prev,
-      [studentId]: { enrolled: true, year: schoolYear }
+      [reEnrollmentPaymentModal.studentId]: { enrolled: true, year: schoolYear }
     }));
-    alert(`Your child has been re-enrolled for the ${schoolYear} school year!`);
+    
+    setReEnrollmentPaymentModal(prev => ({ 
+      ...prev, 
+      isProcessing: false, 
+      paymentComplete: true 
+    }));
+  };
+
+  // Close payment modal
+  const closePaymentModal = () => {
+    setReEnrollmentPaymentModal({
+      isOpen: false,
+      studentId: '',
+      studentName: '',
+      isProcessing: false,
+      paymentComplete: false
+    });
   };
 
   const handleCancelReEnrollment = (studentId: string) => {
@@ -616,7 +670,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                           <p className="text-sm text-gray-500">Click to re-enroll {selectedChild.first_name} for the upcoming school year</p>
                         </div>
                         <button
-                          onClick={() => handleReEnroll(selectedChild.student_id)}
+                          onClick={() => handleReEnroll(selectedChild.student_id, selectedChild.first_name)}
                           className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                         >
                           <RefreshCw className="h-4 w-4 mr-2" />
@@ -710,6 +764,108 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
         studentId={attendanceCalendarModal.studentId}
         studentName={attendanceCalendarModal.studentName}
       />
+
+      {/* Re-Enrollment Payment Modal */}
+      <Dialog open={reEnrollmentPaymentModal.isOpen} onOpenChange={(open) => !open && closePaymentModal()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {reEnrollmentPaymentModal.paymentComplete ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <CreditCard className="h-5 w-5 text-[#0A2463]" />
+              )}
+              {reEnrollmentPaymentModal.paymentComplete ? 'Payment Complete!' : 'Re-Enrollment Payment'}
+            </DialogTitle>
+            <DialogDescription>
+              {reEnrollmentPaymentModal.paymentComplete 
+                ? `${reEnrollmentPaymentModal.studentName} has been successfully re-enrolled!`
+                : `Complete payment to re-enroll ${reEnrollmentPaymentModal.studentName} for the ${new Date().getFullYear()}-${new Date().getFullYear() + 1} school year.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          {!reEnrollmentPaymentModal.paymentComplete ? (
+            <div className="space-y-4">
+              {/* Fee Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">Student</span>
+                  <span className="font-medium">{reEnrollmentPaymentModal.studentName}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">School Year</span>
+                  <span className="font-medium">{new Date().getFullYear()}-{new Date().getFullYear() + 1}</span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-800 font-semibold">Enrollment Fee</span>
+                    <span className="text-2xl font-bold text-[#0A2463]">${ENROLLMENT_FEE.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Info */}
+              <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
+                <p className="font-medium mb-1">Payment will be charged to your saved payment method.</p>
+                <p className="text-blue-600">You can manage your payment methods in the Billing section.</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={closePaymentModal}
+                  disabled={reEnrollmentPaymentModal.isProcessing}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleEnrollmentPayment}
+                  disabled={reEnrollmentPaymentModal.isProcessing}
+                  className="flex-1 bg-[#0A2463] hover:bg-[#163B9A]"
+                >
+                  {reEnrollmentPaymentModal.isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay ${ENROLLMENT_FEE.toFixed(2)}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Success Message */}
+              <div className="bg-green-50 rounded-lg p-4 text-center">
+                <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                <p className="text-green-800 font-semibold">Payment Successful!</p>
+                <p className="text-green-600 text-sm mt-1">
+                  ${ENROLLMENT_FEE.toFixed(2)} has been charged to your payment method.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                <p>{reEnrollmentPaymentModal.studentName} is now enrolled for the {new Date().getFullYear()}-{new Date().getFullYear() + 1} school year.</p>
+                <p className="mt-1">A confirmation email has been sent to your registered email address.</p>
+              </div>
+
+              <Button
+                onClick={closePaymentModal}
+                className="w-full bg-[#0A2463] hover:bg-[#163B9A]"
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
