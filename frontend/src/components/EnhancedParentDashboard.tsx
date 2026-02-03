@@ -111,12 +111,35 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     paymentComplete: false
   })
 
-  // Enrollment fee constant (can be fetched from API in production)
-  const ENROLLMENT_FEE = 250
+  // Enrollment fee from admin settings (fetched from API)
+  const [enrollmentFee, setEnrollmentFee] = useState<number>(250) // Default fallback
+  const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
 
   useEffect(() => {
     fetchParentData()
+    fetchEnrollmentFee()
   }, [parentId])
+
+  // Fetch enrollment fee from admin-configured products
+  const fetchEnrollmentFee = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/products`)
+      const products = await response.json()
+      // Find the enrollment fee product (category = 'Enrollment Fee' or fee_type = 'enrollment')
+      const enrollmentFeeProduct = products.find(
+        (p: { category: string; fee_type?: string; is_fee?: boolean; available: boolean }) => 
+          (p.category === 'Enrollment Fee' || p.fee_type === 'enrollment') && p.available
+      )
+      if (enrollmentFeeProduct) {
+        setEnrollmentFee(enrollmentFeeProduct.price)
+      }
+    } catch (error) {
+      console.error('Error fetching enrollment fee:', error)
+      // Keep default fallback of $250
+    } finally {
+      setEnrollmentFeeLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (selectedChild) {
@@ -800,7 +823,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-800 font-semibold">Enrollment Fee</span>
-                    <span className="text-2xl font-bold text-[#0A2463]">${ENROLLMENT_FEE.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-[#0A2463]">${enrollmentFee.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -834,7 +857,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Pay ${ENROLLMENT_FEE.toFixed(2)}
+                      Pay ${enrollmentFee.toFixed(2)}
                     </>
                   )}
                 </Button>
@@ -847,7 +870,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                 <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
                 <p className="text-green-800 font-semibold">Payment Successful!</p>
                 <p className="text-green-600 text-sm mt-1">
-                  ${ENROLLMENT_FEE.toFixed(2)} has been charged to your payment method.
+                  ${enrollmentFee.toFixed(2)} has been charged to your payment method.
                 </p>
               </div>
 
