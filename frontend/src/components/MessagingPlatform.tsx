@@ -29,6 +29,14 @@ interface StaffMember {
   email: string;
 }
 
+interface Parent {
+  parent_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  student_ids: string[];
+}
+
 interface MessagingPlatformProps {
   role: 'admin' | 'teacher' | 'parent';
   userId: string;
@@ -42,12 +50,15 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [parents, setParents] = useState<Parent[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<string>('');
+  const [selectedRecipientType, setSelectedRecipientType] = useState<'staff' | 'parent'>('parent');
   const [userCampusId, setUserCampusId] = useState<string>('');
 
   useEffect(() => {
     fetchMessages();
     fetchStaffMembers();
+    fetchParents();
     fetchUserCampus();
   }, [userId]);
 
@@ -80,6 +91,16 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
     }
   };
 
+  const fetchParents = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/parents`);
+      const data = await response.json();
+      setParents(data);
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+    }
+  };
+
   const fetchUserCampus = async () => {
     try {
       if (role === 'parent') {
@@ -100,7 +121,12 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
     if (!newMessage.trim() || !selectedRecipient) return;
 
     try {
-      const recipientType = role === 'parent' ? 'Staff' : 'Parent';
+      let recipientType: string;
+      if (role === 'parent') {
+        recipientType = 'Staff';
+      } else {
+        recipientType = selectedRecipientType === 'staff' ? 'Staff' : 'Parent';
+      }
       
       await fetch(`${API_URL}/api/messages`, {
         method: 'POST',
@@ -119,6 +145,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
 
       setNewMessage('');
       setSelectedRecipient('');
+      setSelectedRecipientType('parent');
       setShowCompose(false);
       fetchMessages();
     } catch (error) {
@@ -148,7 +175,21 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
     if (isMessageFromMe(message)) {
       return 'You';
     }
-    return message.sender_type === 'Parent' ? 'Parent' : 'Coach';
+    if (message.sender_type === 'Parent') {
+      const parent = parents.find(p => p.parent_id === message.sender_id);
+      return parent ? `${parent.first_name} ${parent.last_name}` : 'Parent';
+    }
+    const staff = staffMembers.find(s => s.staff_id === message.sender_id);
+    return staff ? `${staff.first_name} ${staff.last_name}` : 'Staff';
+  };
+
+  const getRecipientName = (message: Message) => {
+    if (message.recipient_type === 'Parent') {
+      const parent = parents.find(p => p.parent_id === message.recipient_id);
+      return parent ? `${parent.first_name} ${parent.last_name}` : 'Parent';
+    }
+    const staff = staffMembers.find(s => s.staff_id === message.recipient_id);
+    return staff ? `${staff.first_name} ${staff.last_name}` : 'Staff';
   };
 
   const sentMessages = messages.filter(m => isMessageFromMe(m));
@@ -227,7 +268,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-500" />
-                        <CardTitle className="text-base">To: {message.recipient_type}</CardTitle>
+                        <CardTitle className="text-base">To: {getRecipientName(message)}</CardTitle>
                       </div>
                       <Badge variant="outline" className="text-xs">
                         {formatDateTime(message.date_time)}
@@ -252,7 +293,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
                 <div className="flex justify-between items-start mb-2">
                   <DialogTitle className="text-xl">
                     {isMessageFromMe(selectedMessage) 
-                      ? `To: ${selectedMessage.recipient_type}`
+                      ? `To: ${getRecipientName(selectedMessage)}`
                       : `From: ${getMessageSenderName(selectedMessage)}`
                     }
                   </DialogTitle>
@@ -282,10 +323,33 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
           <DialogHeader>
             <DialogTitle>New Message</DialogTitle>
             <DialogDescription>
-              Send a message to {role === 'parent' ? 'staff members' : 'parents'}
+              {role === 'parent' 
+                ? 'Send a message to staff members'
+                : 'Send a message to parents or staff members'
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {role !== 'parent' && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Recipient Type:</label>
+                <Select 
+                  value={selectedRecipientType} 
+                  onValueChange={(value: 'staff' | 'parent') => {
+                    setSelectedRecipientType(value);
+                    setSelectedRecipient('');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="parent">Parent</SelectItem>
+                    <SelectItem value="staff">Staff Member</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium mb-2 block">To:</label>
               {role === 'parent' ? (
@@ -303,10 +367,34 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
                       ))}
                   </SelectContent>
                 </Select>
+              ) : selectedRecipientType === 'parent' ? (
+                <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a parent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parents.map(parent => (
+                      <SelectItem key={parent.parent_id} value={parent.parent_id}>
+                        {parent.first_name} {parent.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-600">Parents</p>
-                </div>
+                <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a staff member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffMembers
+                      .filter(staff => staff.staff_id !== userId)
+                      .map(staff => (
+                        <SelectItem key={staff.staff_id} value={staff.staff_id}>
+                          {staff.first_name} {staff.last_name} - {staff.role}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
             <div>
@@ -321,10 +409,10 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCompose(false); setNewMessage(''); setSelectedRecipient(''); }}>
+            <Button variant="outline" onClick={() => { setShowCompose(false); setNewMessage(''); setSelectedRecipient(''); setSelectedRecipientType('parent'); }}>
               Cancel
             </Button>
-            <Button onClick={handleSendMessage} disabled={!newMessage.trim() || (role === 'parent' && !selectedRecipient)}>
+            <Button onClick={handleSendMessage} disabled={!newMessage.trim() || !selectedRecipient}>
               <Send className="w-4 h-4 mr-2" />
               Send Message
             </Button>
