@@ -75,9 +75,11 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const [isAttendanceCalendarOpen, setIsAttendanceCalendarOpen] = useState(false)
   const [isGradeBreakdownOpen, setIsGradeBreakdownOpen] = useState(false)
   const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
 
   useEffect(() => {
     fetchTeacherData()
+    fetchUnreadMessages()
   }, [staffId])
 
   const fetchTeacherData = async () => {
@@ -96,6 +98,20 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       }
     } catch (error) {
       console.error('Error fetching teacher data:', error)
+    }
+  }
+
+  const fetchUnreadMessages = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/messages`)
+      const messages = await response.json()
+      const unread = messages.filter(
+        (msg: { recipient_id: string; read?: boolean }) => 
+          msg.recipient_id === staffId && !msg.read
+      ).length
+      setUnreadMessageCount(unread)
+    } catch (error) {
+      console.error('Error fetching unread messages:', error)
     }
   }
 
@@ -220,13 +236,18 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
             </button>
             <button
               onClick={() => setView('messages')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
                 view === 'messages'
                   ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Messages
+              {unreadMessageCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setView('incidents')}

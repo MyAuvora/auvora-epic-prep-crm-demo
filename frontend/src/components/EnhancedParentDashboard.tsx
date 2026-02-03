@@ -114,10 +114,12 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   // Enrollment fee from admin settings (fetched from API)
   const [enrollmentFee, setEnrollmentFee] = useState<number>(500) // Default fallback
   const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
 
   useEffect(() => {
     fetchParentData()
     fetchEnrollmentFee()
+    fetchUnreadMessages()
   }, [parentId])
 
   // Fetch enrollment fee from admin-configured products
@@ -135,9 +137,23 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
       }
     } catch (error) {
       console.error('Error fetching enrollment fee:', error)
-      // Keep default fallback of $250
+      // Keep default fallback of $500
     } finally {
       setEnrollmentFeeLoading(false)
+    }
+  }
+
+  const fetchUnreadMessages = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/messages`)
+      const messages = await response.json()
+      const unread = messages.filter(
+        (msg: { recipient_id: string; read?: boolean }) => 
+          msg.recipient_id === parentId && !msg.read
+      ).length
+      setUnreadMessageCount(unread)
+    } catch (error) {
+      console.error('Error fetching unread messages:', error)
     }
   }
 
@@ -330,13 +346,18 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
             </button>
             <button
               onClick={() => setView('messages')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
                 view === 'messages'
                   ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Messages
+              {unreadMessageCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                </span>
+              )}
             </button>
                       <button
                         onClick={() => setView('health')}
