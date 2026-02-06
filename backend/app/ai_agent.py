@@ -29,6 +29,8 @@ Your personality:
 - Knowledgeable about education and school management
 - Proactive in offering insights and suggestions
 - Clear and concise in your responses
+- Patient when explaining how to use the CRM
+- Able to understand questions asked in many different ways
 
 You have access to the following data through function calls:
 - Students: enrollment, grades, attendance, learning progress (IXL for K-8, Acellus for 9-12)
@@ -45,8 +47,438 @@ When answering questions:
 3. Offer actionable insights when appropriate
 4. If you can't find information, say so clearly
 5. Format responses clearly - use bullet points for lists, bold for emphasis
+6. When users ask HOW to do something, provide step-by-step instructions
+7. Understand that users may ask the same question in different ways
 
 Remember: You're helping run a school. Be helpful, accurate, and supportive of the school's mission: "Raising Lions not Sheep"
+
+=== COMPREHENSIVE CRM KNOWLEDGE BASE ===
+
+You must be able to answer ANY question about how to use this CRM. Below is complete documentation of all features.
+
+## ROLE-BASED ACCESS
+
+The CRM has three user roles with different access levels:
+
+### ADMIN (School Administrator)
+Full access to all features. Can manage students, families, staff, billing, admissions, and all school operations.
+
+### COACH/TEACHER
+Access to their assigned rooms/classrooms, student information, gradebook, messaging, and can upload learning progress data.
+
+### PARENT
+Access to their children's information, billing, events, messaging with staff, and re-enrollment.
+
+---
+
+## ADMIN DASHBOARD FEATURES
+
+### 1. Dashboard (Home)
+**What it shows:** Overview of key metrics
+- Total students (morning/afternoon sessions)
+- Total families
+- Billing status breakdown (Green=current, Yellow=warning, Red=overdue)
+- Today's attendance (present, absent, tardy)
+- Alerts (at-risk students, IXL behind, overdue families)
+- Daily Bible verse
+
+**How to access:** Click "Dashboard" in the top navigation
+
+**Common questions users might ask:**
+- "How do I see my school overview?" → Go to Dashboard
+- "Where can I see attendance for today?" → Dashboard shows today's attendance
+- "How many students do we have?" → Dashboard shows total students
+- "Which families owe money?" → Click on the red billing count or go to Families & Finance
+
+### 2. Students
+**What it shows:** Complete student roster with filtering options
+- Student list with name, grade, session, room
+- Attendance counts (Present/Absent/Tardy)
+- Grade flags (On track, Needs attention, Failing)
+- Risk flags (None, Watch, At risk)
+- IXL status
+
+**How to access:** Click "Students" in the top navigation
+
+**Features:**
+- Click any student to see full details
+- Use "Add Student" button to enroll new students
+- Filter by grade, status, risk level
+- View full student and family account by clicking student name
+
+**Common questions:**
+- "How do I add a new student?" → Click "Add Student" button on Students page
+- "How do I see a student's grades?" → Click on student name, then view grades section
+- "Where do I find at-risk students?" → Students page, filter by risk flag or click alert on Dashboard
+- "How do I see attendance history?" → Click student name, view attendance section
+
+### 3. Families & Finance
+**What it shows:** Family accounts and billing management
+- Family list with billing status
+- Current balances
+- Payment history
+- SUFS scholarship tracking
+
+**Sub-tabs:**
+- **Families:** View all family accounts
+- **Billing:** Payment records and invoices
+- **SUFS Scholarships:** Step Up for Students scholarship management
+- **SUFS Payment Queue:** Record bi-monthly scholarship payments
+
+**How to record a SUFS payment:**
+1. Go to Families & Finance → SUFS Payment Queue
+2. Find the family in the queue
+3. Click "Record Payment"
+4. Enter payment details
+5. Submit
+
+**Common questions:**
+- "How do I see who owes money?" → Families & Finance, filter by Red billing status
+- "How do I record a scholarship payment?" → SUFS Payment Queue tab
+- "Where do I see payment history?" → Click on family name, view billing section
+- "How do I manage SUFS scholarships?" → SUFS Scholarships tab
+
+### 4. Admissions
+**What it shows:** Enrollment pipeline for prospective families
+- Leads by stage (New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled)
+- Lead details and follow-up tracking
+
+**How to access:** Click "Admissions" in the top navigation
+
+**Common questions:**
+- "How do I add a new lead?" → Admissions page, click "Add Lead"
+- "Where do I see tour requests?" → Admissions, filter by "Tour Scheduled" stage
+- "How do I track enrollment pipeline?" → Admissions shows all stages
+
+### 5. Academics
+**What it shows:** Academic management tools
+
+**Sub-tabs:**
+- **Standards Gradebook:** Grade tracking by learning standards
+- **Learning Progress:** IXL (K-8) and Acellus (9-12) progress tracking
+- **Import Progress:** Upload CSV files from IXL/Acellus
+
+**How to import learning progress:**
+1. Go to Academics → Import Progress
+2. Select IXL or Acellus tab
+3. Download template if needed
+4. Upload your CSV export from the learning platform
+5. System matches students by name and updates records
+
+**Common questions:**
+- "How do I upload IXL data?" → Academics → Import Progress → IXL tab
+- "How do I see student grades?" → Academics → Standards Gradebook
+- "Where do I track Acellus progress?" → Academics → Learning Progress
+
+### 6. Student Support
+**What it shows:** Special education and intervention tracking
+
+**Sub-tabs:**
+- **IEP/504:** Individual Education Plans and 504 accommodations
+- **Interventions:** Academic and behavioral intervention tracking
+
+**Common questions:**
+- "Where do I manage IEPs?" → Student Support → IEP/504
+- "How do I track interventions?" → Student Support → Interventions
+
+### 7. Communications
+**What it shows:** Messaging and announcements
+
+**Sub-tabs:**
+- **Direct Messages:** Send messages to specific parents or staff
+- **Broadcasts & Automation:** Mass communications and automated alerts
+- **Announcements:** School-wide announcements
+
+**How to send a message:**
+1. Go to Communications → Direct Messages
+2. Click "New Message"
+3. Select recipient type (Parent or Staff Member)
+4. Select specific recipient from dropdown
+5. Type message and send
+
+**Common questions:**
+- "How do I message a parent?" → Communications → Direct Messages → New Message
+- "How do I send an announcement?" → Communications → Announcements
+- "How do I set up automated messages?" → Communications → Broadcasts & Automation
+
+### 8. Operations
+**What it shows:** Day-to-day school operations
+
+**Sub-tabs:**
+- **Events:** School events calendar and management
+- **Staff:** Staff directory and management
+- **Fees & Products:** Manage enrollment fees, event fees, and store products
+- **Enrollment Forms:** View submitted enrollment forms
+- **Photos:** School photo gallery
+
+**How to create an enrollment fee:**
+1. Go to Operations → Fees & Products
+2. Click "Create New"
+3. Select category "Enrollment Fee"
+4. Set the price
+5. Save - this fee will automatically appear for parents during re-enrollment
+
+**Common questions:**
+- "How do I add a school event?" → Operations → Events → Add Event
+- "How do I manage staff?" → Operations → Staff
+- "How do I set the enrollment fee?" → Operations → Fees & Products
+- "Where do I see enrollment form submissions?" → Operations → Enrollment Forms
+
+### 9. Documents & Forms
+**What it shows:** Document management
+
+**Sub-tabs:**
+- **Document Library:** Upload and organize school documents
+- **Forms:** Manage forms for parents to complete
+
+**Common questions:**
+- "How do I upload a document?" → Documents & Forms → Document Library → Upload
+- "Where do parents find forms?" → Documents & Forms → Forms
+
+### 10. Analytics
+**What it shows:** Advanced reporting and insights
+
+**Sub-tabs:**
+- **At-Risk Report:** Students flagged as at-risk
+- **Advanced Analytics:** Detailed school performance metrics
+
+**Common questions:**
+- "How do I see at-risk students?" → Analytics → At-Risk Report
+- "Where do I find school performance data?" → Analytics → Advanced Analytics
+
+---
+
+## COACH/TEACHER DASHBOARD FEATURES
+
+### 1. My Rooms
+**What it shows:** Assigned classrooms and students
+- Room cards showing student count
+- Student list for each room
+- Quick attendance taking
+
+**How to take attendance:**
+1. Click on a room
+2. Click "Take Attendance"
+3. Mark each student as Present, Absent, or Tardy
+4. Submit
+
+**Common questions:**
+- "How do I take attendance?" → My Rooms → Select room → Take Attendance
+- "How do I see my students?" → My Rooms shows all assigned students
+- "How do I view a student's full record?" → Click student name → View Full Student & Family Account
+
+### 2. Gradebook
+**What it shows:** Grade management for your students
+
+**Common questions:**
+- "How do I enter grades?" → Gradebook tab
+- "How do I see student grades?" → Gradebook tab
+
+### 3. Announcements
+**What it shows:** School announcements you can create and view
+
+### 4. Events
+**What it shows:** School events calendar
+
+### 5. Documents
+**What it shows:** School documents
+
+### 6. Photos
+**What it shows:** School photo gallery
+
+### 7. Messages
+**What it shows:** Direct messaging with parents and other staff
+- Inbox and Sent messages
+- Unread message indicator (red badge on tab)
+
+**How to message a parent:**
+1. Click Messages tab
+2. Click "New Message"
+3. Select "Parent" as recipient type
+4. Select specific parent from dropdown
+5. Type and send message
+
+**How to message another staff member:**
+1. Click Messages tab
+2. Click "New Message"
+3. Select "Staff Member" as recipient type
+4. Select staff member from dropdown
+5. Type and send message
+
+### 8. Incidents
+**What it shows:** Behavioral and safety incident reports
+
+**How to report an incident:**
+1. Click Incidents tab
+2. Click "Report Incident"
+3. Fill in details (student, type, description, severity)
+4. Submit
+
+### 9. Health Records
+**What it shows:** Student health information
+
+### 10. Learning Progress
+**What it shows:** IXL and Acellus progress import
+
+**How to upload learning progress:**
+1. Click Learning Progress tab
+2. Click "Import Progress Data"
+3. Select IXL or Acellus
+4. Upload CSV file from the learning platform
+5. System updates all student records automatically
+
+**Common questions:**
+- "How do I upload IXL scores?" → Learning Progress → Import Progress Data → IXL
+- "How do I import Acellus data?" → Learning Progress → Import Progress Data → Acellus
+
+---
+
+## PARENT DASHBOARD FEATURES
+
+### 1. My Children
+**What it shows:** Overview of your children's progress
+- Child selector (if multiple children)
+- Grades summary
+- Attendance summary
+- Learning progress (IXL/Acellus)
+- Re-enrollment status
+
+**How to re-enroll your child:**
+1. Scroll to Re-Enrollment section
+2. Click "Re-Enroll for [Year]"
+3. Payment modal opens with enrollment fee
+4. Click "Pay" to process payment
+5. Child is re-enrolled for next year
+
+### 2. Billing
+**What it shows:** Your family's billing information
+- Current balance
+- Payment history
+- Tuition breakdown
+- SUFS scholarship status (if applicable)
+
+### 3. Events
+**What it shows:** School events
+- Upcoming events
+- RSVP to events
+- Permission slips
+
+### 4. Documents
+**What it shows:** School documents and forms to complete
+
+### 5. Store
+**What it shows:** School store for purchasing items
+
+### 6. Photos
+**What it shows:** School photo gallery
+
+### 7. Messages
+**What it shows:** Messages with school staff
+- Inbox and Sent messages
+- Unread message indicator
+
+**How to message a teacher:**
+1. Click Messages tab
+2. Click "New Message"
+3. Select staff member from dropdown
+4. Type and send message
+
+### 8. Health
+**What it shows:** Your child's health records
+
+### 9. Enrollment
+**What it shows:** Enrollment forms and status
+
+---
+
+## COMMON TASKS - STEP BY STEP
+
+### How to add a new student (Admin):
+1. Go to Students page
+2. Click "Add Student" button
+3. Fill in student information (name, grade, session, room)
+4. Add family information
+5. Set funding source (Step-Up, Out-of-Pocket, or Mixed)
+6. Submit
+
+### How to record a payment (Admin):
+1. Go to Families & Finance
+2. Click on the family name
+3. Click "Record Payment"
+4. Enter payment amount and method
+5. Submit
+
+### How to send a school-wide announcement (Admin):
+1. Go to Communications
+2. Click Announcements tab
+3. Click "New Announcement"
+4. Enter title and message
+5. Select audience (All, Parents, Staff)
+6. Publish
+
+### How to view a student's full record (Admin/Teacher):
+1. Find the student in your list
+2. Click on their name
+3. Click "View Full Student & Family Account"
+4. Navigate between student info, grades, attendance, and family account
+
+### How to check billing status (Admin):
+1. Go to Families & Finance
+2. View billing status colors:
+   - Green = Current (paid up)
+   - Yellow = Warning (payment due soon)
+   - Red = Overdue (past due)
+3. Click on family for details
+
+### How to track SUFS scholarship payments (Admin):
+1. Go to Families & Finance
+2. Click SUFS Payment Queue tab
+3. View pending payments by period (Aug, Oct, Dec, Feb, Apr, Jun)
+4. Click "Record Payment" when payment received
+
+---
+
+## UNDERSTANDING DIFFERENT QUESTION PHRASINGS
+
+Users may ask the same question in many ways. Here are examples:
+
+**Asking about students:**
+- "How many students do we have?"
+- "What's our enrollment?"
+- "Show me the student count"
+- "Total number of kids enrolled"
+
+**Asking about at-risk students:**
+- "Who are the at-risk students?"
+- "Show me struggling students"
+- "Which kids need help?"
+- "Students with problems"
+- "Who should I be worried about?"
+
+**Asking about billing:**
+- "Who owes money?"
+- "Show me overdue accounts"
+- "Which families haven't paid?"
+- "Outstanding balances"
+- "Red billing status families"
+
+**Asking about attendance:**
+- "How's attendance today?"
+- "Who's absent?"
+- "Show me attendance"
+- "Who didn't come to school?"
+
+**Asking how to do something:**
+- "How do I..." / "How can I..." / "How to..."
+- "Where do I..." / "Where can I..."
+- "Can you show me how to..."
+- "What's the process for..."
+- "Walk me through..."
+- "Help me with..."
+
+Always interpret the user's intent and provide helpful guidance, whether they're asking for data or instructions.
+
+=== END OF KNOWLEDGE BASE ===
 """
 
 # Define the functions the AI can call
@@ -385,6 +817,46 @@ AVAILABLE_FUNCTIONS = [
                     }
                 },
                 "required": ["dataset", "format", "title"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_crm_help",
+            "description": "Get help and guidance on how to use the CRM. Use this when users ask 'how do I', 'where do I', 'help me with', 'walk me through', or any question about using the CRM features.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "The topic or feature the user needs help with (e.g., 'add student', 'record payment', 'take attendance', 'send message', 'upload IXL', 're-enroll')"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "enum": ["admin", "teacher", "parent"],
+                        "description": "The role of the user asking for help"
+                    }
+                },
+                "required": ["topic"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_available_features",
+            "description": "Get a list of all available features for a specific user role. Use this when users ask 'what can I do', 'what features are available', 'show me the menu', or want to know their options.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_role": {
+                        "type": "string",
+                        "enum": ["admin", "teacher", "parent"],
+                        "description": "The role of the user"
+                    }
+                },
+                "required": ["user_role"]
             }
         }
     }
@@ -1004,6 +1476,400 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             "expires_at": result["expires_at"],
             "row_count": result["row_count"]
         }
+    
+    elif function_name == "get_crm_help":
+        topic = arguments.get("topic", "").lower()
+        user_role = arguments.get("user_role", "admin").lower()
+        
+        # Comprehensive help topics with step-by-step instructions
+        help_topics = {
+            # Student management
+            "add student": {
+                "title": "How to Add a New Student",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to the Students page by clicking 'Students' in the top navigation",
+                    "Click the 'Add Student' button in the top right",
+                    "Fill in the student's information: first name, last name, grade level, session (morning/afternoon), and assigned room",
+                    "Add family information or link to an existing family",
+                    "Select the funding source: Step-Up (SUFS scholarship), Out-of-Pocket, or Mixed",
+                    "Click 'Submit' to enroll the student"
+                ]
+            },
+            "view student": {
+                "title": "How to View Student Details",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Go to Students page (Admin) or My Rooms (Teacher)",
+                    "Find the student in the list",
+                    "Click on the student's name to open their profile",
+                    "Click 'View Full Student & Family Account' for complete details including grades, attendance, and family billing"
+                ]
+            },
+            "student grades": {
+                "title": "How to View/Enter Student Grades",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "For Admin: Go to Academics → Standards Gradebook",
+                    "For Teacher: Click the Gradebook tab in your dashboard",
+                    "Select the student or class you want to view/edit",
+                    "Enter or update grades as needed",
+                    "Changes are saved automatically"
+                ]
+            },
+            # Attendance
+            "take attendance": {
+                "title": "How to Take Attendance",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Go to My Rooms (Teacher) or Students page (Admin)",
+                    "Select the room/class",
+                    "Click 'Take Attendance'",
+                    "Mark each student as Present, Absent, or Tardy",
+                    "Add notes if needed (e.g., reason for absence)",
+                    "Click 'Submit' to save attendance"
+                ]
+            },
+            "attendance": {
+                "title": "How to View Attendance",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Admin: Dashboard shows today's attendance summary, or go to Students → click student → view attendance history",
+                    "Teacher: My Rooms shows attendance for your classes",
+                    "Parent: My Children tab shows your child's attendance summary"
+                ]
+            },
+            # Billing and payments
+            "record payment": {
+                "title": "How to Record a Payment",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Families & Finance",
+                    "Find and click on the family name",
+                    "Click 'Record Payment'",
+                    "Enter the payment amount",
+                    "Select payment method (cash, check, card, etc.)",
+                    "Add any notes if needed",
+                    "Click 'Submit' to record the payment"
+                ]
+            },
+            "billing": {
+                "title": "How to Check Billing Status",
+                "roles": ["admin", "parent"],
+                "steps": [
+                    "Admin: Go to Families & Finance to see all families with billing status colors (Green=current, Yellow=warning, Red=overdue)",
+                    "Parent: Click the Billing tab to see your family's balance, payment history, and tuition breakdown"
+                ]
+            },
+            "overdue": {
+                "title": "How to Find Families with Overdue Balances",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Families & Finance",
+                    "Look for families with RED billing status",
+                    "Or use the Dashboard alerts section which shows overdue families count",
+                    "Click on a family to see details and payment history"
+                ]
+            },
+            # SUFS Scholarships
+            "sufs": {
+                "title": "How to Manage SUFS Scholarships",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Families & Finance",
+                    "Click the 'SUFS Scholarships' tab to view all scholarship recipients",
+                    "Click 'SUFS Payment Queue' tab to see pending bi-monthly payments",
+                    "When a SUFS payment is received, click 'Record Payment' next to the family",
+                    "Enter the payment details and submit"
+                ]
+            },
+            "scholarship": {
+                "title": "How to Track Scholarship Payments",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Families & Finance → SUFS Payment Queue",
+                    "View pending payments organized by period (Aug, Oct, Dec, Feb, Apr, Jun)",
+                    "When payment is received from Step Up for Students, click 'Record Payment'",
+                    "The family's balance will be updated automatically"
+                ]
+            },
+            # Messaging
+            "send message": {
+                "title": "How to Send a Message",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Go to Communications (Admin) or Messages tab (Teacher/Parent)",
+                    "Click 'New Message'",
+                    "Admin/Teacher: Select recipient type (Parent or Staff Member)",
+                    "Select the specific person from the dropdown",
+                    "Type your message",
+                    "Click 'Send'"
+                ]
+            },
+            "message": {
+                "title": "How to Use the Messaging System",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Access Messages from your dashboard (Communications for Admin, Messages tab for Teacher/Parent)",
+                    "View your Inbox for received messages",
+                    "View Sent for messages you've sent",
+                    "A red badge on the tab shows unread message count",
+                    "Click 'New Message' to compose a new message"
+                ]
+            },
+            # Learning Progress
+            "upload ixl": {
+                "title": "How to Upload IXL Progress Data",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Export your class data from IXL as a CSV file",
+                    "Go to Academics → Import Progress (Admin) or Learning Progress tab (Teacher)",
+                    "Click 'Import Progress Data'",
+                    "Select the 'IXL' tab",
+                    "Download the template if you need to see the expected format",
+                    "Upload your CSV file",
+                    "The system will match students by name and update their records"
+                ]
+            },
+            "upload acellus": {
+                "title": "How to Upload Acellus Progress Data",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Export your class data from Acellus as a CSV file",
+                    "Go to Academics → Import Progress (Admin) or Learning Progress tab (Teacher)",
+                    "Click 'Import Progress Data'",
+                    "Select the 'Acellus' tab",
+                    "Download the template if you need to see the expected format",
+                    "Upload your CSV file",
+                    "The system will match students by name and update their records"
+                ]
+            },
+            "learning progress": {
+                "title": "How to Track Learning Progress",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Admin: Go to Academics → Learning Progress to see all students' IXL/Acellus progress",
+                    "Teacher: Click Learning Progress tab to see your students' progress and import new data",
+                    "Parent: My Children tab shows your child's learning progress summary"
+                ]
+            },
+            # Re-enrollment
+            "re-enroll": {
+                "title": "How to Re-Enroll a Student",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Parent: Go to My Children, scroll to Re-Enrollment section, click 'Re-Enroll for [Year]', complete payment",
+                    "Admin/Teacher: View student's full account, scroll to Re-Enrollment section, click 'Re-Enroll for [Year]'"
+                ]
+            },
+            "enrollment fee": {
+                "title": "How to Set the Enrollment Fee",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Operations → Fees & Products",
+                    "Click 'Create New'",
+                    "Select category 'Enrollment Fee'",
+                    "Enter the fee amount (e.g., $500)",
+                    "Click 'Save'",
+                    "This fee will automatically appear when parents re-enroll"
+                ]
+            },
+            # Events
+            "add event": {
+                "title": "How to Add a School Event",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Operations → Events",
+                    "Click 'Add Event'",
+                    "Enter event details: title, date, time, location, description",
+                    "Set RSVP requirements if needed",
+                    "Add permission slip if required",
+                    "Click 'Save' to publish the event"
+                ]
+            },
+            "events": {
+                "title": "How to View School Events",
+                "roles": ["admin", "teacher", "parent"],
+                "steps": [
+                    "Admin: Go to Operations → Events",
+                    "Teacher: Click the Events tab",
+                    "Parent: Click the Events tab to see upcoming events and RSVP"
+                ]
+            },
+            # Incidents
+            "report incident": {
+                "title": "How to Report an Incident",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Go to Incidents tab",
+                    "Click 'Report Incident'",
+                    "Select the student involved",
+                    "Choose incident type (behavioral, safety, etc.)",
+                    "Enter description of what happened",
+                    "Set severity level",
+                    "Add any witnesses or notes",
+                    "Click 'Submit'"
+                ]
+            },
+            # Admissions
+            "add lead": {
+                "title": "How to Add a New Lead",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Admissions",
+                    "Click 'Add Lead'",
+                    "Enter parent/guardian information",
+                    "Enter prospective student information",
+                    "Select grade interest",
+                    "Note the source (referral, website, etc.)",
+                    "Click 'Save'"
+                ]
+            },
+            "admissions": {
+                "title": "How to Manage Admissions Pipeline",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Admissions to see all leads",
+                    "Leads are organized by stage: New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled",
+                    "Click on a lead to update their status or add notes",
+                    "Move leads through stages as they progress"
+                ]
+            },
+            # Staff
+            "manage staff": {
+                "title": "How to Manage Staff",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Operations → Staff",
+                    "View all staff members with their roles and contact info",
+                    "Click 'Add Staff' to add a new staff member",
+                    "Click on a staff member to edit their information"
+                ]
+            },
+            # Documents
+            "upload document": {
+                "title": "How to Upload a Document",
+                "roles": ["admin"],
+                "steps": [
+                    "Go to Documents & Forms → Document Library",
+                    "Click 'Upload'",
+                    "Select the file from your computer",
+                    "Add a title and description",
+                    "Select who can view it (All, Parents, Staff)",
+                    "Click 'Upload'"
+                ]
+            },
+            # At-risk students
+            "at-risk": {
+                "title": "How to View At-Risk Students",
+                "roles": ["admin", "teacher"],
+                "steps": [
+                    "Admin: Go to Analytics → At-Risk Report, or check Dashboard alerts",
+                    "Teacher: Look for students with red risk flags in your rooms",
+                    "Click on a student to see why they're flagged (attendance issues, grade issues, etc.)"
+                ]
+            }
+        }
+        
+        # Find matching help topic
+        matched_topic = None
+        for key, value in help_topics.items():
+            if key in topic or topic in key:
+                if user_role in value["roles"] or "admin" in value["roles"]:
+                    matched_topic = value
+                    break
+        
+        if matched_topic:
+            return {
+                "title": matched_topic["title"],
+                "steps": matched_topic["steps"],
+                "available_for_role": user_role in matched_topic["roles"]
+            }
+        else:
+            # Return general guidance
+            return {
+                "message": f"I don't have specific step-by-step instructions for '{topic}', but I can help you find what you need. What are you trying to accomplish?",
+                "suggestion": "Try asking about: adding students, taking attendance, recording payments, sending messages, uploading IXL/Acellus data, re-enrollment, managing events, or viewing reports."
+            }
+    
+    elif function_name == "get_available_features":
+        user_role = arguments.get("user_role", "admin").lower()
+        
+        features = {
+            "admin": {
+                "role": "Administrator",
+                "dashboard_sections": [
+                    "Dashboard - Overview of key metrics, alerts, and daily devotional",
+                    "Students - Complete student roster, add/edit students, view full profiles",
+                    "Families & Finance - Family accounts, billing, SUFS scholarships, payment queue",
+                    "Admissions - Enrollment pipeline, leads management",
+                    "Academics - Standards gradebook, learning progress, IXL/Acellus import",
+                    "Student Support - IEP/504 management, interventions",
+                    "Communications - Direct messages, broadcasts, announcements",
+                    "Operations - Events, staff management, fees/products, enrollment forms",
+                    "Documents & Forms - Document library, form management",
+                    "Analytics - At-risk reports, advanced analytics"
+                ],
+                "key_actions": [
+                    "Add/edit students and families",
+                    "Record payments and manage billing",
+                    "Track SUFS scholarship payments",
+                    "Send messages to parents and staff",
+                    "Create school events",
+                    "Import IXL/Acellus learning progress",
+                    "View at-risk student reports",
+                    "Manage enrollment pipeline"
+                ]
+            },
+            "teacher": {
+                "role": "Coach/Teacher",
+                "dashboard_sections": [
+                    "My Rooms - Your assigned classrooms and students",
+                    "Gradebook - Enter and view grades",
+                    "Announcements - View and create announcements",
+                    "Events - School events calendar",
+                    "Documents - School documents",
+                    "Photos - Photo gallery",
+                    "Messages - Direct messaging with parents and staff",
+                    "Incidents - Report and view incidents",
+                    "Health Records - Student health information",
+                    "Learning Progress - Import IXL/Acellus data"
+                ],
+                "key_actions": [
+                    "Take attendance for your classes",
+                    "Enter grades",
+                    "View full student and family accounts",
+                    "Message parents and other staff",
+                    "Report incidents",
+                    "Upload IXL/Acellus progress data",
+                    "Re-enroll students"
+                ]
+            },
+            "parent": {
+                "role": "Parent",
+                "dashboard_sections": [
+                    "My Children - Overview of your children's progress",
+                    "Billing - Your family's billing and payment history",
+                    "Events - School events and RSVPs",
+                    "Documents - School documents and forms",
+                    "Store - School store",
+                    "Photos - Photo gallery",
+                    "Messages - Messages with school staff",
+                    "Health - Your child's health records",
+                    "Enrollment - Enrollment forms and status"
+                ],
+                "key_actions": [
+                    "View your child's grades and attendance",
+                    "Check billing status and payment history",
+                    "RSVP to school events",
+                    "Message teachers and staff",
+                    "Re-enroll your child for next year",
+                    "Complete enrollment forms"
+                ]
+            }
+        }
+        
+        return features.get(user_role, features["admin"])
     
     return {"error": f"Unknown function: {function_name}"}
 
