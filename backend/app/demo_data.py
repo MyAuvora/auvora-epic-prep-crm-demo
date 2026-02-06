@@ -233,25 +233,57 @@ def generate_all_demo_data():
             else:
                 room = Room.ROOM_4
             
-            attendance_present = random.randint(15, 20)
-            attendance_absent = random.randint(0, 5)
-            attendance_tardy = random.randint(0, 3)
-            
-            grade_flag_choice = random.choices(
-                [GradeFlag.ON_TRACK, GradeFlag.NEEDS_ATTENTION, GradeFlag.FAILING],
-                weights=[0.7, 0.2, 0.1]
+            # Determine student performance profile first (consistent across all metrics)
+            # 60% excellent, 25% average, 15% struggling
+            performance_profile = random.choices(
+                ["excellent", "average", "struggling"],
+                weights=[0.60, 0.25, 0.15]
             )[0]
             
-            ixl_status = random.choices(
-                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
-                weights=[0.75, 0.25]
-            )[0]
+            # Set attendance based on performance profile
+            if performance_profile == "excellent":
+                attendance_present = random.randint(18, 20)
+                attendance_absent = random.randint(0, 1)
+                attendance_tardy = random.randint(0, 1)
+            elif performance_profile == "average":
+                attendance_present = random.randint(16, 18)
+                attendance_absent = random.randint(1, 3)
+                attendance_tardy = random.randint(0, 2)
+            else:  # struggling
+                attendance_present = random.randint(12, 16)
+                attendance_absent = random.randint(4, 7)
+                attendance_tardy = random.randint(2, 4)
             
-            if grade_flag_choice == GradeFlag.FAILING or attendance_absent > 3 or ixl_status == IXLStatus.NEEDS_ATTENTION:
-                risk_flag = random.choices(
-                    [RiskFlag.NONE, RiskFlag.WATCH, RiskFlag.AT_RISK],
-                    weights=[0.3, 0.4, 0.3]
+            # Set grade flag based on performance profile
+            if performance_profile == "excellent":
+                grade_flag_choice = GradeFlag.ON_TRACK
+            elif performance_profile == "average":
+                grade_flag_choice = random.choices(
+                    [GradeFlag.ON_TRACK, GradeFlag.NEEDS_ATTENTION],
+                    weights=[0.7, 0.3]
                 )[0]
+            else:  # struggling
+                grade_flag_choice = random.choices(
+                    [GradeFlag.NEEDS_ATTENTION, GradeFlag.FAILING],
+                    weights=[0.4, 0.6]
+                )[0]
+            
+            # Set IXL status based on performance profile
+            if performance_profile == "excellent":
+                ixl_status = IXLStatus.ON_TRACK
+            elif performance_profile == "average":
+                ixl_status = random.choices(
+                    [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
+                    weights=[0.8, 0.2]
+                )[0]
+            else:  # struggling
+                ixl_status = IXLStatus.NEEDS_ATTENTION
+            
+            # Set risk flag deterministically based on actual metrics
+            if grade_flag_choice == GradeFlag.FAILING or attendance_absent >= 5:
+                risk_flag = RiskFlag.AT_RISK
+            elif grade_flag_choice == GradeFlag.NEEDS_ATTENTION or attendance_absent >= 3 or ixl_status == IXLStatus.NEEDS_ATTENTION:
+                risk_flag = RiskFlag.WATCH
             else:
                 risk_flag = RiskFlag.NONE
             
@@ -294,12 +326,25 @@ def generate_all_demo_data():
             family_student_ids.append(student_id)
             students_db.append(student)
             
+            # Generate grade records that align with overall_grade_flag
             subjects = ["Math", "ELA", "Science", "Social Studies"]
             for subject in subjects:
-                grade_value = random.choices(
-                    ["A", "B", "C", "D", "F"],
-                    weights=[0.3, 0.35, 0.2, 0.1, 0.05]
-                )[0]
+                # Grade values should match the overall_grade_flag
+                if grade_flag_choice == GradeFlag.ON_TRACK:
+                    grade_value = random.choices(
+                        ["A", "B", "C"],
+                        weights=[0.5, 0.4, 0.1]
+                    )[0]
+                elif grade_flag_choice == GradeFlag.NEEDS_ATTENTION:
+                    grade_value = random.choices(
+                        ["B", "C", "D"],
+                        weights=[0.2, 0.5, 0.3]
+                    )[0]
+                else:  # FAILING
+                    grade_value = random.choices(
+                        ["C", "D", "F"],
+                        weights=[0.1, 0.4, 0.5]
+                    )[0]
                 
                 grade_record = GradeRecord(
                     grade_record_id=f"grade_{len(grade_records_db) + 1}",
@@ -363,14 +408,26 @@ def generate_all_demo_data():
                     )
                     attendance_records_db.append(attendance_record)
             
-            math_prof = random.choices(
-                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
-                weights=[0.75, 0.25]
-            )[0]
-            ela_prof = random.choices(
-                [IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION],
-                weights=[0.75, 0.25]
-            )[0]
+            # IXL proficiency should align with ixl_status_flag
+            if ixl_status == IXLStatus.ON_TRACK:
+                math_prof = IXLStatus.ON_TRACK
+                ela_prof = IXLStatus.ON_TRACK
+                weekly_hours = round(random.uniform(3.0, 5.0), 1)
+                skills_practiced = random.randint(12, 20)
+                skills_mastered = random.randint(80, 150)
+                last_active_days = random.randint(0, 3)
+            else:  # NEEDS_ATTENTION
+                # At least one subject should be behind
+                if random.random() < 0.5:
+                    math_prof = IXLStatus.NEEDS_ATTENTION
+                    ela_prof = random.choice([IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION])
+                else:
+                    math_prof = random.choice([IXLStatus.ON_TRACK, IXLStatus.NEEDS_ATTENTION])
+                    ela_prof = IXLStatus.NEEDS_ATTENTION
+                weekly_hours = round(random.uniform(0.0, 2.0), 1)
+                skills_practiced = random.randint(2, 8)
+                skills_mastered = random.randint(20, 60)
+                last_active_days = random.randint(5, 14)
             
             ixl_skills = [
                 "Multiplying fractions", "Main idea in nonfiction", "Dividing decimals",
@@ -383,12 +440,12 @@ def generate_all_demo_data():
                 campus_id=family_campus.campus_id,
                 student_id=student_id,
                 week_start_date=date.today() - timedelta(days=date.today().weekday()),
-                weekly_hours=round(random.uniform(0.0, 5.0), 1),
-                skills_practiced_this_week=random.randint(5, 20),
-                skills_mastered_total=random.randint(20, 150),
+                weekly_hours=weekly_hours,
+                skills_practiced_this_week=skills_practiced,
+                skills_mastered_total=skills_mastered,
                 math_proficiency=math_prof,
                 ela_proficiency=ela_prof,
-                last_active_date=date.today() - timedelta(days=random.randint(0, 14)),
+                last_active_date=date.today() - timedelta(days=last_active_days),
                 recent_skills=random.sample(ixl_skills, 3)
             )
             ixl_summaries_db.append(ixl_summary)
