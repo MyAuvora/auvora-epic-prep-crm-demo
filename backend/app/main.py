@@ -2752,7 +2752,21 @@ async def get_iep_504_plans(campus_id: Optional[str] = None):
     plans = iep_504_plans_db
     if campus_id:
         plans = [p for p in plans if p.campus_id == campus_id]
-    return plans
+    
+    # Include student names in the response
+    plans_with_students = []
+    for plan in plans:
+        student = next((s for s in students_db if s.student_id == plan.student_id), None)
+        plan_dict = plan.model_dump() if hasattr(plan, 'model_dump') else plan.__dict__.copy()
+        if student:
+            plan_dict['student_name'] = f"{student.first_name} {student.last_name}"
+            plan_dict['student_grade'] = student.grade
+        else:
+            plan_dict['student_name'] = f"Student {plan.student_id}"
+            plan_dict['student_grade'] = "N/A"
+        plans_with_students.append(plan_dict)
+    
+    return plans_with_students
 
 @app.get("/api/iep-504-plans/{plan_id}")
 async def get_iep_504_plan(plan_id: str):
@@ -2842,7 +2856,21 @@ async def get_at_risk_assessments(campus_id: Optional[str] = None, risk_level: O
         assessments = [a for a in assessments if a.campus_id == campus_id]
     if risk_level:
         assessments = [a for a in assessments if a.overall_risk_level.value == risk_level]
-    return assessments
+    
+    # Include student names in the response
+    assessments_with_students = []
+    for assessment in assessments:
+        student = next((s for s in students_db if s.student_id == assessment.student_id), None)
+        assessment_dict = assessment.model_dump() if hasattr(assessment, 'model_dump') else assessment.__dict__.copy()
+        if student:
+            assessment_dict['student_name'] = f"{student.first_name} {student.last_name}"
+            assessment_dict['student_grade'] = student.grade
+        else:
+            assessment_dict['student_name'] = f"Student {assessment.student_id}"
+            assessment_dict['student_grade'] = "N/A"
+        assessments_with_students.append(assessment_dict)
+    
+    return assessments_with_students
 
 @app.get("/api/analytics/at-risk-assessments/{assessment_id}")
 async def get_at_risk_assessment(assessment_id: str):
@@ -2873,7 +2901,21 @@ async def get_retention_predictions(campus_id: Optional[str] = None, risk_level:
         predictions = [p for p in predictions if p.campus_id == campus_id]
     if risk_level:
         predictions = [p for p in predictions if p.risk_level.value == risk_level]
-    return predictions
+    
+    # Include student names in the response
+    predictions_with_students = []
+    for prediction in predictions:
+        student = next((s for s in students_db if s.student_id == prediction.student_id), None)
+        prediction_dict = prediction.model_dump() if hasattr(prediction, 'model_dump') else prediction.__dict__.copy()
+        if student:
+            prediction_dict['student_name'] = f"{student.first_name} {student.last_name}"
+            prediction_dict['student_grade'] = student.grade
+        else:
+            prediction_dict['student_name'] = f"Student {prediction.student_id}"
+            prediction_dict['student_grade'] = "N/A"
+        predictions_with_students.append(prediction_dict)
+    
+    return predictions_with_students
 
 @app.get("/api/analytics/retention-predictions/{prediction_id}")
 async def get_retention_prediction(prediction_id: str):

@@ -19,6 +19,8 @@ interface AtRiskAssessment {
   risk_factors: string[]
   recommended_interventions: string[]
   notes: string
+  student_name?: string
+  student_grade?: string
 }
 
 interface RetentionPrediction {
@@ -30,6 +32,8 @@ interface RetentionPrediction {
   key_factors: string[]
   recommended_actions: string[]
   last_updated: string
+  student_name?: string
+  student_grade?: string
 }
 
 interface EnrollmentForecast {
@@ -284,9 +288,9 @@ export function AdvancedAnalyticsDashboard() {
                     <div key={assessment.assessment_id} className="p-3 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">Student ID: {assessment.student_id}</p>
+                          <p className="font-semibold">{assessment.student_name || `Student ${assessment.student_id}`}</p>
                           <p className="text-sm text-gray-600">
-                            Score: {assessment.overall_risk_score}/100
+                            {assessment.student_grade ? `Grade ${assessment.student_grade} • ` : ''}Score: {assessment.overall_risk_score}/100
                           </p>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(assessment.overall_risk_level)}`}>
@@ -350,9 +354,9 @@ export function AdvancedAnalyticsDashboard() {
                     <div key={prediction.prediction_id} className="p-3 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">Student ID: {prediction.student_id}</p>
+                          <p className="font-semibold">{prediction.student_name || `Student ${prediction.student_id}`}</p>
                           <p className="text-sm text-gray-600">
-                            Retention: {prediction.retention_probability}%
+                            {prediction.student_grade ? `Grade ${prediction.student_grade} • ` : ''}Retention: {prediction.retention_probability}%
                           </p>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(prediction.risk_level)}`}>

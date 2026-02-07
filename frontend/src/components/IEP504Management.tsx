@@ -18,6 +18,8 @@ interface IEP504Plan {
   next_review_date: string
   parent_consent_date: string | null
   notes: string
+  student_name?: string
+  student_grade?: string
 }
 
 interface Accommodation {
@@ -218,8 +220,8 @@ export function IEP504Management() {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-semibold">Student ID: {plan.student_id}</h3>
-                      <p className="text-sm text-gray-600">{plan.plan_type}</p>
+                      <h3 className="font-semibold">{plan.student_name || `Student ${plan.student_id}`}</h3>
+                      <p className="text-sm text-gray-600">{plan.plan_type} {plan.student_grade ? `• Grade ${plan.student_grade}` : ''}</p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(plan.status)}`}>
                       {plan.status}
