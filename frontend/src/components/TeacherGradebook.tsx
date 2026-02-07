@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { LearningProgressImport } from './LearningProgressImport'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -310,13 +311,15 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
           <h2 className="text-2xl font-bold text-gray-900">Gradebook</h2>
           <p className="text-gray-600">Manage assignments and grades for {room}</p>
         </div>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-red-600 hover:bg-red-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Assignment
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <LearningProgressImport />
+          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-red-600 hover:bg-red-700">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Assignment
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>Create New Assignment</DialogTitle>
@@ -393,6 +396,7 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

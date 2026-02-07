@@ -17,7 +17,6 @@ import { TeacherGradebook } from './TeacherGradebook'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { FullAccountView } from './FullAccountView'
-import { LearningProgressImport } from './LearningProgressImport'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -65,7 +64,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   // Teachers use the student list in their rooms instead of global search navigation
   void _searchNavigation
   void _onClearSearch
-  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'learning-progress'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
@@ -268,16 +267,6 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
               }`}
             >
               Health Records
-            </button>
-            <button
-              onClick={() => setView('learning-progress')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'learning-progress'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Learning Progress
             </button>
           </nav>
         </div>
@@ -498,50 +487,6 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
 
         {view === 'health' && (
           <HealthRecords role="teacher" userId={staffId} />
-        )}
-
-        {view === 'learning-progress' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Learning Progress Import</h2>
-                <p className="text-gray-600 mt-1">Upload student progress data from IXL (K-8) and Acellus (9-12)</p>
-              </div>
-              <LearningProgressImport />
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>How to Import Learning Progress</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h3 className="font-semibold text-[#0A2463] mb-2">IXL (Grades K-8)</h3>
-                    <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
-                      <li>Log into IXL and go to Reports</li>
-                      <li>Select "Student Usage" or "Skills" report</li>
-                      <li>Export as CSV file</li>
-                      <li>Click "Import Progress Data" above</li>
-                      <li>Select IXL tab and upload your file</li>
-                    </ol>
-                  </div>
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <h3 className="font-semibold text-[#E63946] mb-2">Acellus (Grades 9-12)</h3>
-                    <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
-                      <li>Log into Acellus and go to Reports</li>
-                      <li>Select student progress report</li>
-                      <li>Export as CSV file</li>
-                      <li>Click "Import Progress Data" above</li>
-                      <li>Select Acellus tab and upload your file</li>
-                    </ol>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 mt-4">
-                  After importing, student learning progress will be updated in their profiles and visible on the dashboard.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
         )}
       </div>
 
