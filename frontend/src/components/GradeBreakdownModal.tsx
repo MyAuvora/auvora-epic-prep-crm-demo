@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, FileText, BookOpen, Beaker } from 'lucide-react';
+import { GraduationCap, FileText, BookOpen, Beaker, AlertTriangle, Clock, MessageSquare, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,8 @@ interface Assignment {
   points_possible: number;
   date_assigned: string;
   date_submitted: string;
+  comment?: string;
+  status?: string;
 }
 
 interface GradeBreakdownModalProps {
@@ -93,19 +95,38 @@ export const GradeBreakdownModal: React.FC<GradeBreakdownModalProps> = ({
     return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const groupedAssignments = {
-    tests: assignments.filter(a => a.assignment_type === 'Test'),
-    projects: assignments.filter(a => a.assignment_type === 'Project'),
-    homework: assignments.filter(a => a.assignment_type === 'Homework'),
-    quizzes: assignments.filter(a => a.assignment_type === 'Quiz'),
-    classwork: assignments.filter(a => a.assignment_type === 'Classwork')
-  };
+    const groupedAssignments = {
+      tests: assignments.filter(a => a.assignment_type === 'Test'),
+      projects: assignments.filter(a => a.assignment_type === 'Project'),
+      homework: assignments.filter(a => a.assignment_type === 'Homework'),
+      quizzes: assignments.filter(a => a.assignment_type === 'Quiz'),
+      classwork: assignments.filter(a => a.assignment_type === 'Classwork')
+    };
 
-  const calculateAverage = (items: Assignment[]) => {
-    if (items.length === 0) return 'N/A';
-    const total = items.reduce((sum, item) => sum + (item.points_earned / item.points_possible) * 100, 0);
-    return (total / items.length).toFixed(1) + '%';
-  };
+    const calculateAverage = (items: Assignment[]) => {
+      if (items.length === 0) return 'N/A';
+      const total = items.reduce((sum, item) => sum + (item.points_earned / item.points_possible) * 100, 0);
+      return (total / items.length).toFixed(1) + '%';
+    };
+
+    // Get recent grades (last 7 days)
+    const recentGrades = assignments.filter(a => {
+      const submittedDate = new Date(a.date_submitted);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return submittedDate >= sevenDaysAgo;
+    });
+
+    // Get missing assignments
+    const missingAssignments = assignments.filter(a => a.status === 'Missing' || a.points_earned === 0);
+
+    // Check if assignment is recent (within 3 days)
+    const isRecent = (dateString: string) => {
+      const submittedDate = new Date(dateString);
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      return submittedDate >= threeDaysAgo;
+    };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -120,12 +141,51 @@ export const GradeBreakdownModal: React.FC<GradeBreakdownModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="text-center py-8">Loading assignments...</div>
-        ) : (
-          <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {loading ? (
+                  <div className="text-center py-8">Loading assignments...</div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Missing Work Alert */}
+                    {missingAssignments.length > 0 && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="h-5 w-5 text-amber-600" />
+                          <span className="font-semibold text-amber-800">Missing Work Alert</span>
+                        </div>
+                        <p className="text-sm text-amber-700 mb-2">
+                          {missingAssignments.length} assignment{missingAssignments.length > 1 ? 's' : ''} need{missingAssignments.length === 1 ? 's' : ''} attention:
+                        </p>
+                        <ul className="text-sm text-amber-700 list-disc list-inside">
+                          {missingAssignments.slice(0, 3).map(a => (
+                            <li key={a.assignment_id}>{a.title}</li>
+                          ))}
+                          {missingAssignments.length > 3 && (
+                            <li>...and {missingAssignments.length - 3} more</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Recent Grades */}
+                    {recentGrades.length > 0 && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="h-5 w-5 text-green-600" />
+                          <span className="font-semibold text-green-800">Recently Graded</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {recentGrades.slice(0, 4).map(a => (
+                            <div key={a.assignment_id} className="flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-green-200">
+                              <span className="text-sm font-medium">{a.title}</span>
+                              <span className={`text-sm font-bold ${getGradeColor(a.grade)}`}>{a.grade}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">Tests</CardTitle>
@@ -177,43 +237,69 @@ export const GradeBreakdownModal: React.FC<GradeBreakdownModalProps> = ({
               </Card>
             </div>
 
-            {/* All Assignments List */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">All Assignments</h3>
-              <div className="space-y-3">
-                {assignments.map((assignment) => (
-                  <div
-                    key={assignment.assignment_id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full">
-                        {getTypeIcon(assignment.assignment_type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium">{assignment.title}</p>
-                          <Badge className={getTypeBadgeColor(assignment.assignment_type)}>
-                            {assignment.assignment_type}
-                          </Badge>
+                        {/* All Assignments List */}
+                        <div>
+                          <h3 className="text-lg font-semibold mb-4">All Assignments</h3>
+                          <div className="space-y-3">
+                            {assignments.map((assignment) => (
+                              <div
+                                key={assignment.assignment_id}
+                                className={`p-4 rounded-lg hover:bg-gray-100 transition-colors ${
+                                  isRecent(assignment.date_submitted) ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4 flex-1">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full">
+                                      {getTypeIcon(assignment.assignment_type)}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <p className="font-medium">{assignment.title}</p>
+                                        <Badge className={getTypeBadgeColor(assignment.assignment_type)}>
+                                          {assignment.assignment_type}
+                                        </Badge>
+                                        {isRecent(assignment.date_submitted) && (
+                                          <Badge className="bg-blue-100 text-blue-800">
+                                            <Clock className="w-3 h-3 mr-1" />
+                                            New
+                                          </Badge>
+                                        )}
+                                        {assignment.status === 'Missing' && (
+                                          <Badge className="bg-amber-100 text-amber-800">
+                                            <AlertTriangle className="w-3 h-3 mr-1" />
+                                            Missing
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-gray-500">
+                                        Submitted: {formatDate(assignment.date_submitted)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`text-2xl font-bold ${getGradeColor(assignment.grade)}`}>
+                                      {assignment.grade}
+                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                      {assignment.points_earned}/{assignment.points_possible} pts
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* Teacher Comment */}
+                                {assignment.comment && (
+                                  <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                                      <span className="text-sm font-medium text-gray-700">Teacher Feedback</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600">{assignment.comment}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500">
-                          Submitted: {formatDate(assignment.date_submitted)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-2xl font-bold ${getGradeColor(assignment.grade)}`}>
-                        {assignment.grade}
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        {assignment.points_earned}/{assignment.points_possible} pts
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {assignments.length === 0 && (
               <div className="text-center py-8">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Save, Eye, EyeOff, Calendar, BookOpen } from 'lucide-react'
+import { Plus, Save, Eye, EyeOff, BookOpen, Filter, AlertTriangle, MessageSquare, BarChart3, Users, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +69,10 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
     due_date: new Date().toISOString().split('T')[0]
   })
   const [gradeInputs, setGradeInputs] = useState<Record<string, string>>({})
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [subjectFilter, setSubjectFilter] = useState<string>('All')
+  const [showComments, setShowComments] = useState(false)
 
   useEffect(() => {
     fetchAssignments()
@@ -102,21 +105,28 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
     }
   }
 
-  const fetchGradeEntries = async (assignmentId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/api/grade-entries?assignment_id=${assignmentId}`)
-      const data = await response.json()
-      setGradeEntries(data)
+    const fetchGradeEntries = async (assignmentId: string) => {
+      try {
+        const response = await fetch(`${API_URL}/api/grade-entries?assignment_id=${assignmentId}`)
+        const data = await response.json()
+        setGradeEntries(data)
       
-      const inputs: Record<string, string> = {}
-      data.forEach((entry: GradeEntry) => {
-        inputs[entry.student_id] = entry.points_earned?.toString() || ''
-      })
-      setGradeInputs(inputs)
-    } catch (error) {
-      console.error('Error fetching grade entries:', error)
+        const inputs: Record<string, string> = {}
+        const comments: Record<string, string> = {}
+        data.forEach((entry: GradeEntry) => {
+          inputs[entry.student_id] = entry.points_earned?.toString() || ''
+          comments[entry.student_id] = entry.comment || ''
+        })
+        setGradeInputs(inputs)
+        setCommentInputs(comments)
+      } catch (error) {
+        console.error('Error fetching grade entries:', error)
+      }
     }
-  }
+
+    const handleCommentChange = (studentId: string, value: string) => {
+      setCommentInputs(prev => ({ ...prev, [studentId]: value }))
+    }
 
   const handleCreateAssignment = async () => {
     try {
@@ -190,29 +200,31 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
     return 'F'
   }
 
-  const handleSaveGrades = async () => {
-    if (!selectedAssignment) return
+    const handleSaveGrades = async () => {
+      if (!selectedAssignment) return
     
-    setIsSaving(true)
-    try {
-      const updates = students.map(student => {
-        const points = parseInt(gradeInputs[student.student_id] || '0')
-        const entry = gradeEntries.find(e => e.student_id === student.student_id)
+      setIsSaving(true)
+      try {
+        const updates = students.map(student => {
+          const points = parseInt(gradeInputs[student.student_id] || '0')
+          const comment = commentInputs[student.student_id] || null
+          const entry = gradeEntries.find(e => e.student_id === student.student_id)
         
-        if (!entry) return null
+          if (!entry) return null
 
-        const letterGrade = points > 0 ? calculateLetterGrade(points, selectedAssignment.max_points) : null
-        const percentage = points > 0 ? (points / selectedAssignment.max_points) * 100 : null
+          const letterGrade = points > 0 ? calculateLetterGrade(points, selectedAssignment.max_points) : null
+          const percentage = points > 0 ? (points / selectedAssignment.max_points) * 100 : null
 
-        return {
-          ...entry,
-          points_earned: points > 0 ? points : null,
-          letter_grade: letterGrade,
-          percentage: percentage,
-          status: points > 0 ? 'Complete' : 'Missing',
-          graded_date: new Date().toISOString().split('T')[0]
-        }
-      }).filter(Boolean)
+          return {
+            ...entry,
+            points_earned: points > 0 ? points : null,
+            letter_grade: letterGrade,
+            percentage: percentage,
+            status: points > 0 ? 'Complete' : 'Missing',
+            graded_date: new Date().toISOString().split('T')[0],
+            comment: comment
+          }
+        }).filter(Boolean)
 
       for (const update of updates) {
         if (update) {
@@ -251,8 +263,45 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
     }
   }
 
-  const publishedAssignments = assignments.filter(a => a.status === 'Published')
-  const draftAssignments = assignments.filter(a => a.status === 'Draft')
+        const publishedAssignments = assignments.filter(a => a.status === 'Published')
+  
+    // Filter assignments by subject
+    const filteredAssignments = subjectFilter === 'All' 
+      ? assignments 
+      : assignments.filter(a => a.subject === subjectFilter)
+
+    // Calculate class average for selected assignment
+    const calculateClassAverage = () => {
+      if (!selectedAssignment || gradeEntries.length === 0) return null
+      const gradedEntries = gradeEntries.filter(e => e.points_earned !== null && e.points_earned > 0)
+      if (gradedEntries.length === 0) return null
+      const totalPoints = gradedEntries.reduce((sum, e) => sum + (e.points_earned || 0), 0)
+      return Math.round((totalPoints / gradedEntries.length / selectedAssignment.max_points) * 100)
+    }
+
+    // Calculate grade distribution for selected assignment
+    const calculateGradeDistribution = () => {
+      if (!selectedAssignment) return { A: 0, B: 0, C: 0, D: 0, F: 0, Missing: 0 }
+      const distribution = { A: 0, B: 0, C: 0, D: 0, F: 0, Missing: 0 }
+      students.forEach(student => {
+        const points = parseInt(gradeInputs[student.student_id] || '0')
+        if (points === 0) {
+          distribution.Missing++
+        } else {
+          const letter = calculateLetterGrade(points, selectedAssignment.max_points)
+          distribution[letter as keyof typeof distribution]++
+        }
+      })
+      return distribution
+    }
+
+    // Count missing work across all assignments
+    const getMissingWorkCount = () => {
+      return gradeEntries.filter(e => e.status === 'Missing' || e.points_earned === null || e.points_earned === 0).length
+    }
+
+    const classAverage = calculateClassAverage()
+    const gradeDistribution = calculateGradeDistribution()
 
   return (
     <div className="space-y-6">
@@ -346,51 +395,89 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
-            <BookOpen className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assignments.length}</div>
-            <p className="text-xs text-gray-500">{publishedAssignments.length} published</p>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                  <BookOpen className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{assignments.length}</div>
+                  <p className="text-xs text-gray-500">{publishedAssignments.length} published</p>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Draft Assignments</CardTitle>
-            <Eye className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{draftAssignments.length}</div>
-            <p className="text-xs text-gray-500">Not yet published</p>
-          </CardContent>
-        </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Students</CardTitle>
+                  <Users className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{students.length}</div>
+                  <p className="text-xs text-gray-500">In this room</p>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Students</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
-            <p className="text-xs text-gray-500">In this room</p>
-          </CardContent>
-        </Card>
-      </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Class Average</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {classAverage !== null ? `${classAverage}%` : '--'}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {selectedAssignment ? 'Selected assignment' : 'Select an assignment'}
+                  </p>
+                </CardContent>
+              </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {assignments.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No assignments yet. Create one to get started!</p>
-            ) : (
-              assignments.map((assignment) => (
+              <Card className={getMissingWorkCount() > 0 ? 'border-amber-300 bg-amber-50' : ''}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Missing Work</CardTitle>
+                  <AlertTriangle className={`h-4 w-4 ${getMissingWorkCount() > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${getMissingWorkCount() > 0 ? 'text-amber-600' : ''}`}>
+                    {selectedAssignment ? getMissingWorkCount() : '--'}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {selectedAssignment ? 'Students need to submit' : 'Select an assignment'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Assignments</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Filter by subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All">All Subjects</SelectItem>
+                        <SelectItem value="Math">Math</SelectItem>
+                        <SelectItem value="ELA">ELA</SelectItem>
+                        <SelectItem value="Science">Science</SelectItem>
+                        <SelectItem value="Social Studies">Social Studies</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {filteredAssignments.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">
+                      {assignments.length === 0 ? 'No assignments yet. Create one to get started!' : 'No assignments match the selected filter.'}
+                    </p>
+                  ) : (
+                    filteredAssignments.map((assignment) => (
                 <div
                   key={assignment.assignment_id}
                   className={`p-4 border rounded-lg cursor-pointer transition-all ${
@@ -423,95 +510,150 @@ export function TeacherGradebook({ staffId, campusId, room }: TeacherGradebookPr
         </CardContent>
       </Card>
 
-      {selectedAssignment && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Grade Entry: {selectedAssignment.title}</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">Max Points: {selectedAssignment.max_points}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSaveGrades} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
-                  <Save className="mr-2 h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save Grades'}
-                </Button>
-                {selectedAssignment.status === 'Draft' && (
-                  <Button onClick={handlePublishAssignment} className="bg-red-600 hover:bg-red-700">
-                    <Eye className="mr-2 h-4 w-4" />
-                    Publish
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Points</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Letter</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {students.map((student) => {
-                    const entry = gradeEntries.find(e => e.student_id === student.student_id)
-                    const currentPoints = parseInt(gradeInputs[student.student_id] || '0')
-                    const letterGrade = currentPoints > 0 ? calculateLetterGrade(currentPoints, selectedAssignment.max_points) : '-'
+            {selectedAssignment && (
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                      <CardTitle>Grade Entry: {selectedAssignment.title}</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Max Points: {selectedAssignment.max_points}</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowComments(!showComments)}
+                        className={showComments ? 'bg-blue-50 border-blue-300' : ''}
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        {showComments ? 'Hide Comments' : 'Show Comments'}
+                      </Button>
+                      <Button onClick={handleSaveGrades} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSaving ? 'Saving...' : 'Save Grades'}
+                      </Button>
+                      {selectedAssignment.status === 'Draft' && (
+                        <Button onClick={handlePublishAssignment} className="bg-red-600 hover:bg-red-700">
+                          <Eye className="mr-2 h-4 w-4" />
+                          Publish
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Grade Distribution */}
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Grade Distribution</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <div className="flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full">
+                        <span className="text-xs font-medium text-green-800">A: {gradeDistribution.A}</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 rounded-full">
+                        <span className="text-xs font-medium text-blue-800">B: {gradeDistribution.B}</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-3 py-1 bg-yellow-100 rounded-full">
+                        <span className="text-xs font-medium text-yellow-800">C: {gradeDistribution.C}</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 rounded-full">
+                        <span className="text-xs font-medium text-orange-800">D: {gradeDistribution.D}</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-3 py-1 bg-red-100 rounded-full">
+                        <span className="text-xs font-medium text-red-800">F: {gradeDistribution.F}</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded-full">
+                        <span className="text-xs font-medium text-gray-700">Missing: {gradeDistribution.Missing}</span>
+                      </div>
+                    </div>
+                  </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Points</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Letter</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                {showComments && (
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comment</th>
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {students.map((student) => {
+                                const entry = gradeEntries.find(e => e.student_id === student.student_id)
+                                const currentPoints = parseInt(gradeInputs[student.student_id] || '0')
+                                const letterGrade = currentPoints > 0 ? calculateLetterGrade(currentPoints, selectedAssignment.max_points) : '-'
+                                const isMissing = currentPoints === 0
                     
-                    return (
-                      <tr key={student.student_id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {student.first_name} {student.last_name}
-                          </div>
-                          <div className="text-xs text-gray-500">{student.grade}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Input
-                            type="number"
-                            min="0"
-                            max={selectedAssignment.max_points}
-                            value={gradeInputs[student.student_id] || ''}
-                            onChange={(e) => handleGradeChange(student.student_id, e.target.value)}
-                            className="w-20"
-                            placeholder="0"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {currentPoints} / {selectedAssignment.max_points}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
-                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
-                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
-                            letterGrade === 'F' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {letterGrade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            entry?.status === 'Complete' ? 'bg-green-100 text-green-800' :
-                            entry?.status === 'Late' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {entry?.status || 'Missing'}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                                return (
+                                  <tr key={student.student_id} className={isMissing ? 'bg-amber-50' : ''}>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center gap-2">
+                                        {isMissing && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                                        <div>
+                                          <div className="text-sm font-medium text-gray-900">
+                                            {student.first_name} {student.last_name}
+                                          </div>
+                                          <div className="text-xs text-gray-500">{student.grade}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        max={selectedAssignment.max_points}
+                                        value={gradeInputs[student.student_id] || ''}
+                                        onChange={(e) => handleGradeChange(student.student_id, e.target.value)}
+                                        className="w-20"
+                                        placeholder="0"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      {currentPoints} / {selectedAssignment.max_points}
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                        letterGrade === 'A' ? 'bg-green-100 text-green-800' :
+                                        letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                        letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                        letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
+                                        letterGrade === 'F' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {letterGrade}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                        entry?.status === 'Complete' ? 'bg-green-100 text-green-800' :
+                                        entry?.status === 'Late' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-amber-100 text-amber-800'
+                                      }`}>
+                                        {entry?.status || 'Missing'}
+                                      </span>
+                                    </td>
+                                    {showComments && (
+                                      <td className="px-4 py-4">
+                                        <Input
+                                          type="text"
+                                          value={commentInputs[student.student_id] || ''}
+                                          onChange={(e) => handleCommentChange(student.student_id, e.target.value)}
+                                          className="w-48"
+                                          placeholder="Add feedback..."
+                                        />
+                                      </td>
+                                    )}
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
           </CardContent>
         </Card>
       )}
