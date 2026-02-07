@@ -4397,3 +4397,234 @@ async def download_export(export_id: str):
             "Content-Disposition": f'attachment; filename="{export["filename"]}"'
         }
     )
+
+
+# ============== QuickBooks Integration ==============
+
+# In-memory storage for QuickBooks connection status
+quickbooks_connection = {
+    "connected": False,
+    "company_name": None,
+    "company_id": None,
+    "connected_at": None,
+    "last_sync": None,
+    "sync_settings": {
+        "auto_sync_invoices": True,
+        "auto_sync_payments": True,
+        "sync_frequency": "daily"
+    }
+}
+
+# Simulated sync history
+quickbooks_sync_history = []
+
+@app.get("/api/quickbooks/status")
+async def get_quickbooks_status():
+    """Get QuickBooks connection status"""
+    return quickbooks_connection
+
+@app.post("/api/quickbooks/connect")
+async def connect_quickbooks(data: dict):
+    """Initiate QuickBooks OAuth connection"""
+    # In production, this would redirect to QuickBooks OAuth
+    # For demo, we simulate a successful connection
+    quickbooks_connection["connected"] = True
+    quickbooks_connection["company_name"] = data.get("company_name", "EPIC Prep Academy")
+    quickbooks_connection["company_id"] = f"qb_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    quickbooks_connection["connected_at"] = datetime.now().isoformat()
+    
+    return {
+        "success": True,
+        "message": "Successfully connected to QuickBooks",
+        "auth_url": None,  # In production, this would be the OAuth URL
+        "connection": quickbooks_connection
+    }
+
+@app.post("/api/quickbooks/disconnect")
+async def disconnect_quickbooks():
+    """Disconnect from QuickBooks"""
+    quickbooks_connection["connected"] = False
+    quickbooks_connection["company_name"] = None
+    quickbooks_connection["company_id"] = None
+    quickbooks_connection["connected_at"] = None
+    
+    return {
+        "success": True,
+        "message": "Disconnected from QuickBooks"
+    }
+
+@app.put("/api/quickbooks/settings")
+async def update_quickbooks_settings(settings: dict):
+    """Update QuickBooks sync settings"""
+    if "auto_sync_invoices" in settings:
+        quickbooks_connection["sync_settings"]["auto_sync_invoices"] = settings["auto_sync_invoices"]
+    if "auto_sync_payments" in settings:
+        quickbooks_connection["sync_settings"]["auto_sync_payments"] = settings["auto_sync_payments"]
+    if "sync_frequency" in settings:
+        quickbooks_connection["sync_settings"]["sync_frequency"] = settings["sync_frequency"]
+    
+    return {
+        "success": True,
+        "settings": quickbooks_connection["sync_settings"]
+    }
+
+@app.post("/api/quickbooks/sync/invoices")
+async def sync_invoices_to_quickbooks():
+    """Sync invoices to QuickBooks"""
+    if not quickbooks_connection["connected"]:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+    
+    # Get all invoices
+    invoices_count = len(invoices_db)
+    
+    # Simulate sync
+    sync_record = {
+        "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "type": "invoices",
+        "direction": "export",
+        "records_synced": invoices_count,
+        "status": "completed",
+        "timestamp": datetime.now().isoformat(),
+        "details": f"Exported {invoices_count} invoices to QuickBooks"
+    }
+    quickbooks_sync_history.insert(0, sync_record)
+    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    
+    return {
+        "success": True,
+        "message": f"Successfully synced {invoices_count} invoices to QuickBooks",
+        "sync_record": sync_record
+    }
+
+@app.post("/api/quickbooks/sync/payments")
+async def sync_payments_to_quickbooks():
+    """Sync payments to QuickBooks"""
+    if not quickbooks_connection["connected"]:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+    
+    # Get all payment records
+    payments = [b for b in billing_records_db if b.type == "Payment"]
+    payments_count = len(payments)
+    
+    # Simulate sync
+    sync_record = {
+        "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "type": "payments",
+        "direction": "export",
+        "records_synced": payments_count,
+        "status": "completed",
+        "timestamp": datetime.now().isoformat(),
+        "details": f"Exported {payments_count} payments to QuickBooks"
+    }
+    quickbooks_sync_history.insert(0, sync_record)
+    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    
+    return {
+        "success": True,
+        "message": f"Successfully synced {payments_count} payments to QuickBooks",
+        "sync_record": sync_record
+    }
+
+@app.post("/api/quickbooks/sync/customers")
+async def sync_customers_to_quickbooks():
+    """Sync families as customers to QuickBooks"""
+    if not quickbooks_connection["connected"]:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+    
+    # Get all families
+    families_count = len(families_db)
+    
+    # Simulate sync
+    sync_record = {
+        "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "type": "customers",
+        "direction": "export",
+        "records_synced": families_count,
+        "status": "completed",
+        "timestamp": datetime.now().isoformat(),
+        "details": f"Exported {families_count} families as customers to QuickBooks"
+    }
+    quickbooks_sync_history.insert(0, sync_record)
+    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    
+    return {
+        "success": True,
+        "message": f"Successfully synced {families_count} customers to QuickBooks",
+        "sync_record": sync_record
+    }
+
+@app.post("/api/quickbooks/sync/all")
+async def sync_all_to_quickbooks():
+    """Sync all data to QuickBooks"""
+    if not quickbooks_connection["connected"]:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+    
+    families_count = len(families_db)
+    invoices_count = len(invoices_db)
+    payments = [b for b in billing_records_db if b.type == "Payment"]
+    payments_count = len(payments)
+    
+    total_records = families_count + invoices_count + payments_count
+    
+    # Simulate sync
+    sync_record = {
+        "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "type": "full_sync",
+        "direction": "export",
+        "records_synced": total_records,
+        "status": "completed",
+        "timestamp": datetime.now().isoformat(),
+        "details": f"Full sync: {families_count} customers, {invoices_count} invoices, {payments_count} payments"
+    }
+    quickbooks_sync_history.insert(0, sync_record)
+    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    
+    return {
+        "success": True,
+        "message": f"Successfully synced {total_records} records to QuickBooks",
+        "sync_record": sync_record,
+        "breakdown": {
+            "customers": families_count,
+            "invoices": invoices_count,
+            "payments": payments_count
+        }
+    }
+
+@app.get("/api/quickbooks/sync/history")
+async def get_sync_history():
+    """Get QuickBooks sync history"""
+    return quickbooks_sync_history[:20]  # Return last 20 syncs
+
+@app.get("/api/quickbooks/export/preview")
+async def preview_quickbooks_export():
+    """Preview data that would be exported to QuickBooks"""
+    families_count = len(families_db)
+    invoices_count = len(invoices_db)
+    payments = [b for b in billing_records_db if b.type == "Payment"]
+    payments_count = len(payments)
+    
+    # Calculate totals
+    total_invoiced = sum(inv.total_amount for inv in invoices_db)
+    total_payments = sum(abs(p.amount) for p in payments)
+    total_outstanding = sum(f.current_balance for f in families_db)
+    
+    return {
+        "customers": {
+            "count": families_count,
+            "sample": [{"name": f.family_name, "balance": f.current_balance} for f in families_db[:5]]
+        },
+        "invoices": {
+            "count": invoices_count,
+            "total_amount": total_invoiced,
+            "sample": [{"number": inv.invoice_number, "amount": inv.total_amount, "status": inv.status.value} for inv in invoices_db[:5]]
+        },
+        "payments": {
+            "count": payments_count,
+            "total_amount": total_payments
+        },
+        "summary": {
+            "total_invoiced": total_invoiced,
+            "total_payments": total_payments,
+            "total_outstanding": total_outstanding
+        }
+    }

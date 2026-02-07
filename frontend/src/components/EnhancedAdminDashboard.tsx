@@ -30,6 +30,7 @@ import { DailyBibleVerse } from './DailyBibleVerse'
 import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { LearningProgressImport } from './LearningProgressImport'
 import { FeeProductManagement } from './FeeProductManagement'
+import { QuickBooksIntegration } from './QuickBooksIntegration'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -766,12 +767,13 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="families">Families</TabsTrigger>
                 <TabsTrigger value="billing">Billing & Invoicing</TabsTrigger>
                 <TabsTrigger value="stepup">Step Up Scholarships</TabsTrigger>
                 <TabsTrigger value="revenue">Revenue & Reconciliation</TabsTrigger>
                 <TabsTrigger value="store">Store / POS</TabsTrigger>
+                <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
               </TabsList>
               <TabsContent value="families" className="mt-6">
                 {families.length > 0 && (
@@ -846,6 +848,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               </TabsContent>
               <TabsContent value="store" className="mt-6">
                 <FeeProductManagement campusId={selectedCampusId} />
+              </TabsContent>
+              <TabsContent value="quickbooks" className="mt-6">
+                <QuickBooksIntegration />
               </TabsContent>
             </Tabs>
           </div>
