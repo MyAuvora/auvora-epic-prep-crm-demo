@@ -152,7 +152,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
               />
               <div>
                 <h1 className="text-2xl font-bold text-white">EPIC Prep Academy</h1>
-                <p className="text-xs italic text-gray-300">"Raising Lions not Sheep"</p>
+                <p className="text-xs italic text-gray-300">"Educating Lions not Sheep"</p>
               </div>
             </div>
             

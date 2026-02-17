@@ -150,6 +150,7 @@ class FundingSource(str, Enum):
     STEP_UP = "Step-Up"
     OUT_OF_POCKET = "Out-of-Pocket"
     MIXED = "Mixed"
+    EPIC_SCHOLARSHIP = "EPIC Scholarship"
 
 class PaymentSource(str, Enum):
     STEP_UP = "Step-Up"

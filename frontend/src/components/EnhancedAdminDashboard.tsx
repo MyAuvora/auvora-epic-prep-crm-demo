@@ -766,15 +766,14 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               <h2 className="text-3xl font-bold text-gray-900">Families & Finance</h2>
               <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
-            <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="families">Families</TabsTrigger>
-                <TabsTrigger value="billing">Billing & Invoicing</TabsTrigger>
-                <TabsTrigger value="stepup">Step Up Scholarships</TabsTrigger>
-                <TabsTrigger value="revenue">Revenue & Reconciliation</TabsTrigger>
-                <TabsTrigger value="store">Store / POS</TabsTrigger>
-                <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
-              </TabsList>
+                        <Tabs value={subView} onValueChange={setSubView} className="w-full">
+                          <TabsList className="grid w-full grid-cols-5">
+                            <TabsTrigger value="families">Family Accounts</TabsTrigger>
+                            <TabsTrigger value="scholarships">Scholarships</TabsTrigger>
+                            <TabsTrigger value="billing">Payments & Invoices</TabsTrigger>
+                            <TabsTrigger value="store">Store / POS</TabsTrigger>
+                            <TabsTrigger value="reports">Reports</TabsTrigger>
+                          </TabsList>
               <TabsContent value="families" className="mt-6">
                 {families.length > 0 && (
                   <Card>
@@ -826,32 +825,126 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                   </Card>
                 )}
               </TabsContent>
-              <TabsContent value="billing" className="mt-6">
-                <FinancialManagement selectedCampusId={selectedCampusId} />
-              </TabsContent>
-                            <TabsContent value="stepup" className="mt-6">
-                              <Tabs defaultValue="queue" className="w-full">
+                            <TabsContent value="scholarships" className="mt-6">
+                              {/* Simplified Scholarships Section - SUFS and EPIC Scholarships */}
+                              <div className="space-y-6">
+                                {/* Quick Summary Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                                    <CardContent className="p-6">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-sm font-medium text-green-700">Step Up (SUFS)</p>
+                                          <p className="text-2xl font-bold text-green-800">Active Scholarships</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                                          <DollarSign className="w-6 h-6 text-white" />
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-green-600 mt-2">State-funded scholarship program</p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                                    <CardContent className="p-6">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-sm font-medium text-purple-700">EPIC Scholarships</p>
+                                          <p className="text-2xl font-bold text-purple-800">School Awards</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                                          <Users className="w-6 h-6 text-white" />
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-purple-600 mt-2">For families needing financial assistance</p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                                    <CardContent className="p-6">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-sm font-medium text-blue-700">Out-of-Pocket</p>
+                                          <p className="text-2xl font-bold text-blue-800">Direct Payments</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                                          <Calendar className="w-6 h-6 text-white" />
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-blue-600 mt-2">Family-paid tuition</p>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                  
+                                {/* Scholarship Management Tabs */}
+                                <Tabs defaultValue="sufs" className="w-full">
+                                  <TabsList className="grid w-full grid-cols-3 mb-4">
+                                    <TabsTrigger value="sufs">Step Up (SUFS)</TabsTrigger>
+                                    <TabsTrigger value="epic">EPIC Scholarships</TabsTrigger>
+                                    <TabsTrigger value="queue">Payment Queue</TabsTrigger>
+                                  </TabsList>
+                                  <TabsContent value="sufs">
+                                    <SUFSScholarshipManagement campusId={selectedCampusId} />
+                                  </TabsContent>
+                                  <TabsContent value="epic">
+                                    {/* EPIC Scholarship Management */}
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                          <Users className="w-5 h-5 text-purple-600" />
+                                          EPIC Scholarship Awards
+                                        </CardTitle>
+                                        <p className="text-sm text-gray-500">
+                                          Track scholarships awarded by EPIC Prep Academy for families needing financial assistance. 
+                                          These awards are tracked for tax purposes.
+                                        </p>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                                          <h4 className="font-semibold text-purple-900 mb-2">About EPIC Scholarships</h4>
+                                          <ul className="text-sm text-purple-800 space-y-1">
+                                            <li>• Awarded to families who cannot pay full tuition out-of-pocket</li>
+                                            <li>• Amount varies based on family need and available funds</li>
+                                            <li>• All awards are tracked for tax reporting purposes</li>
+                                            <li>• Can be combined with Step Up (SUFS) scholarships</li>
+                                          </ul>
+                                        </div>
+                                        <div className="text-center py-8 text-gray-500">
+                                          <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                          <p className="font-medium">No EPIC Scholarships awarded yet</p>
+                                          <p className="text-sm">When you award an EPIC Scholarship, it will appear here for tracking.</p>
+                                          <p className="text-xs mt-2 text-gray-400">
+                                            To award an EPIC Scholarship, edit a student's funding source to "EPIC Scholarship" when adding or editing their record.
+                                          </p>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  </TabsContent>
+                                  <TabsContent value="queue">
+                                    <SUFSPaymentQueue campusId={selectedCampusId} />
+                                  </TabsContent>
+                                </Tabs>
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="billing" className="mt-6">
+                              <FinancialManagement selectedCampusId={selectedCampusId} />
+                            </TabsContent>
+                            <TabsContent value="store" className="mt-6">
+                              <FeeProductManagement campusId={selectedCampusId} />
+                            </TabsContent>
+                            <TabsContent value="reports" className="mt-6">
+                              {/* Consolidated Reports Section */}
+                              <Tabs defaultValue="revenue" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2 mb-4">
-                                  <TabsTrigger value="queue">Payment Queue</TabsTrigger>
-                                  <TabsTrigger value="scholarships">Scholarship Management</TabsTrigger>
+                                  <TabsTrigger value="revenue">Revenue Reports</TabsTrigger>
+                                  <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
                                 </TabsList>
-                                <TabsContent value="queue">
-                                  <SUFSPaymentQueue campusId={selectedCampusId} />
+                                <TabsContent value="revenue">
+                                  <AdminRevenueReports role="admin" />
                                 </TabsContent>
-                                <TabsContent value="scholarships">
-                                  <SUFSScholarshipManagement campusId={selectedCampusId} />
+                                <TabsContent value="quickbooks">
+                                  <QuickBooksIntegration />
                                 </TabsContent>
                               </Tabs>
                             </TabsContent>
-              <TabsContent value="revenue" className="mt-6">
-                <AdminRevenueReports role="admin" />
-              </TabsContent>
-              <TabsContent value="store" className="mt-6">
-                <FeeProductManagement campusId={selectedCampusId} />
-              </TabsContent>
-              <TabsContent value="quickbooks" className="mt-6">
-                <QuickBooksIntegration />
-              </TabsContent>
             </Tabs>
           </div>
         )}

@@ -265,11 +265,12 @@ export function AddStudentModal({ open, onClose, onStudentAdded, selectedCampusI
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Step-Up">Step-Up</SelectItem>
-                  <SelectItem value="Out-of-Pocket">Out-of-Pocket</SelectItem>
-                  <SelectItem value="Mixed">Mixed</SelectItem>
-                </SelectContent>
+                                <SelectContent>
+                                  <SelectItem value="Step-Up">Step-Up (SUFS)</SelectItem>
+                                  <SelectItem value="Out-of-Pocket">Out-of-Pocket</SelectItem>
+                                  <SelectItem value="EPIC Scholarship">EPIC Scholarship</SelectItem>
+                                  <SelectItem value="Mixed">Mixed</SelectItem>
+                                </SelectContent>
               </Select>
             </div>
 
