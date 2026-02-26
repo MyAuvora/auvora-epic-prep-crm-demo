@@ -28,6 +28,8 @@ interface StaffManagementProps {
 export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [loading, setLoading] = useState(true);
   const [newStaff, setNewStaff] = useState({
     first_name: '',
@@ -95,6 +97,21 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       'Assistant': 'bg-gray-100 text-gray-800'
     };
     return colors[role] || colors['Coach'];
+  };
+
+  const handleStaffClick = (member: Staff) => {
+    setSelectedStaff(member);
+    setShowProfileModal(true);
+  };
+
+  const getLocationName = (campusId: string) => {
+    const locations: Record<string, string> = {
+      'pace': 'Pace',
+      'navarre': 'Navarre',
+      'crestview_north': 'Crestview North',
+      'crestview_main_street': 'Crestview Main Street'
+    };
+    return locations[campusId] || campusId;
   };
 
   const groupedStaff = {
@@ -173,7 +190,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           <h3 className="text-xl font-semibold mb-4">Leadership Team</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {groupedStaff.leadership.map((member) => (
-              <Card key={member.staff_id} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={member.staff_id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleStaffClick(member)}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">
@@ -208,7 +229,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                 <h3 className="text-xl font-semibold mb-4">Coaches</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {groupedStaff.teachers.map((teacher) => (
-              <Card key={teacher.staff_id} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={teacher.staff_id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleStaffClick(teacher)}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">
@@ -248,7 +273,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           <h3 className="text-xl font-semibold mb-4">Administrative & Support Staff</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...groupedStaff.admin, ...groupedStaff.assistants].map((member) => (
-              <Card key={member.staff_id} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={member.staff_id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleStaffClick(member)}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">
@@ -372,6 +401,71 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
               disabled={!newStaff.first_name || !newStaff.last_name || !newStaff.email}
             >
               Add Staff Member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff Profile Modal */}
+      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Staff Profile</DialogTitle>
+          </DialogHeader>
+          {selectedStaff && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-900 to-red-600 flex items-center justify-center text-white text-2xl font-bold">
+                  {selectedStaff.first_name[0]}{selectedStaff.last_name[0]}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedStaff.first_name} {selectedStaff.last_name}</h3>
+                  <Badge className={getRoleBadgeColor(selectedStaff.role)}>{selectedStaff.role}</Badge>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-gray-500 text-sm mb-2">Contact Information</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span>{selectedStaff.email}</span>
+                    </div>
+                    {selectedStaff.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <span>{selectedStaff.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-gray-500 text-sm mb-2">Work Details</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-gray-500" />
+                      <span>Role: {selectedStaff.role}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-gray-500" />
+                      <span>Location: {getLocationName(selectedStaff.campus_id)}</span>
+                    </div>
+                    {selectedStaff.assigned_rooms && selectedStaff.assigned_rooms.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-500" />
+                        <span>Assigned: {selectedStaff.assigned_rooms.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProfileModal(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
