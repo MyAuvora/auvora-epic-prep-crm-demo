@@ -140,19 +140,19 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
 
   return (
     <>
-      {/* Modern Patriot Color Scheme: Royal Blue Gradient (#0A2463 -> #163B9A) with Signal Red (#E63946) accents */}
-      <header className="text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #0A2463 0%, #163B9A 100%)' }}>
+      {/* Blue to Red Gradient Theme with White Lion Logo */}
+      <header className="text-white shadow-lg" style={{ background: 'linear-gradient(to right, #1e3a5f 0%, #dc3545 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-4">
               <img 
-                src="/epic-logo.jpg" 
+                src="/epic-lion-white-64.png" 
                 alt="EPIC Prep Academy Logo" 
-                className="h-16 w-auto object-contain"
+                className="h-14 w-auto object-contain"
               />
               <div>
                 <h1 className="text-2xl font-bold text-white">EPIC Prep Academy</h1>
-                <p className="text-xs italic text-gray-300">"Educating Lions not Sheep"</p>
+                <p className="text-xs italic text-gray-200">"Educating Lions not Sheep"</p>
               </div>
             </div>
             

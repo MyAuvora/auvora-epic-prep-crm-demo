@@ -281,9 +281,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'dashboard'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'dashboard' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Dashboard
             </button>
@@ -297,9 +298,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'students'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'students' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Students
             </button>
@@ -313,9 +315,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'families-finance'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'families-finance' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Families & Finance
             </button>
@@ -326,9 +329,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                           }}
                           className={`px-3 py-2 text-sm font-medium rounded-md ${
                             view === 'admissions'
-                              ? 'bg-red-600 text-white'
+                              ? 'text-white'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
+                          style={view === 'admissions' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                         >
                           Admissions
                         </button>
@@ -339,9 +343,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'academics'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'academics' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Academics
             </button>
@@ -352,9 +357,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'student-support'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'student-support' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Student Support
             </button>
@@ -365,13 +371,14 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md relative ${
                 view === 'communications'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'communications' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Communications
               {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                   {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                 </span>
               )}
@@ -383,9 +390,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'operations'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'operations' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Operations
             </button>
@@ -396,9 +404,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'documents'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'documents' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Documents & Forms
             </button>
@@ -409,9 +418,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               }}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'analytics'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'analytics' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Analytics
             </button>

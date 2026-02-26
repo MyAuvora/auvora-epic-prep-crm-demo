@@ -201,8 +201,8 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
-        <Card className="w-[420px] h-[600px] shadow-2xl border-2 border-[#0A2463] flex flex-col">
-          <CardHeader className="bg-gradient-to-r from-[#0A2463] to-[#163B9A] text-white py-3 px-4 flex-shrink-0">
+        <Card className="w-[420px] h-[600px] shadow-2xl border-2 flex flex-col" style={{ borderColor: '#1e3a5f' }}>
+          <CardHeader className="text-white py-3 px-4 flex-shrink-0" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
@@ -230,16 +230,17 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
                     className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#0A2463] to-[#163B9A] flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                         <Bot className="h-4 w-4 text-white" />
                       </div>
                     )}
                     <div
                       className={`max-w-[85%] rounded-lg p-3 ${
                         message.role === 'user'
-                          ? 'bg-[#0A2463] text-white'
+                          ? 'text-white'
                           : 'bg-gray-100 text-gray-800'
                       }`}
+                      style={message.role === 'user' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                     >
                       <div className="text-sm">
                         {formatMessage(message.content)}
@@ -262,7 +263,7 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
                 
                 {isLoading && (
                   <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#0A2463] to-[#163B9A] flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                       <Bot className="h-4 w-4 text-white" />
                     </div>
                     <div className="bg-gray-100 rounded-lg p-3">
@@ -307,7 +308,8 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
                 />
                 <Button 
                   type="submit" 
-                  className="bg-[#0A2463] hover:bg-[#163B9A]"
+                  className="text-white"
+                  style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
                   disabled={isLoading || !query.trim()}
                 >
                   {isLoading ? (
@@ -323,7 +325,8 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
       ) : (
         <Button
           onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full bg-gradient-to-r from-[#0A2463] to-[#163B9A] hover:from-[#163B9A] hover:to-[#0A2463] shadow-lg group"
+          className="h-14 w-14 rounded-full shadow-lg group"
+          style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
         >
           <div className="relative">
             <MessageCircle className="h-6 w-6" />

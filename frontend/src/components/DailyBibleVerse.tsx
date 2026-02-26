@@ -49,19 +49,21 @@ export function DailyBibleVerse() {
   const todaysVerse = bibleVerses[verseIndex];
 
   return (
-    <Card className="bg-gradient-to-r from-blue-50 to-red-50 border-blue-200">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-600 rounded-full">
-            <Book className="h-6 w-6 text-white" />
+    <div className="relative rounded-lg p-[3px]" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+      <Card className="bg-gradient-to-r from-blue-50 to-red-50 border-0">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-full" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+              <Book className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2" style={{ color: '#1e3a5f' }}>Daily Devotional</h3>
+              <p className="text-gray-700 italic text-lg leading-relaxed">"{todaysVerse.verse}"</p>
+              <p className="font-medium mt-3" style={{ color: '#dc3545' }}>— {todaysVerse.reference}</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Daily Devotional</h3>
-            <p className="text-gray-700 italic text-lg leading-relaxed">"{todaysVerse.verse}"</p>
-            <p className="text-blue-600 font-medium mt-3">— {todaysVerse.reference}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
