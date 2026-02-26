@@ -36,7 +36,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     email: '',
     phone: '',
     assigned_rooms: [] as string[],
-    campus_id: campusId || 'campus_pace'
+    campus_id: campusId || 'main_campus'
   });
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         email: '',
         phone: '',
         assigned_rooms: [],
-        campus_id: campusId || 'campus_pace'
+        campus_id: campusId || 'main_campus'
       });
       fetchStaff();
     } catch (error) {
@@ -321,6 +321,20 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Coach">Coach</SelectItem>
                   <SelectItem value="Assistant">Assistant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="location">Location</Label>
+              <Select value={newStaff.campus_id} onValueChange={(value) => setNewStaff({ ...newStaff, campus_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main_campus">Main Campus</SelectItem>
+                  <SelectItem value="north_campus">North Campus</SelectItem>
+                  <SelectItem value="south_campus">South Campus</SelectItem>
                 </SelectContent>
               </Select>
             </div>
