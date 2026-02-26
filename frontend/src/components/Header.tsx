@@ -22,7 +22,8 @@ interface HeaderProps {
 
 export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false)
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false)
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState('Main Campus')
   const [showProfileInfo, setShowProfileInfo] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showHelpSupport, setShowHelpSupport] = useState(false)
@@ -104,15 +105,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
     setShowSearchResults(false)
   }
 
-  const getRoleLabel = (role: 'admin' | 'teacher' | 'parent') => {
-    switch (role) {
-      case 'admin': return 'Admin'
-      case 'teacher': return 'Coach'
-      case 'parent': return 'Parent'
-    }
-  }
-
-  const handleSignOut = () => {
+  const handleSignOut= () => {
     setShowDropdown(false)
     alert('Sign out functionality - In production, this would clear your session and redirect to login.')
   }
@@ -231,76 +224,73 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                             </div>
                           )}
 
-                          {/* Role/Location Dropdown */}
+                          {/* Location Dropdown */}
                           <div className="relative">
                 <button
-                  onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
                   className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
                 >
                   <MapPin className="w-4 h-4" />
-                  <span className="font-medium">{getRoleLabel(currentRole)}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
+                  <span className="font-medium">{selectedLocation}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
-                {showRoleDropdown && (
+                {showLocationDropdown && (
                   <>
                     <div 
                       className="fixed inset-0 z-10" 
-                      onClick={() => setShowRoleDropdown(false)}
+                      onClick={() => setShowLocationDropdown(false)}
                     />
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20 py-2">
                       <div className="px-4 py-2 border-b border-gray-200">
-                        <p className="text-xs font-medium text-gray-500 uppercase">Select View</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase">Select Location</p>
                       </div>
                       <button
                         onClick={() => {
-                          onRoleChange('admin')
-                          setShowRoleDropdown(false)
+                          setSelectedLocation('Main Campus')
+                          setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          currentRole === 'admin' 
+                          selectedLocation === 'Main Campus' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={currentRole === 'admin' ? { backgroundColor: '#E63946' } : {}}
+                        style={selectedLocation === 'Main Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>Admin</span>
+                        <span>Main Campus</span>
                       </button>
                       <button
                         onClick={() => {
-                          onRoleChange('teacher')
-                          setShowRoleDropdown(false)
+                          setSelectedLocation('North Campus')
+                          setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          currentRole === 'teacher' 
+                          selectedLocation === 'North Campus' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={currentRole === 'teacher' ? { backgroundColor: '#E63946' } : {}}
+                        style={selectedLocation === 'North Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>Coach</span>
+                        <span>North Campus</span>
                       </button>
                       <button
                         onClick={() => {
-                          onRoleChange('parent')
-                          setShowRoleDropdown(false)
+                          setSelectedLocation('South Campus')
+                          setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          currentRole === 'parent' 
+                          selectedLocation === 'South Campus' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={currentRole === 'parent' ? { backgroundColor: '#E63946' } : {}}
+                        style={selectedLocation === 'South Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>Parent</span>
+                        <span>South Campus</span>
                       </button>
-                      <div className="border-t border-gray-200 mt-2 pt-2 px-4 py-2">
-                        <p className="text-xs text-gray-400 italic">Future: Toggle between school locations</p>
-                      </div>
                     </div>
                   </>
                 )}
@@ -365,6 +355,58 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                         <Shield className="w-5 h-5 text-gray-500" />
                         <span>Privacy & Security</span>
                       </button>
+
+                      {/* Account Type Selection (Demo Only) */}
+                      <div className="border-t border-gray-200 mt-2 pt-2">
+                        <div className="px-4 py-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase">Switch View (Demo)</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            onRoleChange('admin')
+                            setShowDropdown(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 ${
+                            currentRole === 'admin' 
+                              ? 'text-white font-medium' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          style={currentRole === 'admin' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <User className="w-5 h-5" />
+                          <span>Admin View</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onRoleChange('teacher')
+                            setShowDropdown(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 ${
+                            currentRole === 'teacher' 
+                              ? 'text-white font-medium' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          style={currentRole === 'teacher' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <User className="w-5 h-5" />
+                          <span>Coach View</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onRoleChange('parent')
+                            setShowDropdown(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 ${
+                            currentRole === 'parent' 
+                              ? 'text-white font-medium' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          style={currentRole === 'parent' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <User className="w-5 h-5" />
+                          <span>Parent View</span>
+                        </button>
+                      </div>
 
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <button
