@@ -36,7 +36,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     email: '',
     phone: '',
     assigned_rooms: [] as string[],
-    campus_id: campusId || 'main_campus'
+    campus_id: campusId || 'pace'
   });
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         email: '',
         phone: '',
         assigned_rooms: [],
-        campus_id: campusId || 'main_campus'
+        campus_id: campusId || 'pace'
       });
       fetchStaff();
     } catch (error) {
@@ -332,9 +332,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="main_campus">Main Campus</SelectItem>
-                  <SelectItem value="north_campus">North Campus</SelectItem>
-                  <SelectItem value="south_campus">South Campus</SelectItem>
+                  <SelectItem value="pace">Pace</SelectItem>
+                  <SelectItem value="navarre">Navarre</SelectItem>
+                  <SelectItem value="crestview_north">Crestview North</SelectItem>
+                  <SelectItem value="crestview_main_street">Crestview Main Street</SelectItem>
                 </SelectContent>
               </Select>
             </div>

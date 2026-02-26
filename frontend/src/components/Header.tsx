@@ -23,7 +23,7 @@ interface HeaderProps {
 export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState('Main Campus')
+  const [selectedLocation, setSelectedLocation] = useState('Pace')
   const [showProfileInfo, setShowProfileInfo] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showHelpSupport, setShowHelpSupport] = useState(false)
@@ -248,48 +248,63 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       </div>
                       <button
                         onClick={() => {
-                          setSelectedLocation('Main Campus')
+                          setSelectedLocation('Pace')
                           setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          selectedLocation === 'Main Campus' 
+                          selectedLocation === 'Pace' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={selectedLocation === 'Main Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        style={selectedLocation === 'Pace' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>Main Campus</span>
+                        <span>Pace</span>
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedLocation('North Campus')
+                          setSelectedLocation('Navarre')
                           setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          selectedLocation === 'North Campus' 
+                          selectedLocation === 'Navarre' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={selectedLocation === 'North Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        style={selectedLocation === 'Navarre' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>North Campus</span>
+                        <span>Navarre</span>
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedLocation('South Campus')
+                          setSelectedLocation('Crestview North')
                           setShowLocationDropdown(false)
                         }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
-                          selectedLocation === 'South Campus' 
+                          selectedLocation === 'Crestview North' 
                             ? 'text-white font-medium' 
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
-                        style={selectedLocation === 'South Campus' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        style={selectedLocation === 'Crestview North' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>South Campus</span>
+                        <span>Crestview North</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedLocation('Crestview Main Street')
+                          setShowLocationDropdown(false)
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
+                          selectedLocation === 'Crestview Main Street' 
+                            ? 'text-white font-medium' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        style={selectedLocation === 'Crestview Main Street' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                      >
+                        <MapPin className="w-4 h-4" />
+                        <span>Crestview Main Street</span>
                       </button>
                     </div>
                   </>
