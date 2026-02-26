@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Mail, Phone, Briefcase, ArrowLeft, MapPin, FileText, Upload, Download, Trash2, Edit, User, DollarSign, Shield } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Briefcase, ArrowLeft, MapPin, FileText, Upload, Download, Trash2, Edit, User, DollarSign, Shield, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+interface TimeOffRequest {
+  id: string;
+  staff_id: string;
+  staff_name: string;
+  start_date: string;
+  end_date: string;
+  type: 'vacation' | 'sick' | 'personal' | 'bereavement' | 'other';
+  reason: string;
+  status: 'pending' | 'approved' | 'denied';
+  submitted_date: string;
+  reviewed_by?: string;
+  reviewed_date?: string;
+  admin_notes?: string;
+}
 
 interface EmploymentAgreement {
   id: string;
@@ -59,6 +74,22 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedStaff, setEditedStaff] = useState<Staff | null>(null);
+  const [showTimeOffView, setShowTimeOffView] = useState(false);
+  const [showTimeOffRequestModal, setShowTimeOffRequestModal] = useState(false);
+  const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([
+    { id: '1', staff_id: 'staff_1', staff_name: 'Jennifer Kilgore', start_date: '2026-03-10', end_date: '2026-03-12', type: 'vacation', reason: 'Family vacation', status: 'pending', submitted_date: '2026-02-25' },
+    { id: '2', staff_id: 'staff_2', staff_name: 'Brittany Kilcrease', start_date: '2026-03-05', end_date: '2026-03-05', type: 'sick', reason: 'Doctor appointment', status: 'approved', submitted_date: '2026-02-20', reviewed_by: 'Sarah Mitchell', reviewed_date: '2026-02-21' },
+    { id: '3', staff_id: 'staff_3', staff_name: 'David Martinez', start_date: '2026-03-15', end_date: '2026-03-20', type: 'personal', reason: 'Personal matters', status: 'pending', submitted_date: '2026-02-26' },
+    { id: '4', staff_id: 'staff_4', staff_name: 'Lisa Anderson', start_date: '2026-02-28', end_date: '2026-02-28', type: 'bereavement', reason: 'Family emergency', status: 'approved', submitted_date: '2026-02-24', reviewed_by: 'Sarah Mitchell', reviewed_date: '2026-02-24' },
+  ]);
+  const [newTimeOffRequest, setNewTimeOffRequest] = useState({
+    start_date: '',
+    end_date: '',
+    type: 'vacation' as TimeOffRequest['type'],
+    reason: ''
+  });
+  const [reviewingRequest, setReviewingRequest] = useState<TimeOffRequest | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
   const [newStaff, setNewStaff] = useState({
     first_name: '',
     last_name: '',
@@ -163,6 +194,66 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     { id: '5', name: 'Direct Deposit Authorization', type: 'Banking', uploadDate: '2024-01-15', status: 'signed' },
   ];
 
+  const handleSubmitTimeOffRequest = () => {
+    const newRequest: TimeOffRequest = {
+      id: `tor_${Date.now()}`,
+      staff_id: 'current_user',
+      staff_name: 'Current User',
+      start_date: newTimeOffRequest.start_date,
+      end_date: newTimeOffRequest.end_date,
+      type: newTimeOffRequest.type,
+      reason: newTimeOffRequest.reason,
+      status: 'pending',
+      submitted_date: new Date().toISOString().split('T')[0]
+    };
+    setTimeOffRequests([newRequest, ...timeOffRequests]);
+    setShowTimeOffRequestModal(false);
+    setNewTimeOffRequest({ start_date: '', end_date: '', type: 'vacation', reason: '' });
+  };
+
+  const handleApproveRequest = (requestId: string) => {
+    setTimeOffRequests(timeOffRequests.map(req => 
+      req.id === requestId 
+        ? { ...req, status: 'approved' as const, reviewed_by: 'Sarah Mitchell', reviewed_date: new Date().toISOString().split('T')[0], admin_notes: adminNotes }
+        : req
+    ));
+    setReviewingRequest(null);
+    setAdminNotes('');
+  };
+
+  const handleDenyRequest = (requestId: string) => {
+    setTimeOffRequests(timeOffRequests.map(req => 
+      req.id === requestId 
+        ? { ...req, status: 'denied' as const, reviewed_by: 'Sarah Mitchell', reviewed_date: new Date().toISOString().split('T')[0], admin_notes: adminNotes }
+        : req
+    ));
+    setReviewingRequest(null);
+    setAdminNotes('');
+  };
+
+  const getTimeOffTypeBadge = (type: string) => {
+    const colors: Record<string, string> = {
+      'vacation': 'bg-blue-100 text-blue-800',
+      'sick': 'bg-orange-100 text-orange-800',
+      'personal': 'bg-purple-100 text-purple-800',
+      'bereavement': 'bg-gray-100 text-gray-800',
+      'other': 'bg-slate-100 text-slate-800'
+    };
+    return colors[type] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getTimeOffStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      'pending': 'bg-yellow-100 text-yellow-800',
+      'approved': 'bg-green-100 text-green-800',
+      'denied': 'bg-red-100 text-red-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const pendingRequests = timeOffRequests.filter(r => r.status === 'pending');
+  const processedRequests = timeOffRequests.filter(r => r.status !== 'pending');
+
   const getLocationName = (campusId: string) => {
     const locations: Record<string, string> = {
       'pace': 'Pace',
@@ -182,6 +273,237 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
 
   if (loading) {
     return <div className="text-center py-8">Loading staff...</div>;
+  }
+
+  if (showTimeOffView) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => setShowTimeOffView(false)} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Staff List
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold">Time Off Requests</h2>
+              <p className="text-gray-600">Manage staff time off requests</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowTimeOffRequestModal(true)} className="bg-red-600 hover:bg-red-700">
+            <Calendar className="w-4 h-4 mr-2" />
+            Request Time Off
+          </Button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{pendingRequests.length}</div>
+              <p className="text-xs text-gray-500">Awaiting approval</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Approved</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{timeOffRequests.filter(r => r.status === 'approved').length}</div>
+              <p className="text-xs text-gray-500">This month</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Denied</CardTitle>
+              <XCircle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{timeOffRequests.filter(r => r.status === 'denied').length}</div>
+              <p className="text-xs text-gray-500">This month</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {pendingRequests.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                Pending Requests
+              </CardTitle>
+              <CardDescription>Review and approve or deny time off requests</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {pendingRequests.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg bg-yellow-50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-900 to-red-600 flex items-center justify-center text-white font-bold">
+                        {request.staff_name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <div className="font-medium">{request.staff_name}</div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge className={getTimeOffTypeBadge(request.type)}>
+                        {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+                      </Badge>
+                      <div className="text-sm text-gray-600 max-w-xs truncate">{request.reason}</div>
+                      <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => setReviewingRequest(request)}>
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Review
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Request History</CardTitle>
+            <CardDescription>All processed time off requests</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {processedRequests.map((request) => (
+                <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-900 to-red-600 flex items-center justify-center text-white font-bold">
+                      {request.staff_name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <div className="font-medium">{request.staff_name}</div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className={getTimeOffTypeBadge(request.type)}>
+                      {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+                    </Badge>
+                    <Badge className={getTimeOffStatusBadge(request.status)}>
+                      {request.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                      {request.status === 'denied' && <XCircle className="w-3 h-3 mr-1" />}
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </Badge>
+                    {request.reviewed_by && (
+                      <span className="text-xs text-gray-500">by {request.reviewed_by}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {processedRequests.length === 0 && (
+                <div className="text-center py-8 text-gray-500">No processed requests yet</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={showTimeOffRequestModal} onOpenChange={setShowTimeOffRequestModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request Time Off</DialogTitle>
+              <DialogDescription>Submit a new time off request for approval</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Start Date</Label>
+                  <Input type="date" value={newTimeOffRequest.start_date} onChange={(e) => setNewTimeOffRequest({...newTimeOffRequest, start_date: e.target.value})} />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input type="date" value={newTimeOffRequest.end_date} onChange={(e) => setNewTimeOffRequest({...newTimeOffRequest, end_date: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <Label>Type</Label>
+                <Select value={newTimeOffRequest.type} onValueChange={(value: TimeOffRequest['type']) => setNewTimeOffRequest({...newTimeOffRequest, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vacation">Vacation</SelectItem>
+                    <SelectItem value="sick">Sick Leave</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="bereavement">Bereavement</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Reason</Label>
+                <Textarea placeholder="Please provide a reason for your request..." value={newTimeOffRequest.reason} onChange={(e) => setNewTimeOffRequest({...newTimeOffRequest, reason: e.target.value})} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowTimeOffRequestModal(false)}>Cancel</Button>
+              <Button onClick={handleSubmitTimeOffRequest} className="bg-red-600 hover:bg-red-700" disabled={!newTimeOffRequest.start_date || !newTimeOffRequest.end_date || !newTimeOffRequest.reason}>
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!reviewingRequest} onOpenChange={() => setReviewingRequest(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Review Time Off Request</DialogTitle>
+              <DialogDescription>Approve or deny this time off request</DialogDescription>
+            </DialogHeader>
+            {reviewingRequest && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Employee</span>
+                    <span className="font-medium">{reviewingRequest.staff_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Dates</span>
+                    <span className="font-medium">{new Date(reviewingRequest.start_date).toLocaleDateString()} - {new Date(reviewingRequest.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Type</span>
+                    <Badge className={getTimeOffTypeBadge(reviewingRequest.type)}>{reviewingRequest.type.charAt(0).toUpperCase() + reviewingRequest.type.slice(1)}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Reason</span>
+                    <span className="font-medium text-right max-w-xs">{reviewingRequest.reason}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label>Admin Notes (Optional)</Label>
+                  <Textarea placeholder="Add any notes for the employee..." value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
+                </div>
+              </div>
+            )}
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={() => setReviewingRequest(null)}>Cancel</Button>
+              <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => reviewingRequest && handleDenyRequest(reviewingRequest.id)}>
+                <XCircle className="w-4 h-4 mr-2" />
+                Deny
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => reviewingRequest && handleApproveRequest(reviewingRequest.id)}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
   }
 
   if (showFullProfile && selectedStaff) {
@@ -649,10 +971,19 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           <h2 className="text-2xl font-bold">Staff Management</h2>
           <p className="text-gray-600 mt-1">Manage coaches and staff members</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add Staff Member
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowTimeOffView(true)} className="border-red-600 text-red-600 hover:bg-red-50">
+            <Calendar className="w-4 h-4 mr-2" />
+            Time Off Requests
+            {pendingRequests.length > 0 && (
+              <Badge className="ml-2 bg-yellow-500 text-white">{pendingRequests.length}</Badge>
+            )}
+          </Button>
+          <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add Staff Member
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
