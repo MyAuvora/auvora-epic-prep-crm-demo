@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Calendar, BookOpen, ClipboardCheck, Eye } from 'lucide-react'
+import { Users, Calendar, BookOpen, ClipboardCheck, Eye, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -59,12 +59,27 @@ interface TeacherDashboardProps {
   onClearSearch?: () => void
 }
 
+interface TimeOffRequest {
+  id: string
+  staff_id: string
+  staff_name: string
+  start_date: string
+  end_date: string
+  type: 'vacation' | 'sick' | 'personal' | 'bereavement' | 'other'
+  reason: string
+  status: 'pending' | 'approved' | 'denied'
+  submitted_date: string
+  reviewed_by?: string
+  reviewed_date?: string
+  admin_notes?: string
+}
+
 export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation, onClearSearch: _onClearSearch }: TeacherDashboardProps) {
   // Note: searchNavigation and onClearSearch are passed for consistency but not used in Teacher dashboard
   // Teachers use the student list in their rooms instead of global search navigation
   void _searchNavigation
   void _onClearSearch
-  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'timeoff'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
@@ -75,6 +90,17 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const [isGradeBreakdownOpen, setIsGradeBreakdownOpen] = useState(false)
   const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [showTimeOffRequestModal, setShowTimeOffRequestModal] = useState(false)
+  const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([
+    { id: '1', staff_id: 'current_user', staff_name: 'Current User', start_date: '2026-03-10', end_date: '2026-03-12', type: 'vacation', reason: 'Family vacation', status: 'pending', submitted_date: '2026-02-25' },
+    { id: '2', staff_id: 'current_user', staff_name: 'Current User', start_date: '2026-02-15', end_date: '2026-02-15', type: 'sick', reason: 'Doctor appointment', status: 'approved', submitted_date: '2026-02-10', reviewed_by: 'Sarah Mitchell', reviewed_date: '2026-02-11' },
+  ])
+  const [newTimeOffRequest, setNewTimeOffRequest] = useState({
+    start_date: '',
+    end_date: '',
+    type: 'vacation' as TimeOffRequest['type'],
+    reason: ''
+  })
 
   useEffect(() => {
     fetchTeacherData()
@@ -149,6 +175,43 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const handleViewFullAccount = (studentId: string) => {
     setIsStudentModalOpen(false)
     setAccountView({ type: 'student', id: studentId })
+  }
+
+  const handleSubmitTimeOffRequest = () => {
+    const newRequest: TimeOffRequest = {
+      id: `tor_${Date.now()}`,
+      staff_id: staffId,
+      staff_name: teacherData?.staff ? `${teacherData.staff.first_name} ${teacherData.staff.last_name}` : 'Current User',
+      start_date: newTimeOffRequest.start_date,
+      end_date: newTimeOffRequest.end_date,
+      type: newTimeOffRequest.type,
+      reason: newTimeOffRequest.reason,
+      status: 'pending',
+      submitted_date: new Date().toISOString().split('T')[0]
+    }
+    setTimeOffRequests([newRequest, ...timeOffRequests])
+    setShowTimeOffRequestModal(false)
+    setNewTimeOffRequest({ start_date: '', end_date: '', type: 'vacation', reason: '' })
+  }
+
+  const getTimeOffTypeBadge = (type: TimeOffRequest['type']) => {
+    switch (type) {
+      case 'vacation': return 'bg-blue-100 text-blue-800'
+      case 'sick': return 'bg-orange-100 text-orange-800'
+      case 'personal': return 'bg-purple-100 text-purple-800'
+      case 'bereavement': return 'bg-gray-100 text-gray-800'
+      case 'other': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getTimeOffStatusBadge = (status: TimeOffRequest['status']) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'approved': return 'bg-green-100 text-green-800'
+      case 'denied': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   if (!teacherData) {
@@ -267,6 +330,17 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
               }`}
             >
               Health Records
+            </button>
+            <button
+              onClick={() => setView('timeoff')}
+              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
+                view === 'timeoff'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Clock className="inline-block w-4 h-4 mr-1" />
+              Time Off
             </button>
           </nav>
         </div>
@@ -488,7 +562,171 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
         {view === 'health' && (
           <HealthRecords role="teacher" userId={staffId} />
         )}
+
+        {view === 'timeoff' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">My Time Off Requests</h2>
+                <p className="text-gray-600">Submit and track your time off requests</p>
+              </div>
+              <Button onClick={() => setShowTimeOffRequestModal(true)} className="bg-red-600 hover:bg-red-700">
+                <Calendar className="w-4 h-4 mr-2" />
+                Request Time Off
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Pending</p>
+                      <p className="text-2xl font-bold text-yellow-600">{timeOffRequests.filter(r => r.status === 'pending').length}</p>
+                    </div>
+                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Approved</p>
+                      <p className="text-2xl font-bold text-green-600">{timeOffRequests.filter(r => r.status === 'approved').length}</p>
+                    </div>
+                    <CheckCircle className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Denied</p>
+                      <p className="text-2xl font-bold text-red-600">{timeOffRequests.filter(r => r.status === 'denied').length}</p>
+                    </div>
+                    <XCircle className="h-8 w-8 text-red-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>My Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {timeOffRequests.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No time off requests yet. Click "Request Time Off" to submit your first request.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {timeOffRequests.map((request) => (
+                      <div key={request.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTimeOffTypeBadge(request.type)}`}>
+                                {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
+                              </span>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 ${getTimeOffStatusBadge(request.status)}`}>
+                                {request.status === 'pending' && <AlertCircle className="w-3 h-3" />}
+                                {request.status === 'approved' && <CheckCircle className="w-3 h-3" />}
+                                {request.status === 'denied' && <XCircle className="w-3 h-3" />}
+                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                              </span>
+                            </div>
+                            <p className="font-medium">{request.start_date} - {request.end_date}</p>
+                            <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
+                            <p className="text-xs text-gray-400 mt-2">Submitted: {request.submitted_date}</p>
+                          </div>
+                          {request.reviewed_by && (
+                            <div className="text-right text-sm">
+                              <p className="text-gray-500">Reviewed by</p>
+                              <p className="font-medium">{request.reviewed_by}</p>
+                              <p className="text-xs text-gray-400">{request.reviewed_date}</p>
+                              {request.admin_notes && (
+                                <p className="text-xs text-gray-600 mt-1 italic">"{request.admin_notes}"</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+
+      {/* Time Off Request Modal */}
+      <Dialog open={showTimeOffRequestModal} onOpenChange={setShowTimeOffRequestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Time Off</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={newTimeOffRequest.start_date}
+                  onChange={(e) => setNewTimeOffRequest({ ...newTimeOffRequest, start_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={newTimeOffRequest.end_date}
+                  onChange={(e) => setNewTimeOffRequest({ ...newTimeOffRequest, end_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <select
+                value={newTimeOffRequest.type}
+                onChange={(e) => setNewTimeOffRequest({ ...newTimeOffRequest, type: e.target.value as TimeOffRequest['type'] })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="vacation">Vacation</option>
+                <option value="sick">Sick</option>
+                <option value="personal">Personal</option>
+                <option value="bereavement">Bereavement</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <textarea
+                value={newTimeOffRequest.reason}
+                onChange={(e) => setNewTimeOffRequest({ ...newTimeOffRequest, reason: e.target.value })}
+                rows={3}
+                placeholder="Please provide a brief reason for your time off request..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowTimeOffRequestModal(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitTimeOffRequest} 
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={!newTimeOffRequest.start_date || !newTimeOffRequest.end_date || !newTimeOffRequest.reason}
+              >
+                Submit Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget />
