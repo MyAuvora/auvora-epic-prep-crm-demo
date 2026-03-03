@@ -262,136 +262,147 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8 py-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <nav className="flex space-x-1 sm:space-x-4 lg:space-x-8 py-2 sm:py-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
             <button
               onClick={() => setView('home')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'home'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'home' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Home
             </button>
             <button
               onClick={() => setView('announcements')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'announcements'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'announcements' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Announcements
             </button>
             <button
               onClick={() => setView('billing')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'billing'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'billing' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Billing
             </button>
             <button
               onClick={() => setView('conferences')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'conferences'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'conferences' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Conferences
             </button>
             <button
               onClick={() => setView('events')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'events'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'events' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Events
             </button>
             <button
               onClick={() => setView('documents')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'documents'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'documents' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Documents
             </button>
             <button
               onClick={() => setView('store')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'store'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'store' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Store
             </button>
             <button
               onClick={() => setView('photos')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'photos'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'photos' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Photos
             </button>
             <button
               onClick={() => setView('messages')}
-              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 relative ${
                 view === 'messages'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
+              style={view === 'messages' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
             >
               Messages
               {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                   {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                 </span>
               )}
             </button>
-                      <button
-                        onClick={() => setView('health')}
-                        className={`px-3 py-2 text-sm font-medium rounded-md ${
-                          view === 'health'
-                            ? 'bg-red-600 text-white'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Health
-                      </button>
-                      <button
-                        onClick={() => setView('enrollment')}
-                        className={`px-3 py-2 text-sm font-medium rounded-md ${
-                          view === 'enrollment'
-                            ? 'bg-red-600 text-white'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Enrollment
-                      </button>
-                    </nav>
+            <button
+              onClick={() => setView('health')}
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
+                view === 'health'
+                  ? 'text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              style={view === 'health' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+            >
+              Health
+            </button>
+            <button
+              onClick={() => setView('enrollment')}
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
+                view === 'enrollment'
+                  ? 'text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              style={view === 'enrollment' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+            >
+              Enrollment
+            </button>
+          </nav>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {view === 'home' && (
           <>
-                        <div className="mb-8">
-                          <h2 className="text-3xl font-bold text-gray-900">
-                            Welcome, {parentData.parent.first_name} {parentData.parent.last_name}
-                          </h2>
-                          <p className="text-gray-600 mt-2">Parent Dashboard</p>
-                        </div>
+            <div className="mb-4 sm:mb-8">
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900">
+                Welcome, {parentData.parent.first_name} {parentData.parent.last_name}
+              </h2>
+              <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Parent Dashboard</p>
+            </div>
 
                         <div className="mb-8">
                           <DailyBibleVerse />

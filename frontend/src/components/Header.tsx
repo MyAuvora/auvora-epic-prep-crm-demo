@@ -135,47 +135,48 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
     <>
       {/* Blue to Red Gradient Theme with White Lion Logo */}
       <header className="text-white shadow-lg" style={{ background: 'linear-gradient(to right, #1e3a5f 0%, #dc3545 100%)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            {/* Logo and Title - Responsive */}
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
               <img 
                 src="/epic-lion-white-64.png" 
                 alt="EPIC Prep Academy Logo" 
-                className="h-14 w-auto object-contain"
+                className="h-10 sm:h-14 w-auto object-contain flex-shrink-0"
               />
-              <div>
-                <h1 className="text-2xl font-bold text-white">EPIC Prep Academy</h1>
-                <p className="text-xs italic text-gray-200">"Educating Lions not Sheep"</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-2xl font-bold text-white truncate">Prep Academy</h1>
+                <p className="text-[10px] sm:text-xs italic text-gray-200 hidden sm:block">"Educating Lions not Sheep"</p>
               </div>
             </div>
             
-                        <div className="flex items-center space-x-4">
-                          {/* Global Search Bar */}
-                          {currentRole !== 'parent' && (
-                            <div ref={searchRef} className="relative">
-                              <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                  type="text"
-                                  placeholder="Search students or families..."
-                                  value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value)}
-                                  onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
-                                  className="w-64 pl-10 pr-8 py-2 rounded-lg text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  style={{ backgroundColor: 'rgba(255,255,255,0.95)' }}
-                                />
-                                {searchQuery && (
-                                  <button
-                                    onClick={() => {
-                                      setSearchQuery('')
-                                      setShowSearchResults(false)
-                                    }}
-                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
+            <div className="flex items-center space-x-1 sm:space-x-4">
+              {/* Global Search Bar - Hidden on mobile */}
+              {currentRole !== 'parent' && (
+                <div ref={searchRef} className="relative hidden md:block">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search students or families..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
+                      className="w-48 lg:w-64 pl-10 pr-8 py-2 rounded-lg text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.95)' }}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('')
+                          setShowSearchResults(false)
+                        }}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                   
                               {showSearchResults && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl z-30 max-h-96 overflow-y-auto">
@@ -224,16 +225,16 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                             </div>
                           )}
 
-                          {/* Location Dropdown */}
-                          <div className="relative">
+              {/* Location Dropdown */}
+              <div className="relative">
                 <button
                   onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
+                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors text-sm sm:text-base"
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
                 >
-                  <MapPin className="w-4 h-4" />
-                  <span className="font-medium">{selectedLocation}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="font-medium truncate max-w-[60px] sm:max-w-none">{selectedLocation}</span>
+                  <ChevronDown className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform flex-shrink-0 ${showLocationDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showLocationDropdown && (
@@ -314,13 +315,13 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
               <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center space-x-2 rounded-lg p-2 transition-colors"
+                  className="flex items-center space-x-1 sm:space-x-2 rounded-lg p-1 sm:p-2 transition-colors"
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E63946' }}>
-                    <User className="w-6 h-6 text-white" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E63946' }}>
+                    <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-300" />
+                  <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-300" />
                 </button>
 
                 {showDropdown && (

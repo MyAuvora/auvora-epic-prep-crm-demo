@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar for navigation tabs on mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Modern Patriot Color Scheme for EPIC Prep Academy */
 /* Primary: Royal Blue Gradient (#0A2463 -> #163B9A) */
 /* Accent: Signal Red (#E63946) */

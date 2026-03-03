@@ -270,8 +270,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8 py-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <nav className="flex space-x-1 sm:space-x-4 lg:space-x-8 py-2 sm:py-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
             <button
               onClick={() => {
                 setView('dashboard')
@@ -279,7 +279,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setDrillDownView(null)
                 setAskAuvoraResults(null)
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'dashboard'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -296,7 +296,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setAskAuvoraResults(null)
                 fetchStudents()
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'students'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -313,7 +313,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setAskAuvoraResults(null)
                 fetchFamilies()
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'families-finance'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -322,26 +322,26 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
             >
               Families & Finance
             </button>
-                        <button
-                          onClick={() => {
-                            setView('admissions')
-                            setSubView('pipeline')
-                          }}
-                          className={`px-3 py-2 text-sm font-medium rounded-md ${
-                            view === 'admissions'
-                              ? 'text-white'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                          style={view === 'admissions' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-                        >
-                          Admissions
-                        </button>
+            <button
+              onClick={() => {
+                setView('admissions')
+                setSubView('pipeline')
+              }}
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
+                view === 'admissions'
+                  ? 'text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              style={view === 'admissions' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+            >
+              Admissions
+            </button>
             <button
               onClick={() => {
                 setView('academics')
                 setSubView('standards')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'academics'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -355,7 +355,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setView('student-support')
                 setSubView('iep')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'student-support'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -369,7 +369,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setView('communications')
                 setSubView('messages')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 relative ${
                 view === 'communications'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -378,7 +378,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
             >
               Communications
               {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                   {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                 </span>
               )}
@@ -388,7 +388,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setView('operations')
                 setSubView('events')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'operations'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -402,7 +402,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setView('documents')
                 setSubView('library')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'documents'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -416,7 +416,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 setView('analytics')
                 setSubView('at-risk')
               }}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                 view === 'analytics'
                   ? 'text-white'
                   : 'text-gray-700 hover:bg-gray-100'
