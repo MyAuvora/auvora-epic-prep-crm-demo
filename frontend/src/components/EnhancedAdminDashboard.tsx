@@ -31,6 +31,7 @@ import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { LearningProgressImport } from './LearningProgressImport'
 import { FeeProductManagement } from './FeeProductManagement'
 import { QuickBooksIntegration } from './QuickBooksIntegration'
+import UserManagement from './UserManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -89,7 +90,7 @@ interface EnhancedAdminDashboardProps {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -268,18 +269,19 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
       );
     }
 
-        const navItems = [
-          { id: 'dashboard', label: 'Dashboard', subView: 'main' },
-          { id: 'students', label: 'Students', subView: 'main', action: fetchStudents },
-          { id: 'families-finance', label: 'Families & Finance', subView: 'families', action: fetchFamilies },
-          { id: 'admissions', label: 'Admissions', subView: 'pipeline' },
-          { id: 'academics', label: 'Academics', subView: 'standards' },
-          { id: 'student-support', label: 'Student Support', subView: 'iep' },
-          { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount },
-          { id: 'operations', label: 'Operations', subView: 'events' },
-          { id: 'documents', label: 'Documents & Forms', subView: 'library' },
-          { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
-        ]
+                const navItems = [
+                  { id: 'dashboard', label: 'Dashboard', subView: 'main' },
+                  { id: 'students', label: 'Students', subView: 'main', action: fetchStudents },
+                  { id: 'families-finance', label: 'Families & Finance', subView: 'families', action: fetchFamilies },
+                  { id: 'admissions', label: 'Admissions', subView: 'pipeline' },
+                  { id: 'academics', label: 'Academics', subView: 'standards' },
+                  { id: 'student-support', label: 'Student Support', subView: 'iep' },
+                  { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount },
+                  { id: 'operations', label: 'Operations', subView: 'events' },
+                  { id: 'documents', label: 'Documents & Forms', subView: 'library' },
+                  { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
+                  { id: 'settings', label: 'Settings', subView: 'users' },
+                ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
           setView(item.id as typeof view)
@@ -1053,14 +1055,20 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           </div>
         )}
 
-        {view === 'analytics' && (
-          <div className="space-y-6">
-            <AdvancedAnalyticsDashboard />
-          </div>
-        )}
-      </div>
+              {view === 'analytics' && (
+                <div className="space-y-6">
+                  <AdvancedAnalyticsDashboard />
+                </div>
+              )}
 
-      {/* Student Details Modal */}
+              {view === 'settings' && (
+                <div className="space-y-6">
+                  <UserManagement />
+                </div>
+              )}
+            </div>
+
+            {/* Student Details Modal */}
       {selectedStudentId && (
         <StudentDetailsModal
           studentId={selectedStudentId}
