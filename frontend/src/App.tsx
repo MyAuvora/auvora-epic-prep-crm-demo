@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useUser, SignedIn, SignedOut } from '@clerk/clerk-react'
+import { useUser, useAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
 import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
 import { TeacherDashboard } from './components/TeacherDashboard'
 import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
@@ -116,6 +116,7 @@ function AuthenticatedApp() {
 }
 
 function App() {
+  const { isSignedIn } = useAuth()
   const [hashPath, setHashPath] = useState(window.location.hash)
 
   useEffect(() => {
@@ -124,8 +125,15 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  // Handle hash-based routing for sign-in/sign-up (use startsWith to support multi-step flows)
-  if (hashPath.startsWith('#/sign-up')) {
+  // If signed-in user navigates to sign-up, redirect them to dashboard
+  useEffect(() => {
+    if (isSignedIn && hashPath.startsWith('#/sign-up')) {
+      window.location.hash = ''
+    }
+  }, [isSignedIn, hashPath])
+
+  // Handle hash-based routing for sign-up (only for unauthenticated users)
+  if (hashPath.startsWith('#/sign-up') && !isSignedIn) {
     return <SignUpPage />
   }
 
