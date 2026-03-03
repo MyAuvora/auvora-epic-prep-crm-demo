@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import { User, ChevronDown, UserCircle, Settings, HelpCircle, Shield, LogOut, MapPin, Search, Users, Home, X } from 'lucide-react'
 import { ProfileInformation } from './ProfileInformation'
 import { AccountSettings } from './AccountSettings'
@@ -21,6 +22,8 @@ interface HeaderProps {
 }
 
 export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProps) {
+  const { user } = useUser()
+  const { signOut } = useClerk()
   const [showDropdown, setShowDropdown] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState('Pace')
@@ -33,6 +36,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // Get user display name and email from Clerk
+  const userName = user?.fullName || user?.firstName || 'User'
+  const userEmail = user?.primaryEmailAddress?.emailAddress || ''
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -105,10 +112,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
     setShowSearchResults(false)
   }
 
-  const handleSignOut= () => {
-    setShowDropdown(false)
-    alert('Sign out functionality - In production, this would clear your session and redirect to login.')
-  }
+    const handleSignOut = () => {
+      setShowDropdown(false)
+      signOut()
+    }
 
   const handleMenuItemClick = (action: string) => {
     setShowDropdown(false)
@@ -331,14 +338,17 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       onClick={() => setShowDropdown(false)}
                     />
                     <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20 py-2">
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">
-                          {currentRole === 'admin' ? 'Admin User' : currentRole === 'teacher' ? 'Coach Pam Riffle' : 'Parent User'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {currentRole === 'admin' ? 'admin@epicprep.com' : currentRole === 'teacher' ? 'priffle@epicprep.com' : 'parent@epicprep.com'}
-                        </p>
-                      </div>
+                                            <div className="px-4 py-3 border-b border-gray-200">
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {userName}
+                                              </p>
+                                              <p className="text-xs text-gray-500">
+                                                {userEmail}
+                                              </p>
+                                              <p className="text-xs text-blue-600 mt-1 capitalize">
+                                                {currentRole} Account
+                                              </p>
+                                            </div>
 
                       <button
                         onClick={() => handleMenuItemClick('profile')}

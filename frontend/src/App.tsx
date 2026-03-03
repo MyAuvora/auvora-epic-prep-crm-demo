@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useUser, SignedIn, SignedOut } from '@clerk/clerk-react'
 import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
 import { TeacherDashboard } from './components/TeacherDashboard'
 import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
@@ -6,15 +7,35 @@ import { Header } from './components/Header'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TermsOfService } from './components/TermsOfService'
 import { PrivacyPolicy } from './components/PrivacyPolicy'
+import { SignInPage } from './components/SignInPage'
+import { SignUpPage } from './components/SignUpPage'
 
 type Role = 'admin' | 'teacher' | 'parent'
 type Page = 'dashboard' | 'terms' | 'privacy'
 
-function App() {
+function AuthenticatedApp() {
+  const { user } = useUser()
   const [currentRole, setCurrentRole] = useState<Role>('admin')
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+
+  // Get role from Clerk user metadata or default to admin for demo
+  useEffect(() => {
+    if (user) {
+      const userRole = user.publicMetadata?.role as Role
+      if (userRole && ['admin', 'teacher', 'parent'].includes(userRole)) {
+        setCurrentRole(userRole)
+        if (userRole === 'admin') {
+          setSelectedUserId('staff_1')
+        } else if (userRole === 'teacher') {
+          setSelectedUserId('staff_4')
+        } else {
+          setSelectedUserId('parent_1')
+        }
+      }
+    }
+  }, [user])
 
   const handleRoleChange = (role: Role) => {
     setCurrentRole(role)
@@ -91,6 +112,32 @@ function App() {
         </footer>
       </div>
     </ErrorBoundary>
+  )
+}
+
+function App() {
+  const [hashPath, setHashPath] = useState(window.location.hash)
+
+  useEffect(() => {
+    const handleHashChange = () => setHashPath(window.location.hash)
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  // Handle hash-based routing for sign-in/sign-up
+  if (hashPath === '#/sign-up') {
+    return <SignUpPage />
+  }
+
+  return (
+    <>
+      <SignedOut>
+        <SignInPage />
+      </SignedOut>
+      <SignedIn>
+        <AuthenticatedApp />
+      </SignedIn>
+    </>
   )
 }
 
