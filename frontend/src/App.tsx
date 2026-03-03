@@ -124,8 +124,8 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  // Handle hash-based routing for sign-in/sign-up
-  if (hashPath === '#/sign-up') {
+  // Handle hash-based routing for sign-in/sign-up (use startsWith to support multi-step flows)
+  if (hashPath.startsWith('#/sign-up')) {
     return <SignUpPage />
   }
 
