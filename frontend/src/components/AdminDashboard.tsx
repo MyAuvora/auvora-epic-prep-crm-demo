@@ -146,7 +146,7 @@ export function AdminDashboard() {
               onClick={() => setView('dashboard')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'dashboard'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -156,7 +156,7 @@ export function AdminDashboard() {
               onClick={() => setView('students')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'students'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -166,7 +166,7 @@ export function AdminDashboard() {
               onClick={() => setView('families')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'families'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -176,7 +176,7 @@ export function AdminDashboard() {
               onClick={() => setView('ask-auvora')}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 view === 'ask-auvora'
-                  ? 'bg-amber-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -195,7 +195,7 @@ export function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                  <Users className="h-4 w-4 text-amber-600" />
+                  <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.total_students}</div>
@@ -208,7 +208,7 @@ export function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Families</CardTitle>
-                  <Users className="h-4 w-4 text-amber-600" />
+                  <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.total_families}</div>
@@ -219,7 +219,7 @@ export function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
-                  <DollarSign className="h-4 w-4 text-amber-600" />
+                  <DollarSign className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">${dashboardData.billing_summary.total_balance.toFixed(2)}</div>
@@ -232,7 +232,7 @@ export function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
-                  <Calendar className="h-4 w-4 text-amber-600" />
+                  <Calendar className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.attendance_today.present}</div>
@@ -448,7 +448,7 @@ export function AdminDashboard() {
                     onKeyPress={(e) => e.key === 'Enter' && handleAskAuvora()}
                     className="flex-1"
                   />
-                  <Button onClick={handleAskAuvora} disabled={loading} className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={handleAskAuvora} disabled={loading} className="bg-red-600 hover:bg-red-700">
                     <Search className="h-4 w-4 mr-2" />
                     Search
                   </Button>

@@ -1,10 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Hide scrollbar for navigation tabs on mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Modern Patriot Color Scheme for EPIC Prep Academy */
+/* Primary: Royal Blue Gradient (#0A2463 -> #163B9A) */
+/* Accent: Signal Red (#E63946) */
+/* Background: Ice White (#F8FAFF) */
+
 @layer base {
   :root {
-    --radius: 0.5rem
-  ;
+    --radius: 0.5rem;
+    --epic-primary: #0A2463;
+    --epic-primary-light: #163B9A;
+    --epic-accent: #E63946;
+    --epic-accent-hover: #D62839;
+    --epic-background: #F8FAFF;
+    --epic-link: #2563EB;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -12,16 +32,51 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
-  .dark {
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%
   }
+}
+
+/* Override Tailwind red-600 with Signal Red for navigation and buttons */
+@layer utilities {
+  .bg-red-600 {
+    background-color: #E63946 !important;
+  }
+  .bg-red-600:hover {
+    background-color: #D62839 !important;
+  }
+  .hover\:bg-red-700:hover {
+    background-color: #D62839 !important;
+  }
+  .text-red-600 {
+    color: #E63946 !important;
+  }
+  .border-red-600 {
+    border-color: #E63946 !important;
+  }
+  .ring-red-600 {
+    --tw-ring-color: #E63946 !important;
+  }
+  
+  /* Update page background to Ice White */
+  .bg-gray-50 {
+    background-color: #F8FAFF !important;
+  }
+  
+  /* Update link colors to Sky Blue */
+  .text-blue-600 {
+    color: #2563EB !important;
+  }
+}
+
+/* Dark mode support */
+.dark {
+  --sidebar-background: 240 5.9% 10%;
+  --sidebar-foreground: 240 4.8% 95.9%;
+  --sidebar-primary: 224.3 76.3% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 240 4.8% 95.9%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 217.2 91.2% 59.8%
 }
 
