@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -100,9 +100,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Handle search navigation from header
   useEffect(() => {
@@ -267,167 +268,102 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
       );
     }
 
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-          <nav className="flex space-x-1 sm:space-x-4 lg:space-x-8 py-2 sm:py-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <button
-              onClick={() => {
-                setView('dashboard')
-                setSubView('main')
-                setDrillDownView(null)
-                setAskAuvoraResults(null)
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'dashboard'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'dashboard' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => {
-                setView('students')
-                setSubView('main')
-                setDrillDownView(null)
-                setAskAuvoraResults(null)
-                fetchStudents()
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'students'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'students' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Students
-            </button>
-            <button
-              onClick={() => {
-                setView('families-finance')
-                setSubView('families')
-                setDrillDownView(null)
-                setAskAuvoraResults(null)
-                fetchFamilies()
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'families-finance'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'families-finance' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Families & Finance
-            </button>
-            <button
-              onClick={() => {
-                setView('admissions')
-                setSubView('pipeline')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'admissions'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'admissions' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Admissions
-            </button>
-            <button
-              onClick={() => {
-                setView('academics')
-                setSubView('standards')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'academics'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'academics' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Academics
-            </button>
-            <button
-              onClick={() => {
-                setView('student-support')
-                setSubView('iep')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'student-support'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'student-support' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Student Support
-            </button>
-            <button
-              onClick={() => {
-                setView('communications')
-                setSubView('messages')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 relative ${
-                view === 'communications'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'communications' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Communications
-              {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
-                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => {
-                setView('operations')
-                setSubView('events')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'operations'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'operations' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Operations
-            </button>
-            <button
-              onClick={() => {
-                setView('documents')
-                setSubView('library')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'documents'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'documents' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Documents & Forms
-            </button>
-            <button
-              onClick={() => {
-                setView('analytics')
-                setSubView('at-risk')
-              }}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'analytics'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'analytics' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Analytics
-            </button>
-          </nav>
-        </div>
-      </div>
+        const navItems = [
+          { id: 'dashboard', label: 'Dashboard', subView: 'main' },
+          { id: 'students', label: 'Students', subView: 'main', action: fetchStudents },
+          { id: 'families-finance', label: 'Families & Finance', subView: 'families', action: fetchFamilies },
+          { id: 'admissions', label: 'Admissions', subView: 'pipeline' },
+          { id: 'academics', label: 'Academics', subView: 'standards' },
+          { id: 'student-support', label: 'Student Support', subView: 'iep' },
+          { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount },
+          { id: 'operations', label: 'Operations', subView: 'events' },
+          { id: 'documents', label: 'Documents & Forms', subView: 'library' },
+          { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
+        ]
+
+        const handleNavClick = (item: typeof navItems[0]) => {
+          setView(item.id as typeof view)
+          setSubView(item.subView)
+          setDrillDownView(null)
+          setAskAuvoraResults(null)
+          if (item.action) item.action()
+          setMobileMenuOpen(false)
+        }
+
+        const currentNavLabel = navItems.find(item => item.id === view)?.label || 'Dashboard'
+
+        return (
+          <div className="min-h-screen bg-gray-50">
+            <div className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+              {/* Mobile hamburger menu */}
+              <div className="md:hidden py-2">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-white"
+                  style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Menu className="h-5 w-5" />
+                    {currentNavLabel}
+                  </span>
+                  {unreadMessageCount > 0 && (
+                    <span className="bg-white text-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                    </span>
+                  )}
+                </button>
+            
+                {/* Mobile dropdown menu */}
+                {mobileMenuOpen && (
+                  <div className="absolute left-0 right-0 mt-1 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    {navItems.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavClick(item)}
+                        className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+                          view === item.id
+                            ? 'text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                      >
+                        {item.label}
+                        {item.badge && item.badge > 0 && (
+                          <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                            {item.badge > 9 ? '9+' : item.badge}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop navigation */}
+              <nav className="hidden md:flex space-x-4 lg:space-x-8 py-4">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item)}
+                    className={`px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap relative ${
+                      view === item.id
+                        ? 'text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                  >
+                    {item.label}
+                    {item.badge && item.badge > 0 && (
+                      <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {view === 'dashboard' && isLoading && (

@@ -198,10 +198,10 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
     return formattedContent;
   };
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {isOpen ? (
-        <Card className="w-[420px] h-[600px] shadow-2xl border-2 flex flex-col" style={{ borderColor: '#1e3a5f' }}>
+    return (
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+        {isOpen ? (
+          <Card className="w-[calc(100vw-2rem)] sm:w-[420px] h-[calc(100vh-6rem)] sm:h-[600px] max-h-[600px] shadow-2xl border-2 flex flex-col" style={{ borderColor: '#1e3a5f' }}>
           <CardHeader className="text-white py-3 px-4 flex-shrink-0" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
