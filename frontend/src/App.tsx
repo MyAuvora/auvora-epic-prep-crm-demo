@@ -133,7 +133,8 @@ function App() {
   }, [isSignedIn, hashPath])
 
   // Handle hash-based routing for sign-up (only for unauthenticated users)
-  if (hashPath.startsWith('#/sign-up') && !isSignedIn) {
+  // Use isSignedIn === false to avoid flashing sign-up page during Clerk loading
+  if (hashPath.startsWith('#/sign-up') && isSignedIn === false) {
     return <SignUpPage />
   }
 
