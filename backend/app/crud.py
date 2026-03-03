@@ -238,8 +238,6 @@ def create_attendance_record(db: Session, campus_id: str, student_id: str,
         notes=notes
     )
     db.add(record)
-    db.commit()
-    db.refresh(record)
     
     # Update student attendance counts
     student = get_student(db, student_id)
@@ -250,8 +248,10 @@ def create_attendance_record(db: Session, campus_id: str, student_id: str,
             student.attendance_absent_count += 1
         elif status == "Tardy":
             student.attendance_tardy_count += 1
-        db.commit()
     
+    # Single commit for both record and student count update (atomic transaction)
+    db.commit()
+    db.refresh(record)
     return record
 
 
@@ -330,8 +330,6 @@ def create_billing_record(db: Session, campus_id: str, family_id: str,
         period_month=period_month
     )
     db.add(record)
-    db.commit()
-    db.refresh(record)
     
     # Update family balance
     family = get_family(db, family_id)
@@ -350,9 +348,10 @@ def create_billing_record(db: Session, campus_id: str, family_id: str,
             family.billing_status = "Yellow"
         else:
             family.billing_status = "Red"
-        
-        db.commit()
     
+    # Single commit for both record and family balance update (atomic transaction)
+    db.commit()
+    db.refresh(record)
     return record
 
 
@@ -600,12 +599,13 @@ def create_invoice(db: Session, campus_id: str, family_id: str,
     tax = 0  # No tax for education
     total = subtotal + tax
     
-    # Generate invoice number
-    invoice_count = db.query(models.Invoice).count()
-    invoice_number = f"INV-{date.today().year}-{str(invoice_count + 1).zfill(5)}"
+    # Generate invoice number using UUID to avoid race conditions
+    # Format: INV-YEAR-UUID8 (e.g., INV-2026-a1b2c3d4)
+    invoice_number = f"INV-{date.today().year}-{uuid.uuid4().hex[:8].upper()}"
     
+    invoice_id = generate_id("inv_")
     invoice = models.Invoice(
-        invoice_id=generate_id("inv_"),
+        invoice_id=invoice_id,
         campus_id=campus_id,
         family_id=family_id,
         invoice_number=invoice_number,
@@ -619,14 +619,12 @@ def create_invoice(db: Session, campus_id: str, family_id: str,
         balance=total
     )
     db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
     
-    # Create line items
+    # Create line items in the same transaction
     for item in line_items:
         line_item = models.InvoiceLineItem(
             line_item_id=generate_id("line_"),
-            invoice_id=invoice.invoice_id,
+            invoice_id=invoice_id,
             description=item.get('description', ''),
             category=item.get('category', 'Other'),
             student_id=item.get('student_id'),
@@ -637,7 +635,9 @@ def create_invoice(db: Session, campus_id: str, family_id: str,
         )
         db.add(line_item)
     
+    # Single commit for invoice and all line items (atomic transaction)
     db.commit()
+    db.refresh(invoice)
     return invoice
 
 
