@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from enum import Enum
 
-router = APIRouter(prefix="/api/users", tags=["User Management"])
+router = APIRouter(prefix="/api/clerk-users", tags=["User Management"])
 
 # Clerk API configuration
 CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")

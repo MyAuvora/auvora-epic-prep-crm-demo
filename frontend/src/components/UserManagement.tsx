@@ -40,7 +40,7 @@ export default function UserManagement() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`${API_BASE_URL}/api/users/`)
+      const response = await fetch(`${API_BASE_URL}/api/clerk-users/`)
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.detail || 'Failed to fetch users')
@@ -59,7 +59,7 @@ export default function UserManagement() {
     try {
       setInviting(true)
       setError(null)
-      const response = await fetch(`${API_BASE_URL}/api/users/invite`, {
+      const response = await fetch(`${API_BASE_URL}/api/clerk-users/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inviteForm)
@@ -82,7 +82,7 @@ export default function UserManagement() {
     try {
       setActionLoading(userId)
       setError(null)
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
+      const response = await fetch(`${API_BASE_URL}/api/clerk-users/${userId}/role`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole })
@@ -107,8 +107,8 @@ export default function UserManagement() {
     try {
       setActionLoading(userId)
       setError(null)
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-        method: 'DELETE'
+            const response = await fetch(`${API_BASE_URL}/api/clerk-users/${userId}`, {
+              method: 'DELETE'
       })
       if (!response.ok) {
         const errorData = await response.json()
