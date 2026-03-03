@@ -23,7 +23,7 @@ from .clerk_users import router as clerk_users_router
 # Import database components
 from .database import engine, get_db, init_db, SessionLocal
 from . import models, crud
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as DBSession
 
 app = FastAPI()
 

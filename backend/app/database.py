@@ -14,8 +14,9 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "/data/app.db")
 if os.path.exists("/data"):
     DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 else:
-    # Local development - use local file
-    DATABASE_URL = "sqlite:///./app.db"
+    # Local development - use local file, respecting DATABASE_PATH env var
+    local_path = os.getenv("DATABASE_PATH", "./app.db")
+    DATABASE_URL = f"sqlite:///{local_path}"
 
 engine = create_engine(
     DATABASE_URL,
