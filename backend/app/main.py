@@ -17,6 +17,9 @@ load_dotenv()
 # Import AI agent
 from .ai_agent import chat_with_auvora
 
+# Import Clerk user management router
+from .clerk_users import router as clerk_users_router
+
 app = FastAPI()
 
 # Disable CORS. Do not remove this for full-stack development.
@@ -27,6 +30,9 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+# Include Clerk user management router
+app.include_router(clerk_users_router)
 
 class Session(str, Enum):
     MORNING = "Morning"
