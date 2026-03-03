@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Body
+from fastapi import FastAPI, HTTPException, Query, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
@@ -20,7 +20,18 @@ from .ai_agent import chat_with_auvora
 # Import Clerk user management router
 from .clerk_users import router as clerk_users_router
 
+# Import database components
+from .database import engine, get_db, init_db, SessionLocal
+from . import models, crud
+from sqlalchemy.orm import Session
+
 app = FastAPI()
+
+@app.on_event("startup")
+def startup_db():
+    """Initialize database on startup"""
+    init_db()
+    print("Database initialized successfully")
 
 # Disable CORS. Do not remove this for full-stack development.
 app.add_middleware(
