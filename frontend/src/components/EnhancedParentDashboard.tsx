@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X, CreditCard, CheckCircle } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X, CreditCard, CheckCircle, Menu } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -113,8 +113,9 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
 
   // Enrollment fee from admin settings (fetched from API)
   const [enrollmentFee, setEnrollmentFee] = useState<number>(500) // Default fallback
-  const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+    const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     fetchParentData()
@@ -259,140 +260,99 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     return <div className="p-8">Loading...</div>
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-          <nav className="flex space-x-1 sm:space-x-4 lg:space-x-8 py-2 sm:py-4 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <button
-              onClick={() => setView('home')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'home'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'home' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setView('announcements')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'announcements'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'announcements' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Announcements
-            </button>
-            <button
-              onClick={() => setView('billing')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'billing'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'billing' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Billing
-            </button>
-            <button
-              onClick={() => setView('conferences')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'conferences'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'conferences' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Conferences
-            </button>
-            <button
-              onClick={() => setView('events')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'events'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'events' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Events
-            </button>
-            <button
-              onClick={() => setView('documents')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'documents'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'documents' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => setView('store')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'store'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'store' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Store
-            </button>
-            <button
-              onClick={() => setView('photos')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'photos'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'photos' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Photos
-            </button>
-            <button
-              onClick={() => setView('messages')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 relative ${
-                view === 'messages'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'messages' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Messages
-              {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
-                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+    const parentNavItems = [
+      { id: 'home', label: 'Home' },
+      { id: 'announcements', label: 'Announcements' },
+      { id: 'billing', label: 'Billing' },
+      { id: 'conferences', label: 'Conferences' },
+      { id: 'events', label: 'Events' },
+      { id: 'documents', label: 'Documents' },
+      { id: 'store', label: 'Store' },
+      { id: 'photos', label: 'Photos' },
+      { id: 'messages', label: 'Messages', badge: unreadMessageCount },
+      { id: 'health', label: 'Health' },
+      { id: 'enrollment', label: 'Enrollment' },
+    ]
+
+    const handleParentNavClick = (itemId: string) => {
+      setView(itemId as typeof view)
+      setMobileMenuOpen(false)
+    }
+
+    const currentParentNavLabel = parentNavItems.find(item => item.id === view)?.label || 'Home'
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+            {/* Mobile hamburger menu */}
+            <div className="md:hidden py-2">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-white"
+                style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
+              >
+                <span className="flex items-center gap-2">
+                  <Menu className="h-5 w-5" />
+                  {currentParentNavLabel}
                 </span>
+                {unreadMessageCount > 0 && (
+                  <span className="bg-white text-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </button>
+            
+              {/* Mobile dropdown menu */}
+              {mobileMenuOpen && (
+                <div className="absolute left-0 right-0 mt-1 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  {parentNavItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleParentNavClick(item.id)}
+                      className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+                        view === item.id
+                          ? 'text-white'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                    >
+                      {item.label}
+                      {item.badge && item.badge > 0 && (
+                        <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                          {item.badge > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
-            <button
-              onClick={() => setView('health')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'health'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'health' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Health
-            </button>
-            <button
-              onClick={() => setView('enrollment')}
-              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
-                view === 'enrollment'
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={view === 'enrollment' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-            >
-              Enrollment
-            </button>
-          </nav>
+            </div>
+
+            {/* Desktop navigation */}
+            <nav className="hidden md:flex space-x-4 lg:space-x-8 py-4">
+              {parentNavItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleParentNavClick(item.id)}
+                  className={`px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap relative ${
+                    view === item.id
+                      ? 'text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                >
+                  {item.label}
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {view === 'home' && (
