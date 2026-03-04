@@ -29,9 +29,12 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_db():
-    """Initialize database on startup"""
+    """Initialize database on startup and seed with demo data if empty"""
     init_db()
     print("Database initialized successfully")
+    # Seed database with demo data if empty
+    from .db_seed import seed_database
+    seed_database()
 
 # Disable CORS. Do not remove this for full-stack development.
 app.add_middleware(
