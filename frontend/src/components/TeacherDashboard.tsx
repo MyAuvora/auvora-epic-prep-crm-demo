@@ -257,7 +257,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           {/* Mobile hamburger menu */}
-          <div className="md:hidden py-2">
+          <div className="md:hidden py-2 relative">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-white"
