@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Calendar, BookOpen, ClipboardCheck, Eye, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Users, Calendar, BookOpen, ClipboardCheck, Eye, CheckCircle, XCircle, AlertCircle, Menu } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -90,6 +90,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const [isGradeBreakdownOpen, setIsGradeBreakdownOpen] = useState(false)
   const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTimeOffRequestModal, setShowTimeOffRequestModal] = useState(false)
   const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([
     { id: '1', staff_id: 'current_user', staff_name: 'Current User', start_date: '2026-03-10', end_date: '2026-03-12', type: 'vacation', reason: 'Family vacation', status: 'pending', submitted_date: '2026-02-25' },
@@ -231,122 +232,100 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
     );
   }
 
+  const teacherNavItems = [
+    { id: 'rooms', label: 'My Rooms' },
+    { id: 'gradebook', label: 'Gradebook' },
+    { id: 'announcements', label: 'Announcements' },
+    { id: 'events', label: 'Events' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'photos', label: 'Photos' },
+    { id: 'messages', label: 'Messages', badge: unreadMessageCount },
+    { id: 'incidents', label: 'Incidents' },
+    { id: 'health', label: 'Health Records' },
+    { id: 'timeoff', label: 'Time Off' },
+  ]
+
+  const handleTeacherNavClick = (itemId: string) => {
+    setView(itemId as typeof view)
+    setMobileMenuOpen(false)
+  }
+
+  const currentTeacherNavLabel = teacherNavItems.find(item => item.id === view)?.label || 'My Rooms'
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8 py-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          {/* Mobile hamburger menu */}
+          <div className="md:hidden py-2">
             <button
-              onClick={() => setView('rooms')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'rooms'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-white"
+              style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
             >
-              My Rooms
-            </button>
-            <button
-              onClick={() => setView('gradebook')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'gradebook'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Gradebook
-            </button>
-            <button
-              onClick={() => setView('announcements')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'announcements'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Announcements
-            </button>
-            <button
-              onClick={() => setView('events')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'events'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Events
-            </button>
-            <button
-              onClick={() => setView('documents')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'documents'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => setView('photos')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'photos'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Photos
-            </button>
-            <button
-              onClick={() => setView('messages')}
-              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
-                view === 'messages'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Messages
+              <span className="flex items-center gap-2">
+                <Menu className="h-5 w-5" />
+                {currentTeacherNavLabel}
+              </span>
               {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="bg-white text-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
                   {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setView('incidents')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'incidents'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Incidents
-            </button>
-            <button
-              onClick={() => setView('health')}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                view === 'health'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Health Records
-            </button>
-            <button
-              onClick={() => setView('timeoff')}
-              className={`px-3 py-2 text-sm font-medium rounded-md relative ${
-                view === 'timeoff'
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <Clock className="inline-block w-4 h-4 mr-1" />
-              Time Off
-            </button>
+          
+            {/* Mobile dropdown menu */}
+            {mobileMenuOpen && (
+              <div className="absolute left-0 right-0 mt-1 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                {teacherNavItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTeacherNavClick(item.id)}
+                    className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+                      view === item.id
+                        ? 'text-white'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                  >
+                    {item.label}
+                    {item.badge && item.badge > 0 && (
+                      <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop navigation */}
+          <nav className="hidden md:flex space-x-4 lg:space-x-8 py-4">
+            {teacherNavItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleTeacherNavClick(item.id)}
+                className={`px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap relative ${
+                  view === item.id
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+              >
+                {item.label}
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </nav>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {view === 'rooms' && (
           <>
                         <div className="mb-8">
