@@ -289,7 +289,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
                     style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                   >
                     {item.label}
-                    {item.badge && item.badge > 0 && (
+                    {!!item.badge && item.badge > 0 && (
                       <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                         {item.badge > 9 ? '9+' : item.badge}
                       </span>
@@ -314,7 +314,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
                 style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
               >
                 {item.label}
-                {item.badge && item.badge > 0 && (
+                {!!item.badge && item.badge > 0 && (
                   <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                     {item.badge > 9 ? '9+' : item.badge}
                   </span>
