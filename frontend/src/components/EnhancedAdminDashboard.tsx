@@ -12,7 +12,6 @@ import { MessagingPlatform } from './MessagingPlatform'
 import { IncidentReporting } from './IncidentReporting'
 import { HealthRecords } from './HealthRecords'
 import { AdminRevenueReports } from './AdminRevenueReports'
-import { CampusSwitcher } from './CampusSwitcher'
 import { AddStudentModal } from './AddStudentModal'
 import FinancialManagement from './FinancialManagement'
 import AdmissionsPipeline from './AdmissionsPipeline'
@@ -87,9 +86,10 @@ interface Family {
 interface EnhancedAdminDashboardProps {
   searchNavigation?: { type: 'student' | 'family'; id: string } | null
   onClearSearch?: () => void
+  selectedCampusId?: string | null
 }
 
-export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: EnhancedAdminDashboardProps) {
+export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
@@ -99,7 +99,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
     const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
     const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
-  const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)
@@ -125,11 +124,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
     fetchUnreadMessages()
   }, [view, selectedCampusId])
 
-  useEffect(() => {
-    if (view === 'students') {
-      fetchStudents()
-    }
-  }, [selectedCampusId])
 
   const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
     for (let i = 0; i < retries; i++) {
@@ -398,7 +392,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
                         <div className="flex justify-between items-center">
                           <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
-                          <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
                         </div>
 
                         <DailyBibleVerse />
@@ -553,10 +546,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <CampusSwitcher 
-                  selectedCampusId={selectedCampusId}
-                  onCampusChange={setSelectedCampusId}
-                />
                 <Button
                   onClick={() => setShowAddStudentModal(true)}
                   className="bg-red-600 hover:bg-red-700"
@@ -712,7 +701,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Families & Finance</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
                         <Tabs value={subView} onValueChange={setSubView} className="w-full">
                           <TabsList className="grid w-full grid-cols-5">
@@ -901,7 +889,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
                       <h2 className="text-3xl font-bold text-gray-900">Admissions</h2>
-                      <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
                     </div>
                     <Tabs value={subView} onValueChange={setSubView} className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
@@ -922,7 +909,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Academics</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
@@ -984,7 +970,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Communications</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
@@ -1009,7 +994,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Operations</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
@@ -1038,7 +1022,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900">Documents & Forms</h2>
-              <CampusSwitcher onCampusChange={setSelectedCampusId} selectedCampusId={selectedCampusId} />
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
