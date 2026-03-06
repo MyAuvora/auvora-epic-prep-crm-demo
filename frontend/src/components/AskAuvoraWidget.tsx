@@ -57,7 +57,17 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const exampleQueries = [
+  const exampleQueries = userRole === 'parent' ? [
+    'What events are coming up?',
+    'How do I message a teacher?',
+    'How do I re-enroll my child?',
+    'What features are available to me?',
+  ] : userRole === 'teacher' ? [
+    'How many students do we have?',
+    'Show me at-risk students',
+    'What events are coming up?',
+    'How do I take attendance?',
+  ] : [
     'How many students do we have?',
     'Show me at-risk students',
     'What is our scholarship summary?',

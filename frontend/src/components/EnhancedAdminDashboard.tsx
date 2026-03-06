@@ -276,7 +276,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                   { id: 'admissions', label: 'Admissions', subView: 'pipeline' },
                   { id: 'academics', label: 'Academics', subView: 'standards' },
                   { id: 'student-support', label: 'Student Support', subView: 'iep' },
-                  { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount },
+                  { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined },
                   { id: 'operations', label: 'Operations', subView: 'events' },
                   { id: 'documents', label: 'Documents & Forms', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
@@ -331,11 +331,11 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                         style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                       >
                         {item.label}
-                        {item.badge && item.badge > 0 && (
-                          <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
-                            {item.badge > 9 ? '9+' : item.badge}
-                          </span>
-                        )}
+                            {item.badge != null && item.badge > 0 && (
+                              <span className="text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                                {item.badge > 9 ? '9+' : item.badge}
+                              </span>
+                            )}
                       </button>
                     ))}
                   </div>
@@ -343,12 +343,12 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
               </div>
 
               {/* Desktop navigation */}
-              <nav className="hidden md:flex space-x-4 lg:space-x-8 py-4">
+              <nav className="hidden md:flex space-x-2 lg:space-x-4 xl:space-x-6 py-4 overflow-x-auto scrollbar-hide">
                 {navItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item)}
-                    className={`px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap relative ${
+                    className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative ${
                       view === item.id
                         ? 'text-white'
                         : 'text-gray-700 hover:bg-gray-100'
@@ -356,7 +356,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
                     style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                   >
                     {item.label}
-                    {item.badge && item.badge > 0 && (
+                    {item.badge != null && item.badge > 0 && (
                       <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
                         {item.badge > 9 ? '9+' : item.badge}
                       </span>
@@ -1088,7 +1088,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
       />
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget />
+      <AskAuvoraWidget userRole="admin" />
     </div>
   )
 }
