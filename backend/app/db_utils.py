@@ -44,6 +44,24 @@ def _enum_val(val):
     return val.value if hasattr(val, 'value') else val
 
 
+def _upsert(db, model_class, business_key_field: str, business_key_value, field_dict: dict):
+    """
+    Query-first upsert: find existing row by business key, update it if found,
+    otherwise insert a new row. This avoids the merge() issue where id=None
+    always causes an INSERT even when the business key already exists.
+    """
+    existing = db.query(model_class).filter(
+        getattr(model_class, business_key_field) == business_key_value
+    ).first()
+    if existing:
+        for k, v in field_dict.items():
+            if k != business_key_field:
+                setattr(existing, k, v)
+    else:
+        obj = model_class(**field_dict)
+        db.add(obj)
+
+
 # ============================================================================
 # LOAD FROM DATABASE - converts SQLAlchemy rows to Pydantic-compatible dicts
 # ============================================================================
@@ -363,7 +381,7 @@ def save_student(pydantic_student):
     """Persist a student to the database."""
     db = SessionLocal()
     try:
-        obj = models.Student(
+        fields = dict(
             student_id=pydantic_student.student_id,
             campus_id=pydantic_student.campus_id,
             first_name=pydantic_student.first_name,
@@ -385,7 +403,7 @@ def save_student(pydantic_student):
             funding_source=_enum_val(pydantic_student.funding_source),
             step_up_percentage=pydantic_student.step_up_percentage,
         )
-        db.merge(obj)
+        _upsert(db, models.Student, "student_id", pydantic_student.student_id, fields)
         db.commit()
     finally:
         db.close()
@@ -395,7 +413,7 @@ def save_attendance(pydantic_att):
     """Persist an attendance record to the database."""
     db = SessionLocal()
     try:
-        obj = models.AttendanceRecord(
+        fields = dict(
             attendance_id=pydantic_att.attendance_id,
             campus_id=getattr(pydantic_att, 'campus_id', None),
             student_id=pydantic_att.student_id,
@@ -403,7 +421,7 @@ def save_attendance(pydantic_att):
             status=_enum_val(pydantic_att.status),
             session=_enum_val(pydantic_att.session),
         )
-        db.merge(obj)
+        _upsert(db, models.AttendanceRecord, "attendance_id", pydantic_att.attendance_id, fields)
         db.commit()
     finally:
         db.close()
@@ -413,7 +431,7 @@ def save_rsvp(pydantic_rsvp):
     """Persist an event RSVP to the database."""
     db = SessionLocal()
     try:
-        obj = models.EventRSVP(
+        fields = dict(
             rsvp_id=pydantic_rsvp.rsvp_id,
             event_id=pydantic_rsvp.event_id,
             family_id=pydantic_rsvp.family_id,
@@ -422,7 +440,7 @@ def save_rsvp(pydantic_rsvp):
             status=_enum_val(pydantic_rsvp.status),
             response_date=getattr(pydantic_rsvp, 'response_date', None),
         )
-        db.merge(obj)
+        _upsert(db, models.EventRSVP, "rsvp_id", pydantic_rsvp.rsvp_id, fields)
         db.commit()
     finally:
         db.close()
@@ -432,7 +450,7 @@ def save_signature(pydantic_sig):
     """Persist a document signature to the database."""
     db = SessionLocal()
     try:
-        obj = models.DocumentSignature(
+        fields = dict(
             signature_id=pydantic_sig.signature_id,
             document_id=pydantic_sig.document_id,
             parent_id=pydantic_sig.parent_id,
@@ -440,7 +458,7 @@ def save_signature(pydantic_sig):
             signed_date=pydantic_sig.signed_date,
             signature_data=pydantic_sig.signature_data,
         )
-        db.merge(obj)
+        _upsert(db, models.DocumentSignature, "signature_id", pydantic_sig.signature_id, fields)
         db.commit()
     finally:
         db.close()
@@ -450,7 +468,7 @@ def save_product(pydantic_prod):
     """Persist a product to the database."""
     db = SessionLocal()
     try:
-        obj = models.Product(
+        fields = dict(
             product_id=pydantic_prod.product_id,
             name=pydantic_prod.name,
             description=pydantic_prod.description,
@@ -459,7 +477,7 @@ def save_product(pydantic_prod):
             image_url=getattr(pydantic_prod, 'image_url', None),
             available=pydantic_prod.available,
         )
-        db.merge(obj)
+        _upsert(db, models.Product, "product_id", pydantic_prod.product_id, fields)
         db.commit()
     finally:
         db.close()
@@ -479,7 +497,7 @@ def save_order(pydantic_order):
     """Persist an order to the database."""
     db = SessionLocal()
     try:
-        obj = models.Order(
+        fields = dict(
             order_id=pydantic_order.order_id,
             family_id=pydantic_order.family_id,
             parent_id=pydantic_order.parent_id,
@@ -489,7 +507,7 @@ def save_order(pydantic_order):
             order_date=pydantic_order.order_date,
             payment_date=getattr(pydantic_order, 'payment_date', None),
         )
-        db.merge(obj)
+        _upsert(db, models.Order, "order_id", pydantic_order.order_id, fields)
         db.commit()
     finally:
         db.close()
@@ -499,7 +517,7 @@ def save_photo_album(pydantic_album):
     """Persist a photo album to the database."""
     db = SessionLocal()
     try:
-        obj = models.PhotoAlbum(
+        fields = dict(
             album_id=pydantic_album.album_id,
             campus_id=pydantic_album.campus_id,
             title=pydantic_album.title,
@@ -510,7 +528,7 @@ def save_photo_album(pydantic_album):
             photo_urls=_json_dumps(pydantic_album.photo_urls),
             visible_to_grades=_json_dumps(pydantic_album.visible_to_grades),
         )
-        db.merge(obj)
+        _upsert(db, models.PhotoAlbum, "album_id", pydantic_album.album_id, fields)
         db.commit()
     finally:
         db.close()
@@ -520,7 +538,7 @@ def save_incident(pydantic_inc):
     """Persist an incident to the database."""
     db = SessionLocal()
     try:
-        obj = models.Incident(
+        fields = dict(
             incident_id=pydantic_inc.incident_id,
             campus_id=pydantic_inc.campus_id,
             student_id=pydantic_inc.student_id,
@@ -534,7 +552,7 @@ def save_incident(pydantic_inc):
             parent_notified=pydantic_inc.parent_notified,
             followup_required=pydantic_inc.followup_required,
         )
-        db.merge(obj)
+        _upsert(db, models.Incident, "incident_id", pydantic_inc.incident_id, fields)
         db.commit()
     finally:
         db.close()
@@ -544,7 +562,7 @@ def save_health_record(pydantic_hr):
     """Persist a health record to the database."""
     db = SessionLocal()
     try:
-        obj = models.HealthRecord(
+        fields = dict(
             health_record_id=pydantic_hr.health_record_id,
             campus_id=pydantic_hr.campus_id,
             student_id=pydantic_hr.student_id,
@@ -558,7 +576,7 @@ def save_health_record(pydantic_hr):
             physician_phone=getattr(pydantic_hr, 'physician_phone', None),
             last_updated=pydantic_hr.last_updated,
         )
-        db.merge(obj)
+        _upsert(db, models.HealthRecord, "health_record_id", pydantic_hr.health_record_id, fields)
         db.commit()
     finally:
         db.close()
@@ -568,7 +586,7 @@ def save_invoice(pydantic_inv):
     """Persist an invoice to the database."""
     db = SessionLocal()
     try:
-        obj = models.Invoice(
+        fields = dict(
             invoice_id=pydantic_inv.invoice_id,
             campus_id=pydantic_inv.campus_id,
             family_id=pydantic_inv.family_id,
@@ -585,7 +603,7 @@ def save_invoice(pydantic_inv):
             created_date=pydantic_inv.created_date,
             last_updated=pydantic_inv.last_updated,
         )
-        db.merge(obj)
+        _upsert(db, models.Invoice, "invoice_id", pydantic_inv.invoice_id, fields)
         db.commit()
     finally:
         db.close()
@@ -595,7 +613,7 @@ def save_invoice_line_item(pydantic_li):
     """Persist an invoice line item to the database."""
     db = SessionLocal()
     try:
-        obj = models.InvoiceLineItem(
+        fields = dict(
             line_item_id=pydantic_li.line_item_id,
             invoice_id=pydantic_li.invoice_id,
             description=pydantic_li.description,
@@ -606,7 +624,7 @@ def save_invoice_line_item(pydantic_li):
             total=pydantic_li.total,
             funding_source=_enum_val(pydantic_li.funding_source) if pydantic_li.funding_source else None,
         )
-        db.merge(obj)
+        _upsert(db, models.InvoiceLineItem, "line_item_id", pydantic_li.line_item_id, fields)
         db.commit()
     finally:
         db.close()
@@ -616,7 +634,7 @@ def save_payment_plan(pydantic_pp):
     """Persist a payment plan to the database."""
     db = SessionLocal()
     try:
-        obj = models.PaymentPlan(
+        fields = dict(
             payment_plan_id=pydantic_pp.payment_plan_id,
             campus_id=pydantic_pp.campus_id,
             family_id=pydantic_pp.family_id,
@@ -630,7 +648,7 @@ def save_payment_plan(pydantic_pp):
             created_date=pydantic_pp.created_date,
             last_updated=pydantic_pp.last_updated,
         )
-        db.merge(obj)
+        _upsert(db, models.PaymentPlan, "payment_plan_id", pydantic_pp.payment_plan_id, fields)
         db.commit()
     finally:
         db.close()
@@ -640,7 +658,7 @@ def save_payment_schedule(pydantic_ps):
     """Persist a payment schedule entry to the database."""
     db = SessionLocal()
     try:
-        obj = models.PaymentSchedule(
+        fields = dict(
             schedule_id=pydantic_ps.schedule_id,
             payment_plan_id=pydantic_ps.payment_plan_id,
             installment_number=pydantic_ps.installment_number,
@@ -650,7 +668,7 @@ def save_payment_schedule(pydantic_ps):
             paid_date=getattr(pydantic_ps, 'paid_date', None),
             paid_amount=pydantic_ps.paid_amount,
         )
-        db.merge(obj)
+        _upsert(db, models.PaymentSchedule, "schedule_id", pydantic_ps.schedule_id, fields)
         db.commit()
     finally:
         db.close()
@@ -660,7 +678,7 @@ def save_lead(pydantic_lead):
     """Persist a lead to the database."""
     db = SessionLocal()
     try:
-        obj = models.Lead(
+        fields = dict(
             lead_id=pydantic_lead.lead_id,
             campus_id=pydantic_lead.campus_id,
             parent_first_name=pydantic_lead.parent_first_name,
@@ -680,7 +698,7 @@ def save_lead(pydantic_lead):
             notes=pydantic_lead.notes,
             assigned_to=getattr(pydantic_lead, 'assigned_to', None),
         )
-        db.merge(obj)
+        _upsert(db, models.Lead, "lead_id", pydantic_lead.lead_id, fields)
         db.commit()
     finally:
         db.close()
@@ -690,7 +708,7 @@ def save_template(pydantic_tmpl):
     """Persist a message template to the database."""
     db = SessionLocal()
     try:
-        obj = models.MessageTemplate(
+        fields = dict(
             template_id=pydantic_tmpl.template_id,
             name=pydantic_tmpl.name,
             trigger_type=_enum_val(pydantic_tmpl.trigger_type),
@@ -700,7 +718,7 @@ def save_template(pydantic_tmpl):
             active=pydantic_tmpl.active,
             created_date=pydantic_tmpl.created_date,
         )
-        db.merge(obj)
+        _upsert(db, models.MessageTemplate, "template_id", pydantic_tmpl.template_id, fields)
         db.commit()
     finally:
         db.close()
@@ -710,7 +728,7 @@ def save_broadcast(pydantic_bc):
     """Persist a broadcast message to the database."""
     db = SessionLocal()
     try:
-        obj = models.BroadcastMessage(
+        fields = dict(
             broadcast_id=pydantic_bc.broadcast_id,
             campus_id=getattr(pydantic_bc, 'campus_id', None),
             sender_id=pydantic_bc.sender_id,
@@ -724,7 +742,7 @@ def save_broadcast(pydantic_bc):
             sent_date=getattr(pydantic_bc, 'sent_date', None),
             created_date=pydantic_bc.created_date,
         )
-        db.merge(obj)
+        _upsert(db, models.BroadcastMessage, "broadcast_id", pydantic_bc.broadcast_id, fields)
         db.commit()
     finally:
         db.close()
@@ -734,7 +752,7 @@ def save_assessment(pydantic_a):
     """Persist a standard assessment to the database."""
     db = SessionLocal()
     try:
-        obj = models.StandardAssessment(
+        fields = dict(
             assessment_id=pydantic_a.assessment_id,
             student_id=pydantic_a.student_id,
             standard_id=pydantic_a.standard_id,
@@ -743,7 +761,7 @@ def save_assessment(pydantic_a):
             notes=getattr(pydantic_a, 'notes', None),
             teacher_id=getattr(pydantic_a, 'teacher_id', None),
         )
-        db.merge(obj)
+        _upsert(db, models.StandardAssessment, "assessment_id", pydantic_a.assessment_id, fields)
         db.commit()
     finally:
         db.close()
@@ -753,7 +771,7 @@ def save_assignment(pydantic_a):
     """Persist an assignment to the database."""
     db = SessionLocal()
     try:
-        obj = models.Assignment(
+        fields = dict(
             assignment_id=pydantic_a.assignment_id,
             campus_id=getattr(pydantic_a, 'campus_id', None),
             teacher_id=getattr(pydantic_a, 'teacher_id', None),
@@ -767,7 +785,7 @@ def save_assignment(pydantic_a):
             status=_enum_val(pydantic_a.status),
             created_date=getattr(pydantic_a, 'created_date', None),
         )
-        db.merge(obj)
+        _upsert(db, models.Assignment, "assignment_id", pydantic_a.assignment_id, fields)
         db.commit()
     finally:
         db.close()
@@ -777,7 +795,7 @@ def save_grade_entry(pydantic_ge):
     """Persist a grade entry to the database."""
     db = SessionLocal()
     try:
-        obj = models.GradeEntry(
+        fields = dict(
             entry_id=pydantic_ge.entry_id,
             assignment_id=pydantic_ge.assignment_id,
             student_id=pydantic_ge.student_id,
@@ -791,7 +809,7 @@ def save_grade_entry(pydantic_ge):
             graded_date=getattr(pydantic_ge, 'graded_date', None),
             graded_by=getattr(pydantic_ge, 'graded_by', None),
         )
-        db.merge(obj)
+        _upsert(db, models.GradeEntry, "entry_id", pydantic_ge.entry_id, fields)
         db.commit()
     finally:
         db.close()
@@ -801,7 +819,7 @@ def save_announcement(pydantic_ann):
     """Persist an announcement to the database."""
     db = SessionLocal()
     try:
-        obj = models.Announcement(
+        fields = dict(
             announcement_id=pydantic_ann.announcement_id,
             campus_id=getattr(pydantic_ann, 'campus_id', None),
             title=pydantic_ann.title,
@@ -820,7 +838,7 @@ def save_announcement(pydantic_ann):
             created_date=getattr(pydantic_ann, 'created_date', None),
             target_audience=getattr(pydantic_ann, 'target_audience', None),
         )
-        db.merge(obj)
+        _upsert(db, models.Announcement, "announcement_id", pydantic_ann.announcement_id, fields)
         db.commit()
     finally:
         db.close()
@@ -830,13 +848,13 @@ def save_announcement_read(pydantic_ar):
     """Persist an announcement read to the database."""
     db = SessionLocal()
     try:
-        obj = models.AnnouncementRead(
+        fields = dict(
             read_id=pydantic_ar.read_id,
             announcement_id=pydantic_ar.announcement_id,
             user_id=pydantic_ar.user_id,
             read_date=pydantic_ar.read_date,
         )
-        db.merge(obj)
+        _upsert(db, models.AnnouncementRead, "read_id", pydantic_ar.read_id, fields)
         db.commit()
     finally:
         db.close()
@@ -846,7 +864,7 @@ def save_workflow(pydantic_wf):
     """Persist an event workflow to the database."""
     db = SessionLocal()
     try:
-        obj = models.EventWorkflow(
+        fields = dict(
             workflow_id=pydantic_wf.workflow_id,
             event_id=pydantic_wf.event_id,
             rsvp_id=pydantic_wf.rsvp_id,
@@ -860,7 +878,7 @@ def save_workflow(pydantic_wf):
             created_date=pydantic_wf.created_date,
             completed_date=getattr(pydantic_wf, 'completed_date', None),
         )
-        db.merge(obj)
+        _upsert(db, models.EventWorkflow, "workflow_id", pydantic_wf.workflow_id, fields)
         db.commit()
     finally:
         db.close()
@@ -870,7 +888,7 @@ def save_staff(pydantic_staff):
     """Persist a staff member to the database."""
     db = SessionLocal()
     try:
-        obj = models.Staff(
+        fields = dict(
             staff_id=pydantic_staff.staff_id,
             campus_id=pydantic_staff.campus_ids[0] if pydantic_staff.campus_ids else None,
             campus_ids=_json_dumps(pydantic_staff.campus_ids),
@@ -882,7 +900,7 @@ def save_staff(pydantic_staff):
             permissions=pydantic_staff.permissions,
             active=True,
         )
-        db.merge(obj)
+        _upsert(db, models.Staff, "staff_id", pydantic_staff.staff_id, fields)
         db.commit()
     finally:
         db.close()
@@ -892,7 +910,7 @@ def save_billing_record(pydantic_br):
     """Persist a billing record to the database."""
     db = SessionLocal()
     try:
-        obj = models.BillingRecord(
+        fields = dict(
             billing_record_id=pydantic_br.billing_record_id,
             campus_id=pydantic_br.campus_id,
             family_id=pydantic_br.family_id,
@@ -905,7 +923,7 @@ def save_billing_record(pydantic_br):
             category=_enum_val(pydantic_br.category) if pydantic_br.category else None,
             student_id=getattr(pydantic_br, 'student_id', None),
         )
-        db.merge(obj)
+        _upsert(db, models.BillingRecord, "billing_record_id", pydantic_br.billing_record_id, fields)
         db.commit()
     finally:
         db.close()
@@ -915,7 +933,7 @@ def save_family(pydantic_fam):
     """Persist a family to the database (without parent_ids/student_ids which are relational)."""
     db = SessionLocal()
     try:
-        obj = models.Family(
+        fields = dict(
             family_id=pydantic_fam.family_id,
             family_name=pydantic_fam.family_name,
             primary_parent_id=pydantic_fam.primary_parent_id,
@@ -925,7 +943,7 @@ def save_family(pydantic_fam):
             last_payment_date=pydantic_fam.last_payment_date,
             last_payment_amount=pydantic_fam.last_payment_amount,
         )
-        db.merge(obj)
+        _upsert(db, models.Family, "family_id", pydantic_fam.family_id, fields)
         db.commit()
     finally:
         db.close()
@@ -935,7 +953,7 @@ def save_sufs_scholarship(pydantic_s):
     """Persist a SUFS scholarship to the database."""
     db = SessionLocal()
     try:
-        obj = models.SUFSScholarship(
+        fields = dict(
             scholarship_id=pydantic_s.scholarship_id,
             student_id=pydantic_s.student_id,
             family_id=pydantic_s.family_id,
@@ -955,7 +973,7 @@ def save_sufs_scholarship(pydantic_s):
             created_date=pydantic_s.created_date,
             last_updated=pydantic_s.last_updated,
         )
-        db.merge(obj)
+        _upsert(db, models.SUFSScholarship, "scholarship_id", pydantic_s.scholarship_id, fields)
         db.commit()
     finally:
         db.close()
@@ -965,7 +983,7 @@ def save_sufs_claim(pydantic_c):
     """Persist a SUFS claim to the database."""
     db = SessionLocal()
     try:
-        obj = models.SUFSClaim(
+        fields = dict(
             claim_id=pydantic_c.claim_id,
             scholarship_id=pydantic_c.scholarship_id,
             student_id=pydantic_c.student_id,
@@ -987,7 +1005,7 @@ def save_sufs_claim(pydantic_c):
             created_date=pydantic_c.created_date,
             last_updated=pydantic_c.last_updated,
         )
-        db.merge(obj)
+        _upsert(db, models.SUFSClaim, "claim_id", pydantic_c.claim_id, fields)
         db.commit()
     finally:
         db.close()
@@ -997,7 +1015,7 @@ def save_sufs_payment(pydantic_p):
     """Persist a SUFS payment to the database."""
     db = SessionLocal()
     try:
-        obj = models.SUFSPayment(
+        fields = dict(
             payment_id=pydantic_p.payment_id,
             campus_id=pydantic_p.campus_id,
             payment_date=pydantic_p.payment_date,
@@ -1011,7 +1029,7 @@ def save_sufs_payment(pydantic_p):
             notes=getattr(pydantic_p, 'notes', None),
             created_date=pydantic_p.created_date,
         )
-        db.merge(obj)
+        _upsert(db, models.SUFSPayment, "payment_id", pydantic_p.payment_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1021,7 +1039,7 @@ def save_sufs_allocation(pydantic_a):
     """Persist a SUFS payment allocation to the database."""
     db = SessionLocal()
     try:
-        obj = models.SUFSPaymentAllocation(
+        fields = dict(
             allocation_id=pydantic_a.allocation_id,
             payment_id=pydantic_a.payment_id,
             claim_id=pydantic_a.claim_id,
@@ -1033,7 +1051,7 @@ def save_sufs_allocation(pydantic_a):
             discrepancy_reason=getattr(pydantic_a, 'discrepancy_reason', None),
             created_date=pydantic_a.created_date,
         )
-        db.merge(obj)
+        _upsert(db, models.SUFSPaymentAllocation, "allocation_id", pydantic_a.allocation_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1043,7 +1061,7 @@ def save_ixl_summary(pydantic_ixl):
     """Persist an IXL summary to the database."""
     db = SessionLocal()
     try:
-        obj = models.IXLSummary(
+        fields = dict(
             ixl_summary_id=pydantic_ixl.ixl_summary_id,
             student_id=pydantic_ixl.student_id,
             week_start_date=pydantic_ixl.week_start_date,
@@ -1055,7 +1073,7 @@ def save_ixl_summary(pydantic_ixl):
             last_active_date=pydantic_ixl.last_active_date,
             recent_skills=_json_dumps(pydantic_ixl.recent_skills),
         )
-        db.merge(obj)
+        _upsert(db, models.IXLSummary, "ixl_summary_id", pydantic_ixl.ixl_summary_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1065,7 +1083,7 @@ def save_acellus_course(pydantic_ac):
     """Persist an Acellus course to the database."""
     db = SessionLocal()
     try:
-        obj = models.AcellusCourse(
+        fields = dict(
             course_id=pydantic_ac.course_id,
             student_id=pydantic_ac.student_id,
             course_name=pydantic_ac.course_name,
@@ -1079,7 +1097,7 @@ def save_acellus_course(pydantic_ac):
             last_activity_date=pydantic_ac.last_activity_date,
             time_spent_hours=pydantic_ac.time_spent_hours,
         )
-        db.merge(obj)
+        _upsert(db, models.AcellusCourse, "course_id", pydantic_ac.course_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1089,7 +1107,7 @@ def save_acellus_summary(pydantic_as):
     """Persist an Acellus summary to the database."""
     db = SessionLocal()
     try:
-        obj = models.AcellusSummary(
+        fields = dict(
             acellus_summary_id=pydantic_as.acellus_summary_id,
             student_id=pydantic_as.student_id,
             total_courses=pydantic_as.total_courses,
@@ -1100,7 +1118,7 @@ def save_acellus_summary(pydantic_as):
             last_active_date=pydantic_as.last_active_date,
             overall_status=_enum_val(pydantic_as.overall_status),
         )
-        db.merge(obj)
+        _upsert(db, models.AcellusSummary, "acellus_summary_id", pydantic_as.acellus_summary_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1115,7 +1133,7 @@ def save_message(pydantic_msg):
     """Persist a message to the database."""
     db = SessionLocal()
     try:
-        obj = models.Message(
+        fields = dict(
             message_id=pydantic_msg.message_id,
             sender_type=_enum_val(pydantic_msg.sender_type),
             sender_id=pydantic_msg.sender_id,
@@ -1125,7 +1143,7 @@ def save_message(pydantic_msg):
             content_preview=pydantic_msg.content_preview,
             date_time=pydantic_msg.date_time,
         )
-        db.merge(obj)
+        _upsert(db, models.Message, "message_id", pydantic_msg.message_id, fields)
         db.commit()
     finally:
         db.close()
@@ -1135,7 +1153,7 @@ def save_event(pydantic_evt):
     """Persist an event to the database."""
     db = SessionLocal()
     try:
-        obj = models.Event(
+        fields = dict(
             event_id=pydantic_evt.event_id,
             campus_id=pydantic_evt.campus_id,
             title=pydantic_evt.title,
@@ -1150,7 +1168,7 @@ def save_event(pydantic_evt):
             payment_amount=getattr(pydantic_evt, 'payment_amount', None),
             created_by_staff_id=pydantic_evt.created_by_staff_id,
         )
-        db.merge(obj)
+        _upsert(db, models.Event, "event_id", pydantic_evt.event_id, fields)
         db.commit()
     finally:
         db.close()
