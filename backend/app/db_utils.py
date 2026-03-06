@@ -1735,7 +1735,7 @@ def _announcement_to_dict(r):
         "title": r.title or "", "content": r.content or "",
         "category": r.category or "General",
         "status": r.status or "Draft",
-        "created_by": r.created_by, "created_by_role": r.created_by_role,
+        "created_by": r.created_by or "", "created_by_role": r.created_by_role or "Teacher",
         "approved_by": r.approved_by, "approved_date": r.approved_date,
         "published_date": r.published_date, "expires_date": r.expires_date,
         "is_pinned": r.is_pinned or False,
