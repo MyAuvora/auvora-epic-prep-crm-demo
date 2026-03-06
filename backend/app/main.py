@@ -23,6 +23,7 @@ from .clerk_users import router as clerk_users_router
 # Import database components
 from .database import engine, get_db, init_db, SessionLocal
 from . import models, crud
+from . import db_utils
 from sqlalchemy.orm import Session as DBSession
 
 app = FastAPI()
@@ -32,9 +33,24 @@ def startup_db():
     """Initialize database on startup and seed with demo data if empty"""
     init_db()
     print("Database initialized successfully")
-    # Seed database with demo data if empty
-    from .db_seed import seed_database
-    seed_database()
+    # Check if database is empty and seed if needed
+    db = SessionLocal()
+    try:
+        if db.query(models.Organization).count() == 0:
+            print("Database is empty, seeding with demo data...")
+            db.close()
+            db_utils.seed_from_demo_data()
+        else:
+            print("Database has existing data, skipping seed")
+            db.close()
+    except Exception as e:
+        db.close()
+        print(f"Error checking database: {e}")
+        # Fallback: try to seed anyway
+        try:
+            db_utils.seed_from_demo_data()
+        except Exception:
+            pass
 
 # Disable CORS. Do not remove this for full-stack development.
 app.add_middleware(
@@ -1092,8 +1108,8 @@ sufs_claims_db: List[SUFSClaim] = []
 sufs_payments_db: List[SUFSPayment] = []
 sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
 
-def generate_demo_data():
-    """Generate demo data and populate in-memory databases"""
+def load_data_from_db():
+    """Load all data from the SQLite database into in-memory lists for fast reads."""
     global organizations_db, campuses_db, users_db, audit_logs_db
     global students_db, families_db, parents_db, staff_db, grade_records_db
     global behavior_notes_db, attendance_records_db, ixl_summaries_db
@@ -1109,69 +1125,71 @@ def generate_demo_data():
     global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
     global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
-    
-    from .demo_data import generate_all_demo_data
-    
-    data = generate_all_demo_data()
-    organizations_db = data.get("organizations", [])
-    campuses_db = data.get("campuses", [])
-    users_db = data.get("users", [])
-    audit_logs_db = data.get("audit_logs", [])
-    students_db = data["students"]
-    families_db = data["families"]
-    parents_db = data["parents"]
-    staff_db = data["staff"]
-    grade_records_db = data["grade_records"]
-    behavior_notes_db = data["behavior_notes"]
-    attendance_records_db = data["attendance_records"]
-    ixl_summaries_db = data["ixl_summaries"]
-    acellus_summaries_db = data["acellus_summaries"]
-    acellus_courses_db = data["acellus_courses"]
-    billing_records_db = data["billing_records"]
-    conferences_db = data["conferences"]
-    messages_db = data["messages"]
-    events_db = data["events"]
-    event_rsvps_db = data["event_rsvps"]
-    documents_db = data["documents"]
-    document_signatures_db = data["document_signatures"]
-    products_db = data["products"]
-    orders_db = data["orders"]
-    photo_albums_db = data["photo_albums"]
-    incidents_db = data["incidents"]
-    health_records_db = data["health_records"]
-    invoices_db = data.get("invoices", [])
-    invoice_line_items_db = data.get("invoice_line_items", [])
-    payment_plans_db = data.get("payment_plans", [])
-    payment_schedules_db = data.get("payment_schedules", [])
-    leads_db = data.get("leads", [])
-    campus_capacity_db = data.get("campus_capacity", [])
-    message_templates_db = data.get("message_templates", [])
-    broadcast_messages_db = data.get("broadcast_messages", [])
-    automated_alerts_db = data.get("automated_alerts", [])
-    academic_standards_db = data.get("academic_standards", [])
-    standard_assessments_db = data.get("standard_assessments", [])
-    progress_reports_db = data.get("progress_reports", [])
-    iep_504_plans_db = data.get("iep_504_plans", [])
-    accommodations_db = data.get("accommodations", [])
-    iep_goals_db = data.get("iep_goals", [])
-    intervention_plans_db = data.get("intervention_plans", [])
-    intervention_progress_db = data.get("intervention_progress", [])
-    at_risk_assessments_db = data.get("at_risk_assessments", [])
-    retention_predictions_db = data.get("retention_predictions", [])
-    enrollment_forecasts_db = data.get("enrollment_forecasts", [])
-    assignments_db = data.get("assignments", [])
-    grade_entries_db = data.get("grade_entries", [])
-    announcements_db = data.get("announcements", [])
-    announcement_reads_db = data.get("announcement_reads", [])
-    event_workflows_db = data.get("event_workflows", [])
-    sufs_scholarships_db = data.get("sufs_scholarships", [])
-    sufs_claims_db = data.get("sufs_claims", [])
-    sufs_payments_db = data.get("sufs_payments", [])
-    sufs_payment_allocations_db = data.get("sufs_payment_allocations", [])
+
+    data = db_utils.load_all_from_db()
+
+    # Convert dicts back to Pydantic models for each entity type
+    organizations_db = [Organization(**d) for d in data.get("organizations", [])]
+    campuses_db = [Campus(**d) for d in data.get("campuses", [])]
+    users_db = [User(**d) for d in data.get("users", [])]
+    audit_logs_db = [AuditLog(**d) for d in data.get("audit_logs", [])]
+    students_db = [Student(**d) for d in data.get("students", [])]
+    families_db = [Family(**d) for d in data.get("families", [])]
+    parents_db = [Parent(**d) for d in data.get("parents", [])]
+    staff_db = [Staff(**d) for d in data.get("staff", [])]
+    grade_records_db = [GradeRecord(**d) for d in data.get("grade_records", [])]
+    behavior_notes_db = [BehaviorNote(**d) for d in data.get("behavior_notes", [])]
+    attendance_records_db = [AttendanceRecord(**d) for d in data.get("attendance_records", [])]
+    ixl_summaries_db = [IXLSummary(**d) for d in data.get("ixl_summaries", [])]
+    acellus_summaries_db = [AcellusSummary(**d) for d in data.get("acellus_summaries", [])]
+    acellus_courses_db = [AcellusCourse(**d) for d in data.get("acellus_courses", [])]
+    billing_records_db = [BillingRecord(**d) for d in data.get("billing_records", [])]
+    conferences_db = [Conference(**d) for d in data.get("conferences", [])]
+    messages_db = [Message(**d) for d in data.get("messages", [])]
+    events_db = [Event(**d) for d in data.get("events", [])]
+    event_rsvps_db = [EventRSVP(**d) for d in data.get("event_rsvps", [])]
+    documents_db = [Document(**d) for d in data.get("documents", [])]
+    document_signatures_db = [DocumentSignature(**d) for d in data.get("document_signatures", [])]
+    products_db = [Product(**d) for d in data.get("products", [])]
+    orders_db = [Order(**d) for d in data.get("orders", [])]
+    photo_albums_db = [PhotoAlbum(**d) for d in data.get("photo_albums", [])]
+    incidents_db = [Incident(**d) for d in data.get("incidents", [])]
+    health_records_db = [HealthRecord(**d) for d in data.get("health_records", [])]
+    invoices_db = [Invoice(**d) for d in data.get("invoices", [])]
+    invoice_line_items_db = [InvoiceLineItem(**d) for d in data.get("invoice_line_items", [])]
+    payment_plans_db = [PaymentPlan(**d) for d in data.get("payment_plans", [])]
+    payment_schedules_db = [PaymentSchedule(**d) for d in data.get("payment_schedules", [])]
+    leads_db = [Lead(**d) for d in data.get("leads", [])]
+    campus_capacity_db = [CampusCapacity(**d) for d in data.get("campus_capacity", [])]
+    message_templates_db = [MessageTemplate(**d) for d in data.get("message_templates", [])]
+    broadcast_messages_db = [BroadcastMessage(**d) for d in data.get("broadcast_messages", [])]
+    automated_alerts_db = [AutomatedAlert(**d) for d in data.get("automated_alerts", [])]
+    academic_standards_db = [AcademicStandard(**d) for d in data.get("academic_standards", [])]
+    standard_assessments_db = [StandardAssessment(**d) for d in data.get("standard_assessments", [])]
+    progress_reports_db = [ProgressReport(**d) for d in data.get("progress_reports", [])]
+    iep_504_plans_db = [IEP504Plan(**d) for d in data.get("iep_504_plans", [])]
+    accommodations_db = [Accommodation(**d) for d in data.get("accommodations", [])]
+    iep_goals_db = [IEPGoal(**d) for d in data.get("iep_goals", [])]
+    intervention_plans_db = [InterventionPlan(**d) for d in data.get("intervention_plans", [])]
+    intervention_progress_db = [InterventionProgress(**d) for d in data.get("intervention_progress", [])]
+    at_risk_assessments_db = [AtRiskAssessment(**d) for d in data.get("at_risk_assessments", [])]
+    retention_predictions_db = [RetentionPrediction(**d) for d in data.get("retention_predictions", [])]
+    enrollment_forecasts_db = [EnrollmentForecast(**d) for d in data.get("enrollment_forecasts", [])]
+    assignments_db = [Assignment(**d) for d in data.get("assignments", [])]
+    grade_entries_db = [GradeEntry(**d) for d in data.get("grade_entries", [])]
+    announcements_db = [Announcement(**d) for d in data.get("announcements", [])]
+    announcement_reads_db = [AnnouncementRead(**d) for d in data.get("announcement_reads", [])]
+    event_workflows_db = [EventWorkflow(**d) for d in data.get("event_workflows", [])]
+    sufs_scholarships_db = [SUFSScholarship(**d) for d in data.get("sufs_scholarships", [])]
+    sufs_claims_db = [SUFSClaim(**d) for d in data.get("sufs_claims", [])]
+    sufs_payments_db = [SUFSPayment(**d) for d in data.get("sufs_payments", [])]
+    sufs_payment_allocations_db = [SUFSPaymentAllocation(**d) for d in data.get("sufs_payment_allocations", [])]
+
+    print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
 
 @app.on_event("startup")
 async def startup_event():
-    generate_demo_data()
+    load_data_from_db()
 
 @app.get("/healthz")
 async def healthz():
@@ -1274,8 +1292,10 @@ async def create_student(student: Student):
         raise HTTPException(status_code=400, detail="Invalid family_id")
     
     students_db.append(student)
+    db_utils.save_student(student)
     
     family.student_ids.append(student.student_id)
+    db_utils.save_family(family)
     
     return student
 
@@ -1383,6 +1403,7 @@ async def take_attendance(attendance_list: List[AttendanceSubmission]):
         
         if existing:
             existing.status = submission.status
+            db_utils.save_attendance(existing)
             created_records.append(existing)
         else:
             attendance_id = f"att_{len(attendance_records_db) + 1}"
@@ -1394,6 +1415,7 @@ async def take_attendance(attendance_list: List[AttendanceSubmission]):
                 session=submission.session
             )
             attendance_records_db.append(new_record)
+            db_utils.save_attendance(new_record)
             created_records.append(new_record)
             
             if submission.status == AttendanceStatus.PRESENT:
@@ -1402,6 +1424,7 @@ async def take_attendance(attendance_list: List[AttendanceSubmission]):
                 student.attendance_absent_count += 1
             elif submission.status == AttendanceStatus.TARDY:
                 student.attendance_tardy_count += 1
+            db_utils.save_student(student)
     
     return {"message": f"Attendance recorded for {len(created_records)} students", "records": created_records}
 
@@ -1742,6 +1765,7 @@ async def get_rsvps(family_id: Optional[str] = None):
 @app.post("/api/rsvps")
 async def create_rsvp(rsvp: EventRSVP):
     event_rsvps_db.append(rsvp)
+    db_utils.save_rsvp(rsvp)
     return rsvp
 
 @app.put("/api/rsvps/{rsvp_id}")
@@ -1751,6 +1775,7 @@ async def update_rsvp(rsvp_id: str, status: RSVPStatus):
         raise HTTPException(status_code=404, detail="RSVP not found")
     rsvp.status = status
     rsvp.response_date = datetime.now()
+    db_utils.save_rsvp(rsvp)
     return rsvp
 
 @app.get("/api/documents")
@@ -1781,6 +1806,7 @@ async def get_signatures(parent_id: Optional[str] = None):
 @app.post("/api/signatures")
 async def create_signature(signature: DocumentSignature):
     document_signatures_db.append(signature)
+    db_utils.save_signature(signature)
     document = next((d for d in documents_db if d.document_id == signature.document_id), None)
     if document:
         document.status = DocumentStatus.SIGNED
@@ -1802,6 +1828,7 @@ async def get_product(product_id: str):
 @app.post("/api/products")
 async def create_product(product: Product):
     products_db.append(product)
+    db_utils.save_product(product)
     return product
 
 @app.put("/api/products/{product_id}")
@@ -1812,6 +1839,7 @@ async def update_product(product_id: str, product_data: dict):
     for key, value in product_data.items():
         if hasattr(product, key):
             setattr(product, key, value)
+    db_utils.save_product(product)
     return product
 
 @app.delete("/api/products/{product_id}")
@@ -1821,6 +1849,7 @@ async def delete_product(product_id: str):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     products_db = [p for p in products_db if p.product_id != product_id]
+    db_utils.delete_product(product_id)
     return {"message": "Product deleted successfully"}
 
 @app.get("/api/orders")
@@ -1839,6 +1868,7 @@ async def get_order(order_id: str):
 @app.post("/api/orders")
 async def create_order(order: Order):
     orders_db.append(order)
+    db_utils.save_order(order)
     return order
 
 @app.put("/api/orders/{order_id}")
@@ -1849,6 +1879,7 @@ async def update_order(order_id: str, status: OrderStatus):
     order.status = status
     if status == OrderStatus.PAID:
         order.payment_date = datetime.now()
+    db_utils.save_order(order)
     return order
 
 @app.get("/api/photo-albums")
@@ -1867,6 +1898,7 @@ async def get_photo_album(album_id: str):
 @app.post("/api/photo-albums")
 async def create_photo_album(album: PhotoAlbum):
     photo_albums_db.append(album)
+    db_utils.save_photo_album(album)
     return album
 
 @app.get("/api/incidents")
@@ -1885,6 +1917,7 @@ async def get_incident(incident_id: str):
 @app.post("/api/incidents")
 async def create_incident(incident: Incident):
     incidents_db.append(incident)
+    db_utils.save_incident(incident)
     return incident
 
 @app.get("/api/health-records")
@@ -1907,6 +1940,7 @@ async def update_health_record(health_record_id: str, health_record: HealthRecor
         raise HTTPException(status_code=404, detail="Health record not found")
     health_records_db.remove(existing)
     health_records_db.append(health_record)
+    db_utils.save_health_record(health_record)
     return health_record
 
 
@@ -2106,6 +2140,7 @@ async def get_invoice(invoice_id: str):
 async def create_invoice(invoice: Invoice):
     """Create a new invoice"""
     invoices_db.append(invoice)
+    db_utils.save_invoice(invoice)
     return invoice
 
 @app.post("/api/invoices/generate-monthly")
@@ -2176,6 +2211,9 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
         )
         
         invoices_db.append(invoice)
+        db_utils.save_invoice(invoice)
+        for li in line_items:
+            db_utils.save_invoice_line_item(li)
         invoice_line_items_db.extend(line_items)
         generated_invoices.append(invoice)
         invoice_counter += 1
@@ -2217,6 +2255,7 @@ async def get_payment_plan(payment_plan_id: str):
 async def create_payment_plan(plan: PaymentPlan):
     """Create a new payment plan"""
     payment_plans_db.append(plan)
+    db_utils.save_payment_plan(plan)
     return plan
 
 @app.put("/api/payment-plans/{payment_plan_id}")
@@ -2228,6 +2267,7 @@ async def update_payment_plan(payment_plan_id: str, plan: PaymentPlan):
     
     payment_plans_db.remove(existing)
     payment_plans_db.append(plan)
+    db_utils.save_payment_plan(plan)
     return plan
 
 @app.get("/api/reports/ar-aging")
@@ -2553,6 +2593,7 @@ async def create_lead(lead: Lead):
     if any(l.lead_id == lead.lead_id for l in leads_db):
         raise HTTPException(status_code=400, detail="Lead ID already exists")
     leads_db.append(lead)
+    db_utils.save_lead(lead)
     return lead
 
 @app.put("/api/admissions/leads/{lead_id}")
@@ -2562,6 +2603,7 @@ async def update_lead(lead_id: str, lead: Lead):
     if index is None:
         raise HTTPException(status_code=404, detail="Lead not found")
     leads_db[index] = lead
+    db_utils.save_lead(lead)
     return lead
 
 @app.get("/api/admissions/capacity")
@@ -2608,6 +2650,7 @@ async def create_message_template(template: MessageTemplate):
     if any(t.template_id == template.template_id for t in message_templates_db):
         raise HTTPException(status_code=400, detail="Template ID already exists")
     message_templates_db.append(template)
+    db_utils.save_template(template)
     return template
 
 @app.put("/api/communications/templates/{template_id}")
@@ -2617,6 +2660,7 @@ async def update_message_template(template_id: str, template: MessageTemplate):
     if index is None:
         raise HTTPException(status_code=404, detail="Template not found")
     message_templates_db[index] = template
+    db_utils.save_template(template)
     return template
 
 @app.get("/api/communications/broadcasts")
@@ -2646,6 +2690,7 @@ async def create_broadcast_message(broadcast: BroadcastMessage):
     if any(b.broadcast_id == broadcast.broadcast_id for b in broadcast_messages_db):
         raise HTTPException(status_code=400, detail="Broadcast ID already exists")
     broadcast_messages_db.append(broadcast)
+    db_utils.save_broadcast(broadcast)
     return broadcast
 
 @app.put("/api/communications/broadcasts/{broadcast_id}")
@@ -2655,6 +2700,7 @@ async def update_broadcast_message(broadcast_id: str, broadcast: BroadcastMessag
     if index is None:
         raise HTTPException(status_code=404, detail="Broadcast not found")
     broadcast_messages_db[index] = broadcast
+    db_utils.save_broadcast(broadcast)
     return broadcast
 
 @app.get("/api/communications/alerts")
@@ -2710,6 +2756,7 @@ async def create_standard_assessment(assessment: StandardAssessment):
     if any(a.assessment_id == assessment.assessment_id for a in standard_assessments_db):
         raise HTTPException(status_code=400, detail="Assessment ID already exists")
     standard_assessments_db.append(assessment)
+    db_utils.save_assessment(assessment)
     return assessment
 
 @app.put("/api/academics/assessments/{assessment_id}")
@@ -2719,6 +2766,7 @@ async def update_standard_assessment(assessment_id: str, assessment: StandardAss
     if index is None:
         raise HTTPException(status_code=404, detail="Assessment not found")
     standard_assessments_db[index] = assessment
+    db_utils.save_assessment(assessment)
     return assessment
 
 @app.get("/api/academics/progress-reports")
@@ -3058,6 +3106,7 @@ async def get_assignment(assignment_id: str):
 @app.post("/api/assignments")
 async def create_assignment(assignment: Assignment):
     assignments_db.append(assignment)
+    db_utils.save_assignment(assignment)
     return assignment
 
 @app.put("/api/assignments/{assignment_id}")
@@ -3065,6 +3114,7 @@ async def update_assignment(assignment_id: str, assignment: Assignment):
     for i, a in enumerate(assignments_db):
         if a.assignment_id == assignment_id:
             assignments_db[i] = assignment
+            db_utils.save_assignment(assignment)
             return assignment
     raise HTTPException(status_code=404, detail="Assignment not found")
 
@@ -3082,6 +3132,7 @@ async def get_grade_entries(assignment_id: Optional[str] = None, student_id: Opt
 @app.post("/api/grade-entries")
 async def create_grade_entry(entry: GradeEntry):
     grade_entries_db.append(entry)
+    db_utils.save_grade_entry(entry)
     return entry
 
 @app.put("/api/grade-entries/{entry_id}")
@@ -3089,12 +3140,15 @@ async def update_grade_entry(entry_id: str, entry: GradeEntry):
     for i, g in enumerate(grade_entries_db):
         if g.entry_id == entry_id:
             grade_entries_db[i] = entry
+            db_utils.save_grade_entry(entry)
             return entry
     raise HTTPException(status_code=404, detail="Grade entry not found")
 
 @app.post("/api/grade-entries/bulk")
 async def bulk_create_grade_entries(entries: List[GradeEntry]):
     grade_entries_db.extend(entries)
+    for entry in entries:
+        db_utils.save_grade_entry(entry)
     return {"created": len(entries), "entries": entries}
 
 @app.get("/api/announcements")
@@ -3119,6 +3173,7 @@ async def get_announcement(announcement_id: str):
 @app.post("/api/announcements")
 async def create_announcement(announcement: Announcement):
     announcements_db.append(announcement)
+    db_utils.save_announcement(announcement)
     return announcement
 
 @app.put("/api/announcements/{announcement_id}")
@@ -3126,6 +3181,7 @@ async def update_announcement(announcement_id: str, announcement: Announcement):
     for i, a in enumerate(announcements_db):
         if a.announcement_id == announcement_id:
             announcements_db[i] = announcement
+            db_utils.save_announcement(announcement)
             return announcement
     raise HTTPException(status_code=404, detail="Announcement not found")
 
@@ -3137,6 +3193,7 @@ async def approve_announcement(announcement_id: str, approved_by: str):
             announcements_db[i].approved_by = approved_by
             announcements_db[i].approved_date = date.today()
             announcements_db[i].published_date = date.today()
+            db_utils.save_announcement(announcements_db[i])
             return announcements_db[i]
     raise HTTPException(status_code=404, detail="Announcement not found")
 
@@ -3149,6 +3206,7 @@ async def mark_announcement_read(announcement_id: str, user_id: str):
         read_date=date.today()
     )
     announcement_reads_db.append(read_record)
+    db_utils.save_announcement_read(read_record)
     return read_record
 
 @app.get("/api/announcements/{announcement_id}/reads")
@@ -3176,6 +3234,7 @@ async def get_event_workflow(workflow_id: str):
 @app.post("/api/event-workflows")
 async def create_event_workflow(workflow: EventWorkflow):
     event_workflows_db.append(workflow)
+    db_utils.save_workflow(workflow)
     return workflow
 
 @app.put("/api/event-workflows/{workflow_id}")
@@ -3183,6 +3242,7 @@ async def update_event_workflow(workflow_id: str, workflow: EventWorkflow):
     for i, w in enumerate(event_workflows_db):
         if w.workflow_id == workflow_id:
             event_workflows_db[i] = workflow
+            db_utils.save_workflow(workflow)
             return workflow
     raise HTTPException(status_code=404, detail="Workflow not found")
 
@@ -3194,6 +3254,7 @@ async def sign_permission_slip(workflow_id: str, signature_id: str):
             event_workflows_db[i].permission_slip_signature_id = signature_id
             if event_workflows_db[i].status == WorkflowStatus.PENDING:
                 event_workflows_db[i].status = WorkflowStatus.PERMISSION_SLIP_SIGNED
+            db_utils.save_workflow(event_workflows_db[i])
             return event_workflows_db[i]
     raise HTTPException(status_code=404, detail="Workflow not found")
 
@@ -3205,6 +3266,7 @@ async def complete_payment(workflow_id: str, order_id: str):
             event_workflows_db[i].payment_order_id = order_id
             event_workflows_db[i].status = WorkflowStatus.REGISTERED
             event_workflows_db[i].completed_date = date.today()
+            db_utils.save_workflow(event_workflows_db[i])
             return event_workflows_db[i]
     raise HTTPException(status_code=404, detail="Workflow not found")
 
@@ -3241,6 +3303,7 @@ async def create_staff(staff_data: dict):
         assigned_rooms=staff_data.get('assigned_rooms', [])
     )
     staff_db.append(new_staff)
+    db_utils.save_staff(new_staff)
     return {"status": "success", "staff_id": staff_data['staff_id']}
 
 # Grade Assignment endpoints
@@ -3287,6 +3350,7 @@ async def get_payment_methods(family_id: str):
 async def create_payment_method(payment_data: dict):
     """Create a new payment method"""
     payment_methods_db.append(payment_data)
+    # payment_methods stored in-memory only for now
     return {"status": "success", "payment_method_id": payment_data['payment_method_id']}
 
 @app.put("/api/payment-methods/{payment_method_id}/set-default")
@@ -3363,6 +3427,7 @@ async def create_sufs_scholarship(scholarship_data: dict):
         last_updated=date.today()
     )
     sufs_scholarships_db.append(new_scholarship)
+    db_utils.save_sufs_scholarship(new_scholarship)
     return {"status": "success", "scholarship_id": new_scholarship.scholarship_id}
 
 @app.put("/api/sufs/scholarships/{scholarship_id}")
@@ -3375,6 +3440,7 @@ async def update_sufs_scholarship(scholarship_id: str, scholarship_data: dict):
                 'last_updated': date.today()
             })
             sufs_scholarships_db[i] = updated
+            db_utils.save_sufs_scholarship(updated)
             return {"status": "success"}
     raise HTTPException(status_code=404, detail="Scholarship not found")
 
@@ -3438,6 +3504,7 @@ async def create_sufs_claim(claim_data: dict):
         last_updated=date.today()
     )
     sufs_claims_db.append(new_claim)
+    db_utils.save_sufs_claim(new_claim)
     return {"status": "success", "claim_id": new_claim.claim_id}
 
 @app.put("/api/sufs/claims/{claim_id}")
@@ -3450,6 +3517,7 @@ async def update_sufs_claim(claim_id: str, claim_data: dict):
                 'last_updated': date.today()
             })
             sufs_claims_db[i] = updated
+            db_utils.save_sufs_claim(updated)
             return {"status": "success"}
     raise HTTPException(status_code=404, detail="Claim not found")
 
@@ -3464,6 +3532,7 @@ async def submit_sufs_claim(claim_id: str):
                 'last_updated': date.today()
             })
             sufs_claims_db[i] = updated
+            db_utils.save_sufs_claim(updated)
             return {"status": "success", "message": "Claim submitted successfully"}
     raise HTTPException(status_code=404, detail="Claim not found")
 
@@ -3515,6 +3584,7 @@ async def create_sufs_payment(payment_data: dict):
         created_date=date.today()
     )
     sufs_payments_db.append(new_payment)
+    db_utils.save_sufs_payment(new_payment)
     return {"status": "success", "payment_id": new_payment.payment_id}
 
 @app.get("/api/sufs/payment-allocations")
@@ -3550,6 +3620,7 @@ async def create_sufs_payment_allocation(allocation_data: dict):
         created_date=date.today()
     )
     sufs_payment_allocations_db.append(new_allocation)
+    db_utils.save_sufs_allocation(new_allocation)
     
     # Update claim status to Paid if fully allocated
     for i, c in enumerate(sufs_claims_db):
@@ -3561,6 +3632,7 @@ async def create_sufs_payment_allocation(allocation_data: dict):
                 'last_updated': date.today()
             })
             sufs_claims_db[i] = updated
+            db_utils.save_sufs_claim(updated)
             break
     
     return {"status": "success", "allocation_id": new_allocation.allocation_id}
@@ -3852,6 +3924,7 @@ async def import_ixl_csv(request: CSVImportRequest):
                     existing_summary.math_proficiency = get_ixl_status(math_score)
                     existing_summary.ela_proficiency = get_ixl_status(ela_score)
                     existing_summary.last_active_date = date.today()
+                    db_utils.save_ixl_summary(existing_summary)
                 else:
                     # Create new summary
                     new_summary = IXLSummary(
@@ -3867,6 +3940,7 @@ async def import_ixl_csv(request: CSVImportRequest):
                         recent_skills=["Imported from CSV"]
                     )
                     ixl_summaries_db.append(new_summary)
+                    db_utils.save_ixl_summary(new_summary)
                 
                 # Update student's IXL status flag
                 math_status = get_ixl_status(math_score)
@@ -3875,6 +3949,7 @@ async def import_ixl_csv(request: CSVImportRequest):
                     student.ixl_status_flag = IXLStatus.NEEDS_ATTENTION
                 else:
                     student.ixl_status_flag = IXLStatus.ON_TRACK
+                db_utils.save_student(student)
                 
                 records_updated += 1
                 updated_students.append(f"{first_name} {last_name}")
@@ -4020,6 +4095,7 @@ async def import_acellus_csv(request: CSVImportRequest):
                     existing_course.time_spent_hours = time_spent
                     existing_course.status = status
                     existing_course.last_activity_date = date.today()
+                    db_utils.save_acellus_course(existing_course)
                 else:
                     # Create new course
                     new_course = AcellusCourse(
@@ -4037,6 +4113,7 @@ async def import_acellus_csv(request: CSVImportRequest):
                         time_spent_hours=time_spent
                     )
                     acellus_courses_db.append(new_course)
+                    db_utils.save_acellus_course(new_course)
                 
                 # Update or create Acellus summary for this student
                 existing_summary = None
@@ -4069,6 +4146,7 @@ async def import_acellus_csv(request: CSVImportRequest):
                     existing_summary.total_time_spent_hours = total_time
                     existing_summary.last_active_date = date.today()
                     existing_summary.overall_status = overall_status
+                    db_utils.save_acellus_summary(existing_summary)
                 else:
                     new_summary = AcellusSummary(
                         acellus_summary_id=f"acellus_summary_{student.student_id}_{date.today().isoformat()}",
@@ -4082,6 +4160,7 @@ async def import_acellus_csv(request: CSVImportRequest):
                         overall_status=overall_status
                     )
                     acellus_summaries_db.append(new_summary)
+                    db_utils.save_acellus_summary(new_summary)
                 
                 records_updated += 1
                 if student.student_id not in students_updated_set:
@@ -4361,9 +4440,11 @@ async def mark_sufs_payment_received(scholarship_id: str, amount: Optional[float
         last_updated=today
     )
     sufs_claims_db.append(new_claim)
+    db_utils.save_sufs_claim(new_claim)
     
     # Update scholarship remaining balance
     scholarship.remaining_balance = max(0, scholarship.remaining_balance - amount)
+    db_utils.save_sufs_scholarship(scholarship)
     
     # Create a billing record for the family
     family = None
@@ -4386,9 +4467,11 @@ async def mark_sufs_payment_received(scholarship_id: str, amount: Optional[float
             source=PaymentSource.STEP_UP
         )
         billing_records_db.append(new_billing)
+        db_utils.save_billing_record(new_billing)
         
         # Update family balance
         family.current_balance = max(0, family.current_balance - amount)
+        db_utils.save_family(family)
     
     return {
         "success": True,
