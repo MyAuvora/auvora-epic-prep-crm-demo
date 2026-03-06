@@ -36,7 +36,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
   const { signOut } = useClerk()
   const [showDropdown, setShowDropdown] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState('Pace')
+  const [selectedLocation, setSelectedLocation] = useState('All Locations')
   const [showProfileInfo, setShowProfileInfo] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showHelpSupport, setShowHelpSupport] = useState(false)
@@ -264,6 +264,22 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                       <div className="px-4 py-2 border-b border-gray-200">
                         <p className="text-xs font-medium text-gray-500 uppercase">Select Location</p>
                       </div>
+                      <button
+                        onClick={() => {
+                                setSelectedLocation('All Locations')
+                                setShowLocationDropdown(false)
+                                if (onLocationChange) onLocationChange(null)
+                              }}
+                        className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
+                          selectedLocation === 'All Locations' 
+                            ? 'text-white font-medium' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        style={selectedLocation === 'All Locations' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                      >
+                        <MapPin className="w-4 h-4" />
+                        <span>All Locations</span>
+                      </button>
                       <button
                         onClick={() => {
                                 setSelectedLocation('Pace')
