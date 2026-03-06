@@ -862,6 +862,141 @@ AVAILABLE_FUNCTIONS = [
     }
 ]
 
+# Functions that are restricted by role
+# Parents should NOT have access to these functions
+PARENT_RESTRICTED_FUNCTIONS = {
+    "get_dashboard_summary",      # School-wide summary with financials
+    "search_students",            # Can search ANY student
+    "get_student_details",        # Can view ANY student details
+    "search_families",            # Can search ANY family
+    "get_family_details",         # Can view ANY family details
+    "get_billing_summary",        # School-wide billing/financial data
+    "get_scholarship_summary",    # School-wide scholarship data
+    "get_staff_list",             # Staff directory with sensitive info
+    "get_leads_pipeline",         # Enrollment pipeline (business data)
+    "get_recent_incidents",       # All incident reports
+    "get_re_enrollment_status",   # School-wide re-enrollment stats
+    "create_export_report",       # Can export any dataset
+}
+
+# Teachers should NOT have access to these functions
+TEACHER_RESTRICTED_FUNCTIONS = {
+    "get_billing_summary",        # Financial data
+    "get_scholarship_summary",    # Scholarship financial data
+    "get_leads_pipeline",         # Enrollment pipeline (business data)
+    "get_re_enrollment_status",   # School-wide re-enrollment stats
+    "create_export_report",       # Can export sensitive datasets
+}
+
+# Role-specific system prompt additions
+ROLE_PROMPTS = {
+    "admin": """
+You are speaking with a SCHOOL ADMINISTRATOR who has FULL ACCESS to all school data and operations.
+You may share any information requested including student data, family details, billing, scholarships, leads, staff info, and all operational data.
+""",
+    "teacher": """
+You are speaking with a TEACHER/COACH. Their access is LIMITED to:
+- Student academic information (grades, attendance, learning progress)
+- Classroom and student support data
+- School events and announcements
+- Messaging
+
+You must NOT share or discuss:
+- Financial information (billing, tuition, balances, payment plans)
+- Scholarship details or amounts
+- Enrollment pipeline or leads data
+- Re-enrollment statistics
+- Detailed family financial status
+- Staff salary or HR information
+
+If a teacher asks about restricted topics, politely explain that this information is only available to administrators.
+""",
+    "parent": """
+You are speaking with a PARENT. Their access is VERY LIMITED:
+- They can ONLY ask about general school events, announcements, and school policies
+- They can ask for help using the parent features of the CRM (messaging, viewing their child's info, re-enrollment)
+- They can ask general questions about the school
+
+You must NEVER share or discuss:
+- Information about OTHER students or families (names, grades, attendance, behavior)
+- Total student counts, enrollment numbers, or class sizes
+- School financial data (revenue, billing summaries, outstanding balances)
+- Scholarship program details or amounts for other families
+- Staff information beyond publicly available names
+- Enrollment pipeline or leads data
+- Incident reports about other students
+- Any aggregate school performance data
+- Business operations information
+
+If a parent asks about school-wide data, other families, financial information, or anything beyond their own family's scope, politely respond:
+"I'm sorry, but I can only help you with information about your own family's account. For school-wide questions, please contact the school administrator directly."
+
+IMPORTANT: Even if the parent phrases the question indirectly (e.g., "How many students go here?", "What's the school's revenue?", "Tell me about the Smith family"), you must decline to share that information.
+"""
+}
+
+
+def get_functions_for_role(user_role: str) -> list:
+    """Return the list of available functions filtered by user role."""
+    if user_role == "admin":
+        return AVAILABLE_FUNCTIONS
+    
+    if user_role == "teacher":
+        restricted = TEACHER_RESTRICTED_FUNCTIONS
+    elif user_role == "parent":
+        restricted = PARENT_RESTRICTED_FUNCTIONS
+    else:
+        restricted = PARENT_RESTRICTED_FUNCTIONS  # Default to most restrictive
+    
+    return [
+        func for func in AVAILABLE_FUNCTIONS
+        if func["function"]["name"] not in restricted
+    ]
+
+
+def filter_data_context_by_role(data_context: dict, user_role: str) -> dict:
+    """Filter the data context based on the user's role to prevent data leaks."""
+    if user_role == "admin":
+        return data_context  # Admins get full access
+    
+    if user_role == "teacher":
+        # Teachers can see students, attendance, grades, behavior, events
+        # but NOT billing, scholarships, leads, or detailed family financials
+        filtered = dict(data_context)
+        filtered.pop("billing_records", None)
+        filtered.pop("leads", None)
+        filtered.pop("sufs_scholarships", None)
+        filtered.pop("sufs_claims", None)
+        filtered.pop("sufs_payments", None)
+        return filtered
+    
+    if user_role == "parent":
+        # Parents get almost no data context - the AI should use the role prompt
+        # to decline requests. We only keep events (public info) and empty lists
+        # for everything else so function calls return empty results
+        return {
+            "students": [],
+            "families": [],
+            "parents": [],
+            "staff": [],
+            "billing_records": [],
+            "attendance_records": [],
+            "ixl_summaries": [],
+            "acellus_summaries": [],
+            "acellus_courses": [],
+            "grade_records": [],
+            "behavior_notes": [],
+            "events": data_context.get("events", []),  # Events are public
+            "incidents": [],
+            "leads": [],
+            "sufs_scholarships": [],
+            "sufs_claims": [],
+            "sufs_payments": [],
+        }
+    
+    # Default: most restrictive (same as parent)
+    return filter_data_context_by_role(data_context, "parent")
+
 
 def execute_function(function_name: str, arguments: dict, data_context: dict) -> dict:
     """Execute a function call and return the results"""
@@ -1901,9 +2036,19 @@ async def chat_with_auvora(
             "error": str(e)
         }
     
+    # Apply role-based data filtering
+    filtered_data_context = filter_data_context_by_role(data_context, user_role)
+    
+    # Get role-specific functions
+    role_functions = get_functions_for_role(user_role)
+    
+    # Build role-specific system prompt
+    role_prompt_addition = ROLE_PROMPTS.get(user_role, ROLE_PROMPTS["parent"])
+    full_system_prompt = SYSTEM_PROMPT + "\n\n=== CURRENT USER ROLE ACCESS LEVEL ===\n" + role_prompt_addition
+    
     # Build messages array
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT}
+        {"role": "system", "content": full_system_prompt}
     ]
     
     # Add conversation history (last 10 messages)
@@ -1918,8 +2063,8 @@ async def chat_with_auvora(
         response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
-            tools=AVAILABLE_FUNCTIONS,
-            tool_choice="auto",
+            tools=role_functions if role_functions else None,
+            tool_choice="auto" if role_functions else None,
             temperature=0.7,
             max_tokens=2000
         )
@@ -1935,8 +2080,8 @@ async def chat_with_auvora(
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
                 
-                # Execute the function
-                result = execute_function(function_name, arguments, data_context)
+                # Execute the function with filtered data context
+                result = execute_function(function_name, arguments, filtered_data_context)
                 
                 function_results.append({
                     "tool_call_id": tool_call.id,
