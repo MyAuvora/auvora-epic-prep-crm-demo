@@ -124,11 +124,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     fetchUnreadMessages()
   }, [view, selectedCampusId])
 
-  useEffect(() => {
-    if (view === 'students') {
-      fetchStudents()
-    }
-  }, [selectedCampusId])
 
   const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
     for (let i = 0; i < retries; i++) {
