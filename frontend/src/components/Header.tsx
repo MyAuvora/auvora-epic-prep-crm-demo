@@ -19,9 +19,19 @@ interface HeaderProps {
   currentRole: 'admin' | 'teacher' | 'parent'
   onRoleChange: (role: 'admin' | 'teacher' | 'parent') => void
   onSearchSelect?: (type: 'student' | 'family', id: string) => void
+  onLocationChange?: (campusId: string | null) => void
 }
 
-export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProps) {
+// Map location names to campus IDs from the backend
+const LOCATION_TO_CAMPUS_ID: Record<string, string | null> = {
+  'All Locations': null,
+  'Pace': 'campus_1',
+  'Navarre': 'campus_3',
+  'Crestview North': 'campus_2',
+  'Crestview Main Street': 'campus_2',
+}
+
+export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -256,9 +266,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       </div>
                       <button
                         onClick={() => {
-                          setSelectedLocation('Pace')
-                          setShowLocationDropdown(false)
-                        }}
+                                setSelectedLocation('Pace')
+                                setShowLocationDropdown(false)
+                                if (onLocationChange) onLocationChange(LOCATION_TO_CAMPUS_ID['Pace'])
+                              }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
                           selectedLocation === 'Pace' 
                             ? 'text-white font-medium' 
@@ -271,9 +282,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedLocation('Navarre')
-                          setShowLocationDropdown(false)
-                        }}
+                                setSelectedLocation('Navarre')
+                                setShowLocationDropdown(false)
+                                if (onLocationChange) onLocationChange(LOCATION_TO_CAMPUS_ID['Navarre'])
+                              }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
                           selectedLocation === 'Navarre' 
                             ? 'text-white font-medium' 
@@ -286,9 +298,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedLocation('Crestview North')
-                          setShowLocationDropdown(false)
-                        }}
+                                setSelectedLocation('Crestview North')
+                                setShowLocationDropdown(false)
+                                if (onLocationChange) onLocationChange(LOCATION_TO_CAMPUS_ID['Crestview North'])
+                              }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
                           selectedLocation === 'Crestview North' 
                             ? 'text-white font-medium' 
@@ -301,9 +314,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect }: HeaderProp
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedLocation('Crestview Main Street')
-                          setShowLocationDropdown(false)
-                        }}
+                                setSelectedLocation('Crestview Main Street')
+                                setShowLocationDropdown(false)
+                                if (onLocationChange) onLocationChange(LOCATION_TO_CAMPUS_ID['Crestview Main Street'])
+                              }}
                         className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${
                           selectedLocation === 'Crestview Main Street' 
                             ? 'text-white font-medium' 

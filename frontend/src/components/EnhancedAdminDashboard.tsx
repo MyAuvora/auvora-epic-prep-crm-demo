@@ -86,9 +86,10 @@ interface Family {
 interface EnhancedAdminDashboardProps {
   searchNavigation?: { type: 'student' | 'family'; id: string } | null
   onClearSearch?: () => void
+  selectedCampusId?: string | null
 }
 
-export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: EnhancedAdminDashboardProps) {
+export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
@@ -98,7 +99,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch }: Enha
     const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
     const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
-  const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)

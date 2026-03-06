@@ -18,6 +18,7 @@ function AuthenticatedApp() {
   const [currentRole, setCurrentRole] = useState<Role>('admin')
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
+  const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
 
   // Get role from Clerk user metadata or default to admin for demo
@@ -78,10 +79,11 @@ function AuthenticatedApp() {
           currentRole={currentRole} 
           onRoleChange={handleRoleChange}
           onSearchSelect={handleSearchSelect}
+          onLocationChange={setSelectedCampusId}
         />
         
         <main className="flex-1">
-          {currentRole === 'admin' && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
+          {currentRole === 'admin' && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} />}
           {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
           {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
         </main>
