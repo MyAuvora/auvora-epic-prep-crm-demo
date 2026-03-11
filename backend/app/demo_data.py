@@ -1741,7 +1741,7 @@ def generate_all_demo_data():
                 category=ann_data["category"],
                 status=AnnouncementStatus.PUBLISHED,
                 created_by=announcement_author,
-                created_by_role=StaffRole.DIRECTOR,
+                created_by_role=campus_leaders[0].role if campus_leaders else StaffRole.DIRECTOR,
                 approved_by=announcement_author,
                 approved_date=today - timedelta(days=random.randint(0, 5)),
                 published_date=today - timedelta(days=random.randint(0, 5)),
