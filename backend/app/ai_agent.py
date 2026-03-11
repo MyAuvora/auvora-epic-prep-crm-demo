@@ -60,10 +60,10 @@ You must be able to answer ANY question about how to use this CRM. Below is comp
 
 The CRM has three user roles with different access levels:
 
-### ADMIN (School Administrator)
+### OWNER / DIRECTOR (School Leadership)
 Full access to all features. Can manage students, families, staff, billing, admissions, and all school operations.
 
-### COACH/TEACHER
+### COACH
 Access to their assigned rooms/classrooms, student information, gradebook, messaging, and can upload learning progress data.
 
 ### PARENT
@@ -698,7 +698,7 @@ AVAILABLE_FUNCTIONS = [
                 "properties": {
                     "role": {
                         "type": "string",
-                        "enum": ["Owner", "Director", "Manager", "Admin", "Teacher", "Assistant"],
+                        "enum": ["Owner", "Director", "Coach"],
                         "description": "Filter by staff role"
                     }
                 },
@@ -895,7 +895,7 @@ You are speaking with a SCHOOL ADMINISTRATOR who has FULL ACCESS to all school d
 You may share any information requested including student data, family details, billing, scholarships, leads, staff info, and all operational data.
 """,
     "teacher": """
-You are speaking with a TEACHER/COACH. Their access is LIMITED to:
+You are speaking with a COACH. Their access is LIMITED to:
 - Student academic information (grades, attendance, learning progress)
 - Classroom and student support data
 - School events and announcements
@@ -941,7 +941,7 @@ def get_functions_for_role(user_role: str) -> list:
     if user_role == "admin":
         return AVAILABLE_FUNCTIONS
     
-    if user_role == "teacher":
+    if user_role == "teacher" or user_role == "coach":
         restricted = TEACHER_RESTRICTED_FUNCTIONS
     elif user_role == "parent":
         restricted = PARENT_RESTRICTED_FUNCTIONS
@@ -959,8 +959,8 @@ def filter_data_context_by_role(data_context: dict, user_role: str) -> dict:
     if user_role == "admin":
         return data_context  # Admins get full access
     
-    if user_role == "teacher":
-        # Teachers can see students, attendance, grades, behavior, events
+    if user_role == "teacher" or user_role == "coach":
+        # Coaches can see students, attendance, grades, behavior, events
         # but NOT billing, scholarships, leads, or detailed family financials
         filtered = dict(data_context)
         filtered.pop("billing_records", None)

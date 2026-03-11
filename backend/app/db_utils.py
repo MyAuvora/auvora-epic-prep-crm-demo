@@ -1193,7 +1193,7 @@ def _campus_to_dict(r):
 def _user_to_dict(r):
     return {
         "user_id": r.user_id, "email": r.email or "", "password_hash": r.password_hash or "",
-        "first_name": r.first_name, "last_name": r.last_name, "role": r.role or "Teacher",
+        "first_name": r.first_name, "last_name": r.last_name, "role": r.role or "Coach",
         "campus_ids": _json_loads(r.campus_ids), "active": r.active if r.active is not None else True,
         "created_date": r.created_date or date.today(), "last_login": r.last_login,
     }
@@ -1213,9 +1213,9 @@ def _staff_to_dict(r):
         "staff_id": r.staff_id,
         "campus_ids": _json_loads(r.campus_ids) if r.campus_ids else ([r.campus_id] if r.campus_id else []),
         "first_name": r.first_name, "last_name": r.last_name,
-        "role": r.role or "Teacher", "email": r.email or "",
+        "role": r.role or "Coach", "email": r.email or "",
         "assigned_rooms": _json_loads(r.assigned_rooms),
-        "permissions": r.permissions or "Teacher",
+        "permissions": r.permissions or "Coach",
     }
 
 
@@ -1735,7 +1735,7 @@ def _announcement_to_dict(r):
         "title": r.title or "", "content": r.content or "",
         "category": r.category or "General",
         "status": r.status or "Draft",
-        "created_by": r.created_by or "", "created_by_role": r.created_by_role or "Teacher",
+        "created_by": r.created_by or "", "created_by_role": r.created_by_role or "Coach",
         "approved_by": r.approved_by, "approved_date": r.approved_date,
         "published_date": r.published_date, "expires_date": r.expires_date,
         "is_pinned": r.is_pinned or False,

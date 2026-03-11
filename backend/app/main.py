@@ -111,10 +111,7 @@ class RiskFlag(str, Enum):
 class StaffRole(str, Enum):
     OWNER = "Owner"
     DIRECTOR = "Director"
-    MANAGER = "Manager"
-    ADMIN = "Admin"
-    TEACHER = "Teacher"
-    ASSISTANT = "Assistant"
+    COACH = "Coach"
 
 class BehaviorType(str, Enum):
     POSITIVE = "Positive"

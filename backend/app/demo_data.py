@@ -133,12 +133,12 @@ def generate_all_demo_data():
     
     staff_data = [
         {"first_name": "Sarah", "last_name": "Mitchell", "role": StaffRole.OWNER, "rooms": [], "campus_idx": None},
-        {"first_name": "Jennifer", "last_name": "Kilgore", "role": StaffRole.ASSISTANT, "rooms": ["Room 1 - Morning"], "campus_idx": 0},
-        {"first_name": "Brittany", "last_name": "Kilcrease", "role": StaffRole.ADMIN, "rooms": [], "campus_idx": 1},
-        {"first_name": "Pam", "last_name": "Riffle", "role": StaffRole.TEACHER, "rooms": ["Room 2 - Morning", "Room 2 - Afternoon"], "campus_idx": 0},
-        {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.TEACHER, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"], "campus_idx": 1},
-        {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.TEACHER, "rooms": ["Room 1 - Morning"], "campus_idx": 2},
-        {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.TEACHER, "rooms": ["Room 4 - Afternoon"], "campus_idx": 2},
+        {"first_name": "Jennifer", "last_name": "Kilgore", "role": StaffRole.COACH, "rooms": ["Room 1 - Morning"], "campus_idx": 0},
+        {"first_name": "Brittany", "last_name": "Kilcrease", "role": StaffRole.DIRECTOR, "rooms": [], "campus_idx": 1},
+        {"first_name": "Pam", "last_name": "Riffle", "role": StaffRole.COACH, "rooms": ["Room 2 - Morning", "Room 2 - Afternoon"], "campus_idx": 0},
+        {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.COACH, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"], "campus_idx": 1},
+        {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.COACH, "rooms": ["Room 1 - Morning"], "campus_idx": 2},
+        {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.COACH, "rooms": ["Room 4 - Afternoon"], "campus_idx": 2},
     ]
     
     for i, staff_info in enumerate(staff_data):
@@ -152,7 +152,7 @@ def generate_all_demo_data():
             role=staff_info["role"],
             email=f"{staff_info['first_name'].lower()}.{staff_info['last_name'].lower()}@epicprepacademy.com",
             assigned_rooms=staff_info["rooms"],
-            permissions="Admin" if staff_info["role"] in [StaffRole.OWNER, StaffRole.ADMIN] else "Teacher"
+            permissions="Admin" if staff_info["role"] in [StaffRole.OWNER, StaffRole.DIRECTOR] else "Coach"
         )
         staff_db.append(staff)
     
@@ -634,7 +634,7 @@ def generate_all_demo_data():
     for i in range(10):
         student = random.choice(students_db)
         family = next(f for f in families_db if f.family_id == student.family_id)
-        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
         
         conf_status = random.choice([ConferenceStatus.SCHEDULED, ConferenceStatus.COMPLETED])
         conf_date = datetime.now() + timedelta(days=random.randint(-30, 30))
@@ -655,7 +655,7 @@ def generate_all_demo_data():
     for i in range(15):
         student = random.choice(students_db)
         family = next(f for f in families_db if f.family_id == student.family_id)
-        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
         
         is_parent_sender = random.choice([True, False])
         
@@ -719,7 +719,7 @@ def generate_all_demo_data():
             requires_permission_slip=(event_type == EventType.FIELD_TRIP),
             requires_payment=requires_payment,
             payment_amount=random.choice([15.0, 25.0, 35.0]) if requires_payment else None,
-            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER]])
         )
         events_db.append(event)
         
@@ -860,7 +860,7 @@ def generate_all_demo_data():
             campus_id=album_campus.campus_id,
             title=title,
             description=description,
-            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
+            created_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.COACH]),
             created_date=date.today() - timedelta(days=random.randint(1, 60)),
             status=random.choice([PhotoAlbumStatus.PUBLISHED, PhotoAlbumStatus.DRAFT]),
             photo_urls=[f"/photos/album_{i+1}/photo_{j+1}.jpg" for j in range(random.randint(5, 15))],
@@ -888,7 +888,7 @@ def generate_all_demo_data():
             incident_id=f"incident_{i+1}",
             campus_id=student.campus_id,
             student_id=student.student_id,
-            reported_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.TEACHER]),
+            reported_by_staff_id=random.choice([s.staff_id for s in staff_db if s.role == StaffRole.COACH]),
             incident_type=incident_type,
             severity=severity,
             date=date.today() - timedelta(days=random.randint(1, 30)),
@@ -1149,7 +1149,7 @@ def generate_all_demo_data():
             last_contact_date=last_contact,
             tour_date=tour_date_val,
             notes=f"Interested in {campus.name}. {random.choice(['Referred by current parent.', 'Found us on social media.', 'Attended open house.', 'Looking for small class sizes.', 'Needs flexible schedule.'])}",
-            assigned_to=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+            assigned_to=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER]])
         )
         leads_db.append(lead)
     
@@ -1193,7 +1193,7 @@ def generate_all_demo_data():
     
     for i in range(12):
         campus = random.choice(campuses_db) if i % 3 == 0 else None
-        sender = random.choice([s for s in staff_db if s.role in [StaffRole.ADMIN, StaffRole.OWNER]])
+        sender = random.choice([s for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER]])
         
         recipient_types = ["All Parents", "Grade K", "Grade 1-3", "Grade 4-6", "Grade 7-9", "Grade 10-12", "Session Morning", "Session Afternoon"]
         recipient_type = random.choice(recipient_types)
@@ -1323,7 +1323,7 @@ def generate_all_demo_data():
         num_assessments = random.randint(1, min(8, len(relevant_standards)))
         assessed_standards = random.sample(relevant_standards, num_assessments)
         
-        teacher = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        teacher = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
         
         for standard in assessed_standards:
             mastery_weights = [MasteryLevel.PROFICIENT, MasteryLevel.PROFICIENT, MasteryLevel.DEVELOPING, MasteryLevel.ADVANCED, MasteryLevel.BEGINNING]
@@ -1375,7 +1375,7 @@ def generate_all_demo_data():
     
     for idx, student in enumerate(iep_504_students):
         plan_type = random.choice([PlanType.IEP, PlanType.SECTION_504])
-        case_manager = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        case_manager = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
         
         start_date = today - timedelta(days=random.randint(180, 730))
         end_date = start_date + timedelta(days=365)
@@ -1457,7 +1457,7 @@ def generate_all_demo_data():
         }
         
         start_date = today - timedelta(days=random.randint(30, 90))
-        staff_member = random.choice([s for s in staff_db if s.role == StaffRole.TEACHER])
+        staff_member = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
         
         intervention = InterventionPlan(
             intervention_id=f"intervention_{idx+1}",
@@ -1540,7 +1540,7 @@ def generate_all_demo_data():
         if "Low engagement" in risk_factors:
             recommended_interventions.append("Mentorship program")
         
-        assessor = random.choice([s for s in staff_db if s.role in [StaffRole.TEACHER, StaffRole.ADMIN]])
+        assessor = random.choice([s for s in staff_db if s.role in [StaffRole.COACH, StaffRole.DIRECTOR]])
         
         assessment = AtRiskAssessment(
             assessment_id=f"risk_assessment_{idx+1}",
@@ -1644,14 +1644,7 @@ def generate_all_demo_data():
     announcement_reads_db = []
     event_workflows_db = []
     
-    for staff_member in staff_db:
-        if staff_member.role == StaffRole.DIRECTOR:
-            staff_member.role = StaffRole.DIRECTOR
-        elif staff_member.role == StaffRole.MANAGER:
-            staff_member.role = StaffRole.MANAGER
-    
     director_count = sum(1 for s in staff_db if s.role == StaffRole.DIRECTOR)
-    manager_count = sum(1 for s in staff_db if s.role == StaffRole.MANAGER)
     
     if director_count == 0:
         for i, campus in enumerate(campuses_db):
@@ -1667,21 +1660,7 @@ def generate_all_demo_data():
             )
             staff_db.append(director)
     
-    if manager_count == 0:
-        for i, campus in enumerate(campuses_db):
-            manager = Staff(
-                staff_id=f"staff_manager_{i+1}",
-                campus_ids=[campus.campus_id],
-                first_name=["David", "Lisa", "Robert"][i],
-                last_name=["Martinez", "Anderson", "Taylor"][i],
-                role=StaffRole.MANAGER,
-                email=f"manager{i+1}@epicprepacademy.com",
-                assigned_rooms=[],
-                permissions="Admin"
-            )
-            staff_db.append(manager)
-    
-    teachers = [s for s in staff_db if s.role == StaffRole.TEACHER]
+    coaches = [s for s in staff_db if s.role == StaffRole.COACH]
     assignment_titles = {
         "Math": ["Fractions Quiz", "Multiplication Test", "Word Problems Homework", "Geometry Project", "Algebra Quiz"],
         "ELA": ["Book Report", "Grammar Quiz", "Creative Writing", "Reading Comprehension Test", "Vocabulary Homework"],
@@ -1690,7 +1669,7 @@ def generate_all_demo_data():
     }
     
     assignment_id = 1
-    for teacher in teachers[:5]:
+    for teacher in coaches[:5]:
         for subject in ["Math", "ELA", "Science", "Social Studies"]:
             for i, title in enumerate(assignment_titles[subject][:3]):
                 assignment = Assignment(
@@ -1763,7 +1742,7 @@ def generate_all_demo_data():
                 published_date=today - timedelta(days=random.randint(0, 5)),
                 expires_date=today + timedelta(days=30) if not ann_data["pinned"] else None,
                 is_pinned=ann_data["pinned"],
-                target_roles=["Parent", "Teacher"]
+                target_roles=["Parent", "Coach"]
             )
             announcements_db.append(announcement)
     
