@@ -144,7 +144,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       setInviteError(null);
 
       // Step 1: Add staff member to the database
-      await fetch(`${API_URL}/api/staff`, {
+      const staffResponse = await fetch(`${API_URL}/api/staff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -152,6 +152,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           ...newStaff
         })
       });
+
+      if (!staffResponse.ok) {
+        throw new Error('Failed to add staff member');
+      }
 
       // Step 2: Send login invite if checkbox is checked
       if (sendLoginInvite && newStaff.email) {
