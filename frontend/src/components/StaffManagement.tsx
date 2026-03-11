@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Mail, Phone, Briefcase, ArrowLeft, MapPin, FileText, Upload, Download, Trash2, Edit, User, DollarSign, Shield, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Briefcase, ArrowLeft, MapPin, FileText, Upload, Download, Trash2, Edit, User, DollarSign, Shield, Calendar, CheckCircle, XCircle, AlertCircle, Send } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +90,9 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   });
   const [reviewingRequest, setReviewingRequest] = useState<TimeOffRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [sendLoginInvite, setSendLoginInvite] = useState(true);
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [newStaff, setNewStaff] = useState({
     first_name: '',
     last_name: '',
@@ -119,8 +122,28 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     }
   };
 
+  // Map staff roles to Clerk login roles
+  const getClerkRole = (staffRole: string): 'admin' | 'teacher' | 'parent' => {
+    switch (staffRole) {
+      case 'Owner':
+      case 'Director':
+      case 'Manager':
+      case 'Admin':
+        return 'admin';
+      case 'Coach':
+      case 'Assistant':
+        return 'teacher';
+      default:
+        return 'teacher';
+    }
+  };
+
   const handleAddStaff = async () => {
     try {
+      setInviteStatus('sending');
+      setInviteError(null);
+
+      // Step 1: Add staff member to the database
       await fetch(`${API_URL}/api/staff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,8 +152,34 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           ...newStaff
         })
       });
-      
+
+      // Step 2: Send login invite if checkbox is checked
+      if (sendLoginInvite && newStaff.email) {
+        const inviteResponse = await fetch(`${API_URL}/api/clerk-users/invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: newStaff.email,
+            first_name: newStaff.first_name,
+            last_name: newStaff.last_name,
+            role: getClerkRole(newStaff.role)
+          })
+        });
+
+        if (!inviteResponse.ok) {
+          const errorData = await inviteResponse.json();
+          const errorMsg = errorData.detail || 'Failed to send login invite';
+          // Staff was added but invite failed — show warning but don't block
+          setInviteError(errorMsg);
+          setInviteStatus('error');
+          fetchStaff();
+          return;
+        }
+      }
+
+      setInviteStatus('success');
       setShowAddModal(false);
+      setSendLoginInvite(true);
       setNewStaff({
         first_name: '',
         last_name: '',
@@ -141,8 +190,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         campus_id: campusId || 'pace'
       });
       fetchStaff();
+      // Reset status after brief delay
+      setTimeout(() => setInviteStatus('idle'), 3000);
     } catch (error) {
       console.error('Error adding staff:', error);
+      setInviteStatus('error');
+      setInviteError('An unexpected error occurred');
     }
   };
 
@@ -1238,17 +1291,67 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                 placeholder="(555) 123-4567"
               />
             </div>
+
+            {/* Login Invite Toggle */}
+            <div className="border-t pt-4 mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <Label htmlFor="send-invite" className="text-sm font-medium cursor-pointer">
+                      Send login invite
+                    </Label>
+                    <p className="text-xs text-gray-500">They'll receive an email to set up their password</p>
+                  </div>
+                </div>
+                <button
+                  id="send-invite"
+                  type="button"
+                  role="switch"
+                  aria-checked={sendLoginInvite}
+                  onClick={() => setSendLoginInvite(!sendLoginInvite)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    sendLoginInvite ? 'bg-red-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      sendLoginInvite ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {sendLoginInvite && (
+                <div className="mt-2 text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'admin' ? 'Admin (full access)' : 'Teacher (classroom access)'}
+                </div>
+              )}
+            </div>
+
+            {inviteError && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                <strong>Staff member was added</strong>, but the login invite failed: {inviteError}
+                <br />
+                <span className="text-xs">You can send the invite later from Settings → User Management.</span>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+            <Button variant="outline" onClick={() => { setShowAddModal(false); setInviteError(null); setInviteStatus('idle'); }}>
               Cancel
             </Button>
             <Button 
               onClick={handleAddStaff}
               className="bg-red-600 hover:bg-red-700"
-              disabled={!newStaff.first_name || !newStaff.last_name || !newStaff.email}
+              disabled={!newStaff.first_name || !newStaff.last_name || !newStaff.email || inviteStatus === 'sending'}
             >
-              Add Staff Member
+              {inviteStatus === 'sending' ? (
+                <><span className="animate-spin mr-2">⏳</span> Adding...</>
+              ) : sendLoginInvite ? (
+                <><UserPlus className="w-4 h-4 mr-2" /> Add & Send Invite</>
+              ) : (
+                <><UserPlus className="w-4 h-4 mr-2" /> Add Staff Member</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
