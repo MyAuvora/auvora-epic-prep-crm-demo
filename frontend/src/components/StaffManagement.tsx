@@ -93,6 +93,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   const [sendLoginInvite, setSendLoginInvite] = useState(true);
   const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [staffCreationFailed, setStaffCreationFailed] = useState(false);
   const [newStaff, setNewStaff] = useState({
     first_name: '',
     last_name: '',
@@ -149,6 +150,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     try {
       setInviteStatus('sending');
       setInviteError(null);
+      setStaffCreationFailed(false);
 
       // Step 1: Add staff member to the database
       const staffPayload = {
@@ -168,7 +170,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       });
 
       if (!staffResponse.ok) {
-        throw new Error('Failed to add staff member');
+        setStaffCreationFailed(true);
+        throw new Error('Failed to add staff member. Please try again.');
       }
 
       // Step 2: Send login invite if checkbox is checked
@@ -1347,10 +1350,16 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
             </div>
 
             {inviteError && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                <strong>Staff member was added</strong>, but the login invite failed: {inviteError}
-                <br />
-                <span className="text-xs">You can send the invite later from Settings → User Management.</span>
+              <div className={`p-3 ${staffCreationFailed ? 'bg-red-50 border-red-200 text-red-800' : 'bg-yellow-50 border-yellow-200 text-yellow-800'} border rounded-lg text-sm`}>
+                {staffCreationFailed ? (
+                  <>{inviteError}</>
+                ) : (
+                  <>
+                    <strong>Staff member was added</strong>, but the login invite failed: {inviteError}
+                    <br />
+                    <span className="text-xs">You can send the invite later from Settings → User Management.</span>
+                  </>
+                )}
               </div>
             )}
           </div>
