@@ -3300,7 +3300,9 @@ async def create_staff(staff_data: dict):
         last_name=staff_data['last_name'],
         role=staff_data['role'],
         email=staff_data['email'],
-        assigned_rooms=staff_data.get('assigned_rooms', [])
+        assigned_rooms=staff_data.get('assigned_rooms', []),
+        campus_ids=staff_data.get('campus_ids', ['pace']),
+        permissions=staff_data.get('permissions', 'standard')
     )
     staff_db.append(new_staff)
     db_utils.save_staff(new_staff)

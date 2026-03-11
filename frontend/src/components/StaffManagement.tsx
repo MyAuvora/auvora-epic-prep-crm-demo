@@ -122,6 +122,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     }
   };
 
+  // Map UI role labels to backend StaffRole enum values
+  const toBackendRole = (uiRole: string): string => {
+    // The school uses "Coach" but backend stores "Teacher"
+    return uiRole === 'Coach' ? 'Teacher' : uiRole;
+  };
+
   // Map staff roles to Clerk login roles
   const getClerkRole = (staffRole: string): 'admin' | 'teacher' | 'parent' => {
     switch (staffRole) {
@@ -131,6 +137,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       case 'Admin':
         return 'admin';
       case 'Coach':
+      case 'Teacher':
       case 'Assistant':
         return 'teacher';
       default:
@@ -144,13 +151,20 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       setInviteError(null);
 
       // Step 1: Add staff member to the database
+      const staffPayload = {
+        staff_id: `staff_${Date.now()}`,
+        first_name: newStaff.first_name,
+        last_name: newStaff.last_name,
+        role: toBackendRole(newStaff.role),
+        email: newStaff.email,
+        assigned_rooms: newStaff.assigned_rooms,
+        campus_ids: [newStaff.campus_id],
+        permissions: 'standard'
+      };
       const staffResponse = await fetch(`${API_URL}/api/staff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          staff_id: `staff_${Date.now()}`,
-          ...newStaff
-        })
+        body: JSON.stringify(staffPayload)
       });
 
       if (!staffResponse.ok) {
@@ -324,7 +338,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   const groupedStaff = {
     leadership: staff.filter(s => ['Owner', 'Director', 'Manager'].includes(s.role)),
     admin: staff.filter(s => s.role === 'Admin'),
-    teachers: staff.filter(s => s.role === 'Coach'),
+    teachers: staff.filter(s => s.role === 'Coach' || s.role === 'Teacher'),
     assistants: staff.filter(s => s.role === 'Assistant')
   };
 
