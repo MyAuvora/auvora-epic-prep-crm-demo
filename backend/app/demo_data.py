@@ -1727,6 +1727,11 @@ def generate_all_demo_data():
     ]
     
     for i, campus in enumerate(campuses_db):
+        # Find a director or owner for this campus to attribute announcements to
+        campus_leaders = [s for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER] and campus.campus_id in s.campus_ids]
+        if not campus_leaders:
+            campus_leaders = [s for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER]]
+        announcement_author = campus_leaders[0].staff_id if campus_leaders else "staff_1"
         for j, ann_data in enumerate(announcement_data):
             announcement = Announcement(
                 announcement_id=f"ann_{campus.campus_id}_{j+1}",
@@ -1735,9 +1740,9 @@ def generate_all_demo_data():
                 content=ann_data["content"],
                 category=ann_data["category"],
                 status=AnnouncementStatus.PUBLISHED,
-                created_by=f"staff_director_{i+1}",
+                created_by=announcement_author,
                 created_by_role=StaffRole.DIRECTOR,
-                approved_by=f"staff_director_{i+1}",
+                approved_by=announcement_author,
                 approved_date=today - timedelta(days=random.randint(0, 5)),
                 published_date=today - timedelta(days=random.randint(0, 5)),
                 expires_date=today + timedelta(days=30) if not ann_data["pinned"] else None,

@@ -934,6 +934,7 @@ If a parent asks about school-wide data, other families, financial information, 
 IMPORTANT: Even if the parent phrases the question indirectly (e.g., "How many students go here?", "What's the school's revenue?", "Tell me about the Smith family"), you must decline to share that information.
 """
 }
+ROLE_PROMPTS["coach"] = ROLE_PROMPTS["teacher"]
 
 
 def get_functions_for_role(user_role: str) -> list:
