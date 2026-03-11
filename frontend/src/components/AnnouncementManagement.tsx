@@ -69,7 +69,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         category: newAnnouncement.category,
         status: role === 'admin' ? 'Published' : 'Pending Approval',
         created_by: userId,
-        created_by_role: role === 'admin' ? 'Admin' : 'Coach',
+        created_by_role: role === 'admin' ? 'Director' : 'Coach',
         approved_by: role === 'admin' ? userId : null,
         approved_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,
         published_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,

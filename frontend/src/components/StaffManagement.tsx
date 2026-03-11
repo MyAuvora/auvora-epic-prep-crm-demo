@@ -125,8 +125,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
 
   // Map UI role labels to backend StaffRole enum values
   const toBackendRole = (uiRole: string): string => {
-    // The school uses "Coach" but backend stores "Teacher"
-    return uiRole === 'Coach' ? 'Teacher' : uiRole;
+    // Backend now uses "Coach" directly
+    return uiRole;
   };
 
   // Map staff roles to Clerk login roles
@@ -134,12 +134,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     switch (staffRole) {
       case 'Owner':
       case 'Director':
-      case 'Manager':
-      case 'Admin':
         return 'admin';
       case 'Coach':
-      case 'Teacher':
-      case 'Assistant':
         return 'teacher';
       default:
         return 'teacher';
@@ -224,10 +220,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
     const colors: Record<string, string> = {
       'Owner': 'bg-purple-100 text-purple-800',
       'Director': 'bg-blue-100 text-blue-800',
-      'Manager': 'bg-green-100 text-green-800',
-      'Admin': 'bg-amber-100 text-amber-800',
-      'Coach': 'bg-teal-100 text-teal-800',
-      'Assistant': 'bg-gray-100 text-gray-800'
+      'Coach': 'bg-teal-100 text-teal-800'
     };
     return colors[role] || colors['Coach'];
   };
@@ -339,10 +332,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   };
 
   const groupedStaff = {
-    leadership: staff.filter(s => ['Owner', 'Director', 'Manager'].includes(s.role)),
-    admin: staff.filter(s => s.role === 'Admin'),
-    teachers: staff.filter(s => s.role === 'Coach' || s.role === 'Teacher'),
-    assistants: staff.filter(s => s.role === 'Assistant')
+    leadership: staff.filter(s => ['Owner', 'Director'].includes(s.role)),
+    coaches: staff.filter(s => s.role === 'Coach')
   };
 
   if (loading) {
@@ -816,10 +807,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                           <SelectContent>
                             <SelectItem value="Owner">Owner</SelectItem>
                             <SelectItem value="Director">Director</SelectItem>
-                            <SelectItem value="Manager">Manager</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
                             <SelectItem value="Coach">Coach</SelectItem>
-                            <SelectItem value="Assistant">Assistant</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1068,18 +1056,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{groupedStaff.leadership.length}</div>
-            <p className="text-xs text-gray-500">Owners, Directors, Managers</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Administrators</CardTitle>
-            <Briefcase className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{groupedStaff.admin.length}</div>
-            <p className="text-xs text-gray-500">Administrative staff</p>
+            <p className="text-xs text-gray-500">Owners and Directors</p>
           </CardContent>
         </Card>
 
@@ -1089,19 +1066,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
             <Users className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupedStaff.teachers.length}</div>
+            <div className="text-2xl font-bold">{groupedStaff.coaches.length}</div>
             <p className="text-xs text-gray-500">Coaching staff</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assistants</CardTitle>
-            <Users className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{groupedStaff.assistants.length}</div>
-            <p className="text-xs text-gray-500">Support staff</p>
           </CardContent>
         </Card>
       </div>
@@ -1146,11 +1112,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
       )}
 
             {/* Coaches Section */}
-            {groupedStaff.teachers.length > 0 && (
+            {groupedStaff.coaches.length > 0 && (
               <div>
                 <h3 className="text-xl font-semibold mb-4">Coaches</h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {groupedStaff.teachers.map((teacher) => (
+            {groupedStaff.coaches.map((teacher) => (
               <Card 
                 key={teacher.staff_id} 
                 className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -1189,44 +1155,6 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         </div>
       )}
 
-      {/* Admin & Assistants Section */}
-      {(groupedStaff.admin.length > 0 || groupedStaff.assistants.length > 0) && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Administrative & Support Staff</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[...groupedStaff.admin, ...groupedStaff.assistants].map((member) => (
-              <Card 
-                key={member.staff_id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleStaffClick(member)}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <CardTitle className="text-lg">
-                      {member.first_name} {member.last_name}
-                    </CardTitle>
-                    <Badge className={getRoleBadgeColor(member.role)}>{member.role}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Mail className="w-4 h-4" />
-                      <span>{member.email}</span>
-                    </div>
-                    {member.phone && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="w-4 h-4" />
-                        <span>{member.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Add Staff Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
@@ -1268,10 +1196,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                 <SelectContent>
                   <SelectItem value="Owner">Owner</SelectItem>
                   <SelectItem value="Director">Director</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Coach">Coach</SelectItem>
-                  <SelectItem value="Assistant">Assistant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1344,7 +1269,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
               </div>
               {sendLoginInvite && (
                 <div className="mt-2 text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'admin' ? 'Admin (full access)' : 'Teacher (classroom access)'}
+                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'admin' ? 'Admin (full access)' : 'Coach (classroom access)'}
                 </div>
               )}
             </div>
