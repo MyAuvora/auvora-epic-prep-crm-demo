@@ -156,8 +156,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
         role: toBackendRole(newStaff.role),
         email: newStaff.email,
         assigned_rooms: newStaff.assigned_rooms,
-        campus_ids: [newStaff.campus_id],
-        permissions: 'standard'
+        campus_ids: newStaff.role === 'Owner' ? ['pace', 'navarre', 'crestview_north', 'crestview_main_street'] : [newStaff.campus_id],
+        permissions: newStaff.role === 'Owner' || newStaff.role === 'Director' ? 'Admin' : 'standard'
       };
       const staffResponse = await fetch(`${API_URL}/api/staff`, {
         method: 'POST',
@@ -815,20 +815,26 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                         <Label>Department</Label>
                         <Input value={editedStaff?.department || ''} onChange={(e) => setEditedStaff(prev => prev ? {...prev, department: e.target.value} : null)} />
                       </div>
-                      <div>
-                        <Label>Location</Label>
-                        <Select value={editedStaff?.campus_id || ''} onValueChange={(value) => setEditedStaff(prev => prev ? {...prev, campus_id: value} : null)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pace">Pace</SelectItem>
-                            <SelectItem value="navarre">Navarre</SelectItem>
-                            <SelectItem value="crestview_north">Crestview North</SelectItem>
-                            <SelectItem value="crestview_main_street">Crestview Main Street</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {editedStaff?.role === 'Owner' ? (
+                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                          <strong>All Locations</strong> — Owner has access to all locations automatically.
+                        </div>
+                      ) : (
+                        <div>
+                          <Label>Location</Label>
+                          <Select value={editedStaff?.campus_id || ''} onValueChange={(value) => setEditedStaff(prev => prev ? {...prev, campus_id: value} : null)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pace">Pace</SelectItem>
+                              <SelectItem value="navarre">Navarre</SelectItem>
+                              <SelectItem value="crestview_north">Crestview North</SelectItem>
+                              <SelectItem value="crestview_main_street">Crestview Main Street</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div>
                         <Label>Employment Type</Label>
                         <Select value={editedStaff?.employment_type || ''} onValueChange={(value) => setEditedStaff(prev => prev ? {...prev, employment_type: value} : null)}>
@@ -1201,20 +1207,26 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="location">Location</Label>
-              <Select value={newStaff.campus_id} onValueChange={(value) => setNewStaff({ ...newStaff, campus_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pace">Pace</SelectItem>
-                  <SelectItem value="navarre">Navarre</SelectItem>
-                  <SelectItem value="crestview_north">Crestview North</SelectItem>
-                  <SelectItem value="crestview_main_street">Crestview Main Street</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {newStaff.role === 'Owner' ? (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                <strong>All Locations</strong> — Owner has access to all locations automatically.
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Select value={newStaff.campus_id} onValueChange={(value) => setNewStaff({ ...newStaff, campus_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pace">Pace</SelectItem>
+                    <SelectItem value="navarre">Navarre</SelectItem>
+                    <SelectItem value="crestview_north">Crestview North</SelectItem>
+                    <SelectItem value="crestview_main_street">Crestview Main Street</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="email">Email</Label>
