@@ -1296,11 +1296,33 @@ def delete_event(event_id: str):
         db.close()
 
 
+def save_time_off_request(pydantic_req):
+    """Persist a time-off request to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            request_id=pydantic_req.request_id,
+            staff_id=pydantic_req.staff_id,
+            start_date=pydantic_req.start_date,
+            end_date=pydantic_req.end_date,
+            reason=pydantic_req.reason,
+            status=_enum_val(pydantic_req.status),
+            submitted_date=pydantic_req.submitted_date,
+            reviewed_by=pydantic_req.reviewed_by,
+            review_date=pydantic_req.review_date,
+        )
+        _upsert(db, models.TimeOffRequest, "request_id", pydantic_req.request_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
 def reset_all_data():
     """Wipe all data from all tables for production reset."""
     db = SessionLocal()
     try:
         # Delete in reverse dependency order
+        db.query(models.TimeOffRequest).delete()
         db.query(models.AuditLog).delete()
         db.query(models.SUFSPaymentAllocation).delete()
         db.query(models.SUFSPayment).delete()

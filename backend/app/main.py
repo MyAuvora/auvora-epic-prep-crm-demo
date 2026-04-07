@@ -5047,6 +5047,7 @@ async def create_time_off_request(request: TimeOffRequest):
     if not request.submitted_date:
         request.submitted_date = date.today()
     time_off_requests_db.append(request)
+    db_utils.save_time_off_request(request)
     return request
 
 @app.put("/api/time-off-requests/{request_id}")
@@ -5057,4 +5058,5 @@ async def update_time_off_request(request_id: str, status: TimeOffRequestStatus,
     request.status = status
     request.reviewed_by = reviewed_by
     request.review_date = date.today()
+    db_utils.save_time_off_request(request)
     return request
