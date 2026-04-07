@@ -39,7 +39,7 @@ interface CartItem {
 }
 
 interface StoreComponentProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   familyId?: string;
   parentId?: string;
   userId?: string;
@@ -200,7 +200,7 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
         </div>
       )}
 
-      {role === 'admin' && (
+      {(role === 'owner' || role === 'admin') && (
         <div>
           <h2 className="text-2xl font-bold mb-4">Store Overview</h2>
           <div className="grid gap-4 md:grid-cols-3">

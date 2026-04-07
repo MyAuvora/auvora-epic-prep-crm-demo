@@ -10,26 +10,26 @@ import { PrivacyPolicy } from './components/PrivacyPolicy'
 import { SignInPage } from './components/SignInPage'
 import { SignUpPage } from './components/SignUpPage'
 
-type Role = 'admin' | 'teacher' | 'parent'
+type Role = 'owner' | 'admin' | 'coach' | 'parent'
 type Page = 'dashboard' | 'terms' | 'privacy'
 
 function AuthenticatedApp() {
   const { user } = useUser()
-  const [currentRole, setCurrentRole] = useState<Role>('admin')
+  const [currentRole, setCurrentRole] = useState<Role>('owner')
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
 
-  // Get role from Clerk user metadata or default to admin for demo
+  // Get role from Clerk user metadata or default to owner for demo
   useEffect(() => {
     if (user) {
       const userRole = user.publicMetadata?.role as Role
-      if (userRole && ['admin', 'teacher', 'parent'].includes(userRole)) {
+      if (userRole && ['owner', 'admin', 'coach', 'parent'].includes(userRole)) {
         setCurrentRole(userRole)
-        if (userRole === 'admin') {
+        if (userRole === 'owner' || userRole === 'admin') {
           setSelectedUserId('staff_1')
-        } else if (userRole === 'teacher') {
+        } else if (userRole === 'coach') {
           setSelectedUserId('staff_4')
         } else {
           setSelectedUserId('parent_1')
@@ -41,9 +41,9 @@ function AuthenticatedApp() {
   const handleRoleChange = (role: Role) => {
     setCurrentRole(role)
     setSearchNavigation(null)
-    if (role === 'admin') {
+    if (role === 'owner' || role === 'admin') {
       setSelectedUserId('staff_1')
-    } else if (role === 'teacher') {
+    } else if (role === 'coach') {
       setSelectedUserId('staff_4')
     } else {
       setSelectedUserId('parent_1')
@@ -83,8 +83,8 @@ function AuthenticatedApp() {
         />
         
         <main className="flex-1">
-          {currentRole === 'admin' && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} />}
-          {currentRole === 'teacher' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
+          {(currentRole === 'owner' || currentRole === 'admin') && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} />}
+          {currentRole === 'coach' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
           {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
         </main>
 

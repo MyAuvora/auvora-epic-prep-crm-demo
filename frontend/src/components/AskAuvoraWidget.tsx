@@ -62,7 +62,7 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
     'How do I message a teacher?',
     'How do I re-enroll my child?',
     'What features are available to me?',
-  ] : userRole === 'teacher' ? [
+  ] : userRole === 'coach' ? [
     'How many students do we have?',
     'Show me at-risk students',
     'What events are coming up?',

@@ -28,7 +28,7 @@ interface Student {
 }
 
 interface HealthRecordsProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   studentId?: string;
   userId?: string;
 }
@@ -118,7 +118,7 @@ export const HealthRecords: React.FC<HealthRecordsProps> = ({ role, studentId, u
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Health Records</h2>
-        {role === 'admin' && (
+        {(role === 'owner' || role === 'admin') && (
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-red-50 text-red-800">
               {recordsWithAlerts.length} With Alerts

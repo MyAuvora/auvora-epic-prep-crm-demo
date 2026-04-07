@@ -197,9 +197,9 @@ class BillingCategory(str, Enum):
     OTHER = "Other"
 
 class UserRole(str, Enum):
-    SUPER_ADMIN = "Super Admin"
-    CAMPUS_ADMIN = "Campus Admin"
-    TEACHER = "Teacher"
+    OWNER = "Owner"
+    ADMIN = "Admin"
+    COACH = "Coach"
     PARENT = "Parent"
 
 class AuditAction(str, Enum):
@@ -915,7 +915,7 @@ class Announcement(BaseModel):
     published_date: Optional[date]
     expires_date: Optional[date]
     is_pinned: bool
-    target_roles: List[str]  # ["Parent", "Teacher", "Admin"]
+    target_roles: List[str]  # ["Parent", "Coach", "Admin", "Owner"]
 
 class AnnouncementRead(BaseModel):
     read_id: str

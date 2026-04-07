@@ -512,34 +512,34 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
 
         {view === 'announcements' && (
           <AnnouncementManagement 
-            role="teacher" 
+            role="coach" 
             userId={staffId} 
             campusId={campusId} 
           />
         )}
 
         {view === 'events' && (
-          <EventsCalendar role="teacher" userId={staffId} />
+          <EventsCalendar role="coach" userId={staffId} />
         )}
 
         {view === 'documents' && (
-          <DocumentManagement role="teacher" userId={staffId} />
+          <DocumentManagement role="coach" userId={staffId} />
         )}
 
         {view === 'photos' && (
-          <PhotoGallery role="teacher" userId={staffId} />
+          <PhotoGallery role="coach" userId={staffId} />
         )}
 
         {view === 'messages' && (
-          <MessagingPlatform role="teacher" userId={staffId} userType="Staff" />
+          <MessagingPlatform role="coach" userId={staffId} userType="Staff" />
         )}
 
         {view === 'incidents' && (
-          <IncidentReporting role="teacher" userId={staffId} />
+          <IncidentReporting role="coach" userId={staffId} />
         )}
 
         {view === 'health' && (
-          <HealthRecords role="teacher" userId={staffId} />
+          <HealthRecords role="coach" userId={staffId} />
         )}
 
         {view === 'timeoff' && (
@@ -708,7 +708,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       </Dialog>
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget userRole="teacher" />
+      <AskAuvoraWidget userRole="coach" />
 
       {/* Attendance Taking Modal */}
       {selectedRoom && (

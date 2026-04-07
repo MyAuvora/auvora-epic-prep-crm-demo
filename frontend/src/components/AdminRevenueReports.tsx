@@ -24,7 +24,7 @@ interface MonthlyRevenue {
 }
 
 interface AdminRevenueReportsProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
 }
 
 export const AdminRevenueReports: React.FC<AdminRevenueReportsProps> = ({ role: _role }) => {

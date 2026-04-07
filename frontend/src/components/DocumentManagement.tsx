@@ -33,7 +33,7 @@ interface DocumentSignature {
 }
 
 interface DocumentManagementProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   parentId?: string;
   studentId?: string;
   userId?: string;
@@ -190,7 +190,7 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
 
   return (
     <div className="space-y-6">
-      {(role === 'admin' || role === 'teacher') && (
+      {(role === 'owner' || role === 'admin' || role === 'coach') && (
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold">Document Management</h2>
