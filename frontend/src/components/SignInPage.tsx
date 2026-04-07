@@ -20,7 +20,10 @@ export function SignInPage() {
             card: 'shadow-xl',
             headerTitle: 'text-[#1e3a5f]',
             headerSubtitle: 'text-gray-600',
-            socialButtonsBlockButton: 'border-gray-300',
+            socialButtonsBlockButton: 'hidden',
+            socialButtonsBlockButtonArrow: 'hidden',
+            socialButtonsProviderIcon: 'hidden',
+            dividerRow: 'hidden',
             formButtonPrimary: 'bg-gradient-to-r from-[#1e3a5f] to-[#dc3545] hover:opacity-90',
             footerActionLink: 'text-[#1e3a5f] hover:text-[#dc3545]',
           }
