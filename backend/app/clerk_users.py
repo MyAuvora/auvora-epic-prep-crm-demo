@@ -17,8 +17,9 @@ CLERK_API_BASE = "https://api.clerk.com/v1"
 
 
 class UserRole(str, Enum):
+    OWNER = "owner"
     ADMIN = "admin"
-    TEACHER = "teacher"
+    COACH = "coach"
     PARENT = "parent"
 
 

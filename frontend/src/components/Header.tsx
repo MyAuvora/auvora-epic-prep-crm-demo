@@ -169,7 +169,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
             
             <div className="flex items-center space-x-1 sm:space-x-4">
               {/* Global Search Bar - Hidden on mobile */}
-              {(currentRole === 'owner' || currentRole === 'admin') && (
+              {currentRole !== 'parent' && (
                 <div ref={searchRef} className="relative hidden md:block">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
