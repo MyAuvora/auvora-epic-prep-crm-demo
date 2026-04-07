@@ -8,7 +8,7 @@ import { Lock, Bell, Globe, Clock, Save } from 'lucide-react'
 interface AccountSettingsProps {
   isOpen: boolean
   onClose: () => void
-  currentRole: 'admin' | 'teacher' | 'parent'
+  currentRole: 'owner' | 'admin' | 'coach' | 'parent'
 }
 
 export function AccountSettings({ isOpen, onClose, currentRole }: AccountSettingsProps) {
@@ -24,7 +24,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
     emailAttendance: true,
     emailGrades: true,
     emailAnnouncements: true,
-    emailBilling: currentRole === 'parent' || currentRole === 'admin',
+    emailBilling: currentRole === 'parent' || currentRole === 'owner' || currentRole === 'admin',
     emailIncidents: true,
     smsAttendance: false,
     smsGrades: false,
@@ -187,7 +187,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
                   />
                   <span className="text-sm">Announcements</span>
                 </label>
-                {(currentRole === 'parent' || currentRole === 'admin') && (
+                {(currentRole === 'parent' || currentRole === 'owner' || currentRole === 'admin') && (
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -240,7 +240,7 @@ export function AccountSettings({ isOpen, onClose, currentRole }: AccountSetting
                   />
                   <span className="text-sm">Announcements</span>
                 </label>
-                {(currentRole === 'parent' || currentRole === 'admin') && (
+                {(currentRole === 'parent' || currentRole === 'owner' || currentRole === 'admin') && (
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"

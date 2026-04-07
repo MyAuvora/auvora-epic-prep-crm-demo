@@ -39,7 +39,7 @@ interface EventRSVP {
 }
 
 interface EventsCalendarProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   familyId?: string;
   userId?: string;
 }
@@ -317,7 +317,7 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
                   </div>
                 )}
 
-                {role === 'admin' && (
+                {(role === 'owner' || role === 'admin') && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="w-5 h-5 text-gray-600" />

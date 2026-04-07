@@ -38,7 +38,7 @@ interface Parent {
 }
 
 interface MessagingPlatformProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   userId: string;
   userType: string;
 }

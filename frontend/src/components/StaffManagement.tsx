@@ -130,15 +130,16 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
   };
 
   // Map staff roles to Clerk login roles
-  const getClerkRole = (staffRole: string): 'admin' | 'teacher' | 'parent' => {
+  const getClerkRole = (staffRole: string): 'owner' | 'admin' | 'coach' | 'parent' => {
     switch (staffRole) {
       case 'Owner':
+        return 'owner';
       case 'Director':
         return 'admin';
       case 'Coach':
-        return 'teacher';
+        return 'coach';
       default:
-        return 'teacher';
+        return 'coach';
     }
   };
 
@@ -1281,7 +1282,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
               </div>
               {sendLoginInvite && (
                 <div className="mt-2 text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'admin' ? 'Admin (full access)' : 'Coach (classroom access)'}
+                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'owner' ? 'Owner (full access)' : getClerkRole(newStaff.role) === 'admin' ? 'Admin (location access)' : 'Coach (classroom access)'}
                 </div>
               )}
             </div>

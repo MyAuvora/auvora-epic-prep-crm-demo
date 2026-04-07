@@ -22,7 +22,7 @@ interface PhotoAlbum {
 }
 
 interface PhotoGalleryProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   studentGrade?: string;
   userId?: string;
 }
@@ -112,7 +112,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ role, studentGrade, 
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Photo Gallery</h2>
-        {(role === 'admin' || role === 'teacher') && (
+        {(role === 'owner' || role === 'admin' || role === 'coach') && (
           <Button onClick={() => setShowUploadModal(true)} className="bg-red-600 hover:bg-red-700">
             <Upload className="w-4 h-4 mr-2" />
             Upload Photos

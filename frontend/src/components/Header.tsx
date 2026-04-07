@@ -16,8 +16,8 @@ interface SearchResult {
 }
 
 interface HeaderProps {
-  currentRole: 'admin' | 'teacher' | 'parent'
-  onRoleChange: (role: 'admin' | 'teacher' | 'parent') => void
+  currentRole: 'owner' | 'admin' | 'coach' | 'parent'
+  onRoleChange: (role: 'owner' | 'admin' | 'coach' | 'parent') => void
   onSearchSelect?: (type: 'student' | 'family', id: string) => void
   onLocationChange?: (campusId: string | null) => void
 }
@@ -169,7 +169,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
             
             <div className="flex items-center space-x-1 sm:space-x-4">
               {/* Global Search Bar - Hidden on mobile */}
-              {currentRole !== 'parent' && (
+              {(currentRole === 'owner' || currentRole === 'admin') && (
                 <div ref={searchRef} className="relative hidden md:block">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -376,7 +376,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                                                 {userEmail}
                                               </p>
                                               <p className="text-xs text-blue-600 mt-1 capitalize">
-                                                {currentRole} Account
+                                                {currentRole === 'owner' ? 'Owner' : currentRole === 'admin' ? 'Admin' : currentRole === 'coach' ? 'Coach' : 'Parent'} Account
                                               </p>
                                             </div>
 
@@ -419,6 +419,21 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                         </div>
                         <button
                           onClick={() => {
+                            onRoleChange('owner')
+                            setShowDropdown(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 ${
+                            currentRole === 'owner' 
+                              ? 'text-white font-medium' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          style={currentRole === 'owner' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <User className="w-5 h-5" />
+                          <span>Owner View</span>
+                        </button>
+                        <button
+                          onClick={() => {
                             onRoleChange('admin')
                             setShowDropdown(false)
                           }}
@@ -434,15 +449,15 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                         </button>
                         <button
                           onClick={() => {
-                            onRoleChange('teacher')
+                            onRoleChange('coach')
                             setShowDropdown(false)
                           }}
                           className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 ${
-                            currentRole === 'teacher' 
+                            currentRole === 'coach' 
                               ? 'text-white font-medium' 
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
-                          style={currentRole === 'teacher' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                          style={currentRole === 'coach' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                         >
                           <User className="w-5 h-5" />
                           <span>Coach View</span>

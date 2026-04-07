@@ -29,7 +29,7 @@ interface Announcement {
 }
 
 interface AnnouncementManagementProps {
-  role: 'admin' | 'teacher'
+  role: 'owner' | 'admin' | 'coach'
   userId: string
   campusId: string
 }
@@ -67,12 +67,12 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         title: newAnnouncement.title,
         content: newAnnouncement.content,
         category: newAnnouncement.category,
-        status: role === 'admin' ? 'Published' : 'Pending Approval',
+        status: (role === 'owner' || role === 'admin') ? 'Published' : 'Pending Approval',
         created_by: userId,
-        created_by_role: role === 'admin' ? 'Director' : 'Coach',
-        approved_by: role === 'admin' ? userId : null,
-        approved_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,
-        published_date: role === 'admin' ? new Date().toISOString().split('T')[0] : null,
+        created_by_role: (role === 'owner' || role === 'admin') ? 'Director' : 'Coach',
+        approved_by: (role === 'owner' || role === 'admin') ? userId : null,
+        approved_date: (role === 'owner' || role === 'admin') ? new Date().toISOString().split('T')[0] : null,
+        published_date: (role === 'owner' || role === 'admin') ? new Date().toISOString().split('T')[0] : null,
         expires_date: newAnnouncement.expires_date || null,
         is_pinned: newAnnouncement.is_pinned,
         target_roles: ['Parent']
@@ -94,7 +94,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
       })
       fetchAnnouncements()
       
-      if (role === 'teacher') {
+      if (role === 'coach') {
         alert('Announcement submitted for admin approval!')
       } else {
         alert('Announcement published successfully!')
@@ -218,7 +218,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
                 />
                 <Label htmlFor="pin" className="cursor-pointer">Pin to top</Label>
               </div>
-              {role === 'teacher' && (
+              {role === 'coach' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-sm text-yellow-800">
                     <Bell className="inline h-4 w-4 mr-1" />
@@ -227,7 +227,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
                 </div>
               )}
               <Button onClick={handleCreateAnnouncement} className="w-full bg-red-600 hover:bg-red-700">
-                {role === 'admin' ? 'Publish Announcement' : 'Submit for Approval'}
+                {(role === 'owner' || role === 'admin') ? 'Publish Announcement' : 'Submit for Approval'}
               </Button>
             </div>
           </DialogContent>
@@ -246,7 +246,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
           </CardContent>
         </Card>
 
-        {role === 'admin' && (
+        {(role === 'owner' || role === 'admin') && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
@@ -273,7 +273,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         </Card>
       </div>
 
-      {role === 'admin' && pendingAnnouncements.length > 0 && (
+      {(role === 'owner' || role === 'admin') && pendingAnnouncements.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Pending Approval</CardTitle>

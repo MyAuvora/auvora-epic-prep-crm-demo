@@ -8,7 +8,7 @@ import { User, Mail, Phone, MapPin, Building, Save, Edit2 } from 'lucide-react'
 interface ProfileInformationProps {
   isOpen: boolean
   onClose: () => void
-  currentRole: 'admin' | 'teacher' | 'parent'
+  currentRole: 'owner' | 'admin' | 'coach' | 'parent'
 }
 
 export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInformationProps) {
@@ -16,20 +16,33 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
   
   const getDefaultProfile = () => {
     switch (currentRole) {
+      case 'owner':
+        return {
+          firstName: 'Owner',
+          lastName: 'User',
+          email: 'owner@epicprep.com',
+          phone: '(850) 555-0100',
+          address: '123 School St, Pace, FL 32571',
+          campus: 'All Campuses',
+          role: 'Owner',
+          department: 'Administration',
+          emergencyContact: 'N/A',
+          emergencyPhone: 'N/A'
+        }
       case 'admin':
         return {
           firstName: 'Admin',
           lastName: 'User',
           email: 'admin@epicprep.com',
-          phone: '(850) 555-0100',
+          phone: '(850) 555-0101',
           address: '123 School St, Pace, FL 32571',
-          campus: 'All Campuses',
+          campus: 'Pace Campus',
           role: 'Administrator',
           department: 'Administration',
           emergencyContact: 'N/A',
           emergencyPhone: 'N/A'
         }
-      case 'teacher':
+      case 'coach':
         return {
           firstName: 'Pam',
           lastName: 'Riffle',
@@ -202,7 +215,7 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
               />
             </div>
 
-            {currentRole !== 'parent' && (
+            {currentRole !== 'parent' && currentRole !== 'coach' && (
               <div className="md:col-span-2">
                 <Label htmlFor="department">Department</Label>
                 <Input
@@ -216,7 +229,7 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
           </div>
 
           {/* Emergency Contact */}
-          {currentRole !== 'admin' && (
+          {currentRole !== 'owner' && currentRole !== 'admin' && (
             <div className="border-t pt-4">
               <h3 className="text-sm font-semibold mb-3">Emergency Contact</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

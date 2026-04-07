@@ -12,7 +12,7 @@ interface ClerkUser {
   image_url: string | null
 }
 
-type UserRole = 'admin' | 'teacher' | 'parent'
+type UserRole = 'owner' | 'admin' | 'coach' | 'parent'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -26,7 +26,7 @@ export default function UserManagement() {
     email: '',
     first_name: '',
     last_name: '',
-    role: 'parent' as UserRole
+    role: 'coach' as UserRole
   })
   const [inviting, setInviting] = useState(false)
   const [editingRole, setEditingRole] = useState<string | null>(null)
@@ -69,7 +69,7 @@ export default function UserManagement() {
         throw new Error(errorData.detail || 'Failed to invite user')
       }
       setShowInviteModal(false)
-      setInviteForm({ email: '', first_name: '', last_name: '', role: 'parent' })
+      setInviteForm({ email: '', first_name: '', last_name: '', role: 'coach' })
       fetchUsers()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to invite user')
@@ -133,9 +133,11 @@ export default function UserManagement() {
 
   const getRoleBadgeColor = (role: string | null) => {
     switch (role) {
+      case 'owner':
+        return 'bg-red-100 text-red-800'
       case 'admin':
         return 'bg-purple-100 text-purple-800'
-      case 'teacher':
+      case 'coach':
         return 'bg-blue-100 text-blue-800'
       case 'parent':
         return 'bg-green-100 text-green-800'
@@ -244,8 +246,9 @@ export default function UserManagement() {
                           disabled={actionLoading === user.id}
                           className="text-sm border border-gray-300 rounded px-2 py-1"
                         >
+                          <option value="owner">Owner</option>
                           <option value="admin">Admin</option>
-                          <option value="teacher">Teacher</option>
+                          <option value="coach">Coach</option>
                           <option value="parent">Parent</option>
                         </select>
                       ) : (
@@ -337,8 +340,9 @@ export default function UserManagement() {
                     onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as UserRole })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   >
+                    <option value="owner">Owner</option>
                     <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
+                    <option value="coach">Coach</option>
                     <option value="parent">Parent</option>
                   </select>
                 </div>

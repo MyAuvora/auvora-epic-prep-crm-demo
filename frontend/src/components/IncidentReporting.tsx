@@ -29,7 +29,7 @@ interface Incident {
 }
 
 interface IncidentReportingProps {
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'owner' | 'admin' | 'coach' | 'parent';
   studentId?: string;
   userId?: string;
 }
@@ -196,13 +196,13 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Incident Reports</h2>
         <div className="flex gap-2">
-          {(role === 'admin' || role === 'teacher') && (
+          {(role === 'owner' || role === 'admin' || role === 'coach') && (
             <Button onClick={() => setShowAddModal(true)} className="bg-red-600 hover:bg-red-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Incident
             </Button>
           )}
-          {role === 'admin' && (
+          {(role === 'owner' || role === 'admin') && (
             <>
               <Badge variant="outline" className="bg-red-50 text-red-800">
                 {highSeverityIncidents.length} High Priority
@@ -384,7 +384,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                 </div>
 
                 {/* Admin Action Buttons */}
-                {role === 'admin' && (selectedIncident.status === 'pending_review' || !selectedIncident.status) && (
+                {(role === 'owner' || role === 'admin') && (selectedIncident.status === 'pending_review' || !selectedIncident.status) && (
                   <div className="border-t pt-4 mt-4">
                     <p className="text-sm font-medium mb-3">Admin Actions</p>
                     <div className="flex gap-3">
@@ -415,7 +415,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
                 )}
 
                 {/* Show action buttons for approved incidents that haven't been sent to parent */}
-                {role === 'admin' && selectedIncident.status === 'approved' && !selectedIncident.parent_notified && (
+                {(role === 'owner' || role === 'admin') && selectedIncident.status === 'approved' && !selectedIncident.parent_notified && (
                   <div className="border-t pt-4 mt-4">
                     <p className="text-sm font-medium mb-3">Admin Actions</p>
                     <Button
