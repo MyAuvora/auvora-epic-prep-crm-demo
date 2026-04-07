@@ -4956,6 +4956,8 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
+    global stripe_connection, stripe_transactions
+    global quickbooks_connection, quickbooks_sync_history
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5015,6 +5017,36 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_payment_allocations_db = []
     time_off_requests_db = []
     payment_methods_db = []
+    stripe_transactions = []
+    stripe_connection.update({
+        "connected": False,
+        "account_name": None,
+        "account_id": None,
+        "connected_at": None,
+        "mode": "test",
+        "settings": {
+            "auto_create_invoices": True,
+            "send_payment_receipts": True,
+            "default_currency": "usd",
+            "payment_methods": ["card"],
+            "late_fee_enabled": False,
+            "late_fee_percentage": 5.0,
+            "late_fee_grace_days": 7
+        }
+    })
+    quickbooks_sync_history.clear()
+    quickbooks_connection.update({
+        "connected": False,
+        "company_name": None,
+        "company_id": None,
+        "connected_at": None,
+        "last_sync": None,
+        "sync_settings": {
+            "auto_sync_invoices": True,
+            "auto_sync_payments": True,
+            "sync_frequency": "daily"
+        }
+    })
 
     # Wipe the database
     db_utils.reset_all_data()
@@ -5076,3 +5108,178 @@ async def update_time_off_request(request_id: str, status: TimeOffRequestStatus,
     request.review_date = date.today()
     db_utils.save_time_off_request(request)
     return request
+
+
+# ============== Stripe Integration ==============
+
+# In-memory storage for Stripe connection status
+stripe_connection = {
+    "connected": False,
+    "account_name": None,
+    "account_id": None,
+    "connected_at": None,
+    "mode": "test",
+    "settings": {
+        "auto_create_invoices": True,
+        "send_payment_receipts": True,
+        "default_currency": "usd",
+        "payment_methods": ["card"],
+        "late_fee_enabled": False,
+        "late_fee_percentage": 5.0,
+        "late_fee_grace_days": 7
+    }
+}
+
+# Simulated Stripe transactions
+stripe_transactions = []
+
+@app.get("/api/stripe/status")
+async def get_stripe_status():
+    """Get Stripe connection status"""
+    return stripe_connection
+
+@app.post("/api/stripe/connect")
+async def connect_stripe(data: dict):
+    """Connect Stripe account"""
+    # In production, this would redirect to Stripe OAuth / Connect
+    stripe_connection["connected"] = True
+    stripe_connection["account_name"] = data.get("account_name", "EPIC Prep Academy")
+    stripe_connection["account_id"] = f"acct_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    stripe_connection["connected_at"] = datetime.now().isoformat()
+    stripe_connection["mode"] = data.get("mode", "test")
+
+    return {
+        "success": True,
+        "message": "Successfully connected to Stripe",
+        "connection": stripe_connection
+    }
+
+@app.post("/api/stripe/disconnect")
+async def disconnect_stripe():
+    """Disconnect from Stripe"""
+    stripe_connection["connected"] = False
+    stripe_connection["account_name"] = None
+    stripe_connection["account_id"] = None
+    stripe_connection["connected_at"] = None
+
+    return {
+        "success": True,
+        "message": "Disconnected from Stripe"
+    }
+
+@app.put("/api/stripe/settings")
+async def update_stripe_settings(settings: dict):
+    """Update Stripe settings"""
+    for key in settings:
+        if key in stripe_connection["settings"]:
+            stripe_connection["settings"][key] = settings[key]
+
+    return {
+        "success": True,
+        "settings": stripe_connection["settings"]
+    }
+
+@app.post("/api/stripe/create-invoice")
+async def create_stripe_invoice(data: dict):
+    """Create a Stripe invoice for a family"""
+    if not stripe_connection["connected"]:
+        raise HTTPException(status_code=400, detail="Stripe not connected")
+
+    family_id = data.get("family_id")
+    amount = data.get("amount", 0)
+    description = data.get("description", "Tuition Payment")
+    due_date = data.get("due_date")
+
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+
+    invoice_id = f"inv_{datetime.now().strftime('%Y%m%d%H%M%S')}_{family_id}"
+    transaction = {
+        "transaction_id": invoice_id,
+        "type": "invoice",
+        "family_id": family_id,
+        "family_name": family.family_name,
+        "amount": amount,
+        "description": description,
+        "status": "pending",
+        "due_date": due_date,
+        "created_at": datetime.now().isoformat(),
+        "paid_at": None,
+        "stripe_invoice_id": f"in_{invoice_id}"
+    }
+    stripe_transactions.insert(0, transaction)
+
+    return {
+        "success": True,
+        "message": f"Invoice created for {family.family_name}: ${amount:.2f}",
+        "invoice": transaction
+    }
+
+@app.post("/api/stripe/process-payment")
+async def process_stripe_payment(data: dict):
+    """Process a payment through Stripe"""
+    if not stripe_connection["connected"]:
+        raise HTTPException(status_code=400, detail="Stripe not connected")
+
+    family_id = data.get("family_id")
+    amount = data.get("amount", 0)
+    description = data.get("description", "Payment")
+    payment_method = data.get("payment_method", "card")
+
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+
+    payment_id = f"pay_{datetime.now().strftime('%Y%m%d%H%M%S')}_{family_id}"
+    transaction = {
+        "transaction_id": payment_id,
+        "type": "payment",
+        "family_id": family_id,
+        "family_name": family.family_name,
+        "amount": amount,
+        "description": description,
+        "status": "completed",
+        "payment_method": payment_method,
+        "created_at": datetime.now().isoformat(),
+        "paid_at": datetime.now().isoformat(),
+        "stripe_payment_id": f"pi_{payment_id}"
+    }
+    stripe_transactions.insert(0, transaction)
+
+    # Update family balance
+    family.current_balance = max(0, family.current_balance - amount)
+    db_utils.save_family(family)
+
+    return {
+        "success": True,
+        "message": f"Payment of ${amount:.2f} processed for {family.family_name}",
+        "payment": transaction
+    }
+
+@app.get("/api/stripe/transactions")
+async def get_stripe_transactions(family_id: Optional[str] = None, transaction_type: Optional[str] = None):
+    """Get Stripe transaction history"""
+    result = stripe_transactions
+    if family_id:
+        result = [t for t in result if t["family_id"] == family_id]
+    if transaction_type:
+        result = [t for t in result if t["type"] == transaction_type]
+    return result[:50]
+
+@app.get("/api/stripe/summary")
+async def get_stripe_summary():
+    """Get Stripe payment summary"""
+    total_invoiced = sum(t["amount"] for t in stripe_transactions if t["type"] == "invoice")
+    total_collected = sum(t["amount"] for t in stripe_transactions if t["type"] == "payment" and t["status"] == "completed")
+    pending_invoices = [t for t in stripe_transactions if t["type"] == "invoice" and t["status"] == "pending"]
+    recent_payments = [t for t in stripe_transactions if t["type"] == "payment"][:10]
+
+    return {
+        "total_invoiced": total_invoiced,
+        "total_collected": total_collected,
+        "outstanding_balance": total_invoiced - total_collected,
+        "pending_invoice_count": len(pending_invoices),
+        "recent_payments": recent_payments,
+        "families_with_balance": len(set(t["family_id"] for t in pending_invoices))
+    }
