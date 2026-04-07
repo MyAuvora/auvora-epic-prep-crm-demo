@@ -4772,10 +4772,11 @@ async def quickbooks_connect_redirect():
 async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: str = "", error: Optional[str] = None):
     """Handle QuickBooks OAuth callback"""
     if error:
-        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={error}")
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(error), safe='')}")
 
     # Verify state token
-    if state not in oauth_state_tokens:
+    if state not in oauth_state_tokens or oauth_state_tokens[state] != "quickbooks":
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error=Invalid+state+token")
     del oauth_state_tokens[state]
 
@@ -4837,7 +4838,8 @@ async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: st
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_connected=true")
 
     except Exception as e:
-        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={str(e)}")
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(e), safe='')}")
 
 async def refresh_quickbooks_token():
     """Refresh QuickBooks access token using refresh token"""
@@ -5373,10 +5375,11 @@ async def stripe_connect_redirect():
 async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional[str] = None, error_description: Optional[str] = None):
     """Handle Stripe OAuth callback"""
     if error:
-        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={error_description or error}")
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(error_description or error), safe='')}")
 
     # Verify state token
-    if state not in oauth_state_tokens:
+    if state not in oauth_state_tokens or oauth_state_tokens[state] != "stripe":
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error=Invalid+state+token")
     del oauth_state_tokens[state]
 
@@ -5406,9 +5409,11 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_connected=true")
 
     except stripe.oauth_error.OAuthError as e:
-        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={str(e)}")
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
     except Exception as e:
-        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={str(e)}")
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
 
 @app.post("/api/stripe/connect")
 async def connect_stripe(data: dict):
@@ -5416,9 +5421,9 @@ async def connect_stripe(data: dict):
     api_key = data.get("api_key", "")
     if api_key:
         # Direct API key connection (no OAuth needed)
+        # Use per-request api_key param instead of mutating global stripe.api_key
         try:
-            stripe.api_key = api_key
-            account = stripe.Account.retrieve()
+            account = stripe.Account.retrieve(api_key=api_key)
             stripe_connection["connected"] = True
             stripe_connection["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or data.get("account_name", "EPIC Prep Academy")
             stripe_connection["account_id"] = account.get("id")
