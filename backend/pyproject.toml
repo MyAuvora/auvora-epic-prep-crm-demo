@@ -16,6 +16,7 @@ reportlab = "^4.0.0"
 httpx = "^0.28.1"
 sqlalchemy = "^2.0.48"
 aiosqlite = "^0.22.1"
+stripe = "^15.0.1"
 
 
 [build-system]

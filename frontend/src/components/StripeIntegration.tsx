@@ -11,6 +11,7 @@ interface StripeConnection {
   account_id: string | null
   connected_at: string | null
   mode: string
+  configured: boolean
   settings: {
     auto_create_invoices: boolean
     send_payment_receipts: boolean
@@ -53,6 +54,20 @@ export function StripeIntegration() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
+    // Check for OAuth callback params in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const stripeConnected = urlParams.get('stripe_connected')
+    const stripeError = urlParams.get('stripe_error')
+
+    if (stripeConnected === 'true') {
+      setMessage({ type: 'success', message: 'Successfully connected to Stripe!' })
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (stripeError) {
+      setMessage({ type: 'error', message: `Stripe connection failed: ${stripeError}` })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
     fetchConnectionStatus()
     fetchTransactions()
     fetchSummary()
@@ -99,13 +114,24 @@ export function StripeIntegration() {
   const handleConnect = async () => {
     setConnecting(true)
     try {
-      const response = await fetch(`${API_URL}/api/stripe/connect`, {
+      // Try OAuth flow first (GET returns auth_url)
+      const response = await fetch(`${API_URL}/api/stripe/connect`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.auth_url) {
+          // Redirect to Stripe OAuth
+          window.location.href = data.auth_url
+          return
+        }
+      }
+      // Fallback to POST for demo mode
+      const postResponse = await fetch(`${API_URL}/api/stripe/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account_name: 'EPIC Prep Academy', mode: 'live' })
       })
-      if (response.ok) {
-        const data = await response.json()
+      if (postResponse.ok) {
+        const data = await postResponse.json()
         setConnection(data.connection)
         setMessage({ type: 'success', message: 'Successfully connected to Stripe!' })
       }

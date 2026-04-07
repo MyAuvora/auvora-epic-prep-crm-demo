@@ -11,6 +11,7 @@ interface QuickBooksConnection {
   company_id: string | null
   connected_at: string | null
   last_sync: string | null
+  configured: boolean
   sync_settings: {
     auto_sync_invoices: boolean
     auto_sync_payments: boolean
@@ -60,6 +61,19 @@ export function QuickBooksIntegration() {
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
+    // Check for OAuth callback params in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const qbConnected = urlParams.get('qb_connected')
+    const qbError = urlParams.get('qb_error')
+
+    if (qbConnected === 'true') {
+      setSyncMessage({ type: 'success', message: 'Successfully connected to QuickBooks!' })
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (qbError) {
+      setSyncMessage({ type: 'error', message: `QuickBooks connection failed: ${qbError}` })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
     fetchConnectionStatus()
     fetchSyncHistory()
     fetchExportPreview()
@@ -106,13 +120,24 @@ export function QuickBooksIntegration() {
   const handleConnect = async () => {
     setConnecting(true)
     try {
-      const response = await fetch(`${API_URL}/api/quickbooks/connect`, {
+      // Try OAuth flow first (GET returns auth_url)
+      const response = await fetch(`${API_URL}/api/quickbooks/connect`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.auth_url) {
+          // Redirect to QuickBooks OAuth
+          window.location.href = data.auth_url
+          return
+        }
+      }
+      // Fallback to POST for demo mode
+      const postResponse = await fetch(`${API_URL}/api/quickbooks/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_name: 'EPIC Prep Academy' })
       })
-      if (response.ok) {
-        const data = await response.json()
+      if (postResponse.ok) {
+        const data = await postResponse.json()
         setConnection(data.connection)
         setSyncMessage({ type: 'success', message: 'Successfully connected to QuickBooks!' })
       }
