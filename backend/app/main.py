@@ -4979,7 +4979,16 @@ async def disconnect_quickbooks(org_id: str = DEFAULT_ORG_ID):
         except Exception:
             pass  # Best effort revocation
 
-    db_utils.delete_oauth_connection(org_id, "quickbooks")
+    # Clear auth fields but preserve settings and sync history
+    qb_conn["connected"] = False
+    qb_conn["company_name"] = None
+    qb_conn["company_id"] = None
+    qb_conn["connected_at"] = None
+    qb_conn["access_token"] = None
+    qb_conn["refresh_token"] = None
+    qb_conn["token_expires_at"] = None
+    qb_conn["realm_id"] = None
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
 
     return {
         "success": True,
@@ -5479,7 +5488,15 @@ async def disconnect_stripe(org_id: str = DEFAULT_ORG_ID):
         except Exception:
             pass  # Best effort deauthorization
 
-    db_utils.delete_oauth_connection(org_id, "stripe")
+    # Clear auth fields but preserve settings and sync history
+    stripe_conn["connected"] = False
+    stripe_conn["account_name"] = None
+    stripe_conn["account_id"] = None
+    stripe_conn["connected_at"] = None
+    stripe_conn["stripe_user_id"] = None
+    stripe_conn["access_token"] = None
+    stripe_conn["refresh_token"] = None
+    db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
 
     return {
         "success": True,

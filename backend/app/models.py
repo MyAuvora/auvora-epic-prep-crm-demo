@@ -1,7 +1,7 @@
 """
 SQLAlchemy models for EPIC CRM
 """
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from .database import Base
@@ -953,6 +953,7 @@ class TimeOffRequest(Base):
 
 class OAuthConnection(Base):
     __tablename__ = "oauth_connections"
+    __table_args__ = (UniqueConstraint('organization_id', 'provider', name='uq_oauth_org_provider'),)
 
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(String, index=True, nullable=False)
