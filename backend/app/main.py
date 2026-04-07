@@ -4792,9 +4792,9 @@ def _get_stripe_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
 async def get_quickbooks_status(org_id: str = DEFAULT_ORG_ID):
     """Get QuickBooks connection status"""
     qb_conn = _get_qb_connection(org_id)
-    # Return safe version without tokens
+    # Return safe version without tokens or large data
     safe_connection = {k: v for k, v in qb_conn.items()
-                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id", "organization_id", "provider")}
+                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id", "organization_id", "provider", "sync_history")}
     safe_connection["configured"] = bool(QB_CLIENT_ID and QB_CLIENT_SECRET)
     return safe_connection
 
@@ -5348,8 +5348,9 @@ if STRIPE_SECRET_KEY:
 async def get_stripe_status(org_id: str = DEFAULT_ORG_ID):
     """Get Stripe connection status"""
     stripe_conn = _get_stripe_connection(org_id)
+    # Return safe version without tokens or large data
     safe_connection = {k: v for k, v in stripe_conn.items()
-                       if k not in ("access_token", "refresh_token", "stripe_user_id", "organization_id", "provider")}
+                       if k not in ("access_token", "refresh_token", "stripe_user_id", "organization_id", "provider", "sync_history", "token_expires_at")}
     safe_connection["configured"] = bool(STRIPE_SECRET_KEY)
     return safe_connection
 

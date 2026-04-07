@@ -12,7 +12,7 @@ interface QuickBooksConnection {
   connected_at: string | null
   last_sync: string | null
   configured: boolean
-  sync_settings: {
+  settings: {
     auto_sync_invoices: boolean
     auto_sync_payments: boolean
     sync_frequency: string
@@ -185,7 +185,7 @@ export function QuickBooksIntegration() {
     }
   }
 
-  const handleUpdateSettings = async (settings: Partial<QuickBooksConnection['sync_settings']>) => {
+  const handleUpdateSettings = async (settings: Partial<QuickBooksConnection['settings']>) => {
     try {
       const response = await fetch(`${API_URL}/api/quickbooks/settings`, {
         method: 'PUT',
@@ -327,7 +327,7 @@ export function QuickBooksIntegration() {
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={connection.sync_settings.auto_sync_invoices}
+                          checked={connection.settings.auto_sync_invoices}
                           onChange={(e) => handleUpdateSettings({ auto_sync_invoices: e.target.checked })}
                           className="rounded"
                         />
@@ -336,7 +336,7 @@ export function QuickBooksIntegration() {
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={connection.sync_settings.auto_sync_payments}
+                          checked={connection.settings.auto_sync_payments}
                           onChange={(e) => handleUpdateSettings({ auto_sync_payments: e.target.checked })}
                           className="rounded"
                         />
@@ -345,7 +345,7 @@ export function QuickBooksIntegration() {
                       <div className="flex items-center gap-2">
                         <span>Sync frequency:</span>
                         <select
-                          value={connection.sync_settings.sync_frequency}
+                          value={connection.settings.sync_frequency}
                           onChange={(e) => handleUpdateSettings({ sync_frequency: e.target.value })}
                           className="border rounded px-2 py-1"
                         >
