@@ -4928,6 +4928,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
             detail="You must pass confirm='CONFIRM_RESET' to wipe all data. This action is irreversible."
         )
 
+    global organizations_db, campuses_db, users_db, audit_logs_db
     global students_db, families_db, parents_db, staff_db, grade_records_db
     global behavior_notes_db, attendance_records_db, ixl_summaries_db
     global acellus_courses_db, acellus_summaries_db, billing_records_db
@@ -4935,18 +4936,22 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global documents_db, document_signatures_db, products_db, orders_db
     global photo_albums_db, incidents_db, health_records_db
     global invoices_db, invoice_line_items_db, payment_plans_db, payment_schedules_db
-    global leads_db, campus_capacities_db, message_templates_db
+    global leads_db, campus_capacity_db, message_templates_db
     global broadcast_messages_db, automated_alerts_db
     global academic_standards_db, standard_assessments_db, progress_reports_db
-    global iep_plans_db, accommodations_db, iep_goals_db
+    global iep_504_plans_db, accommodations_db, iep_goals_db
     global intervention_plans_db, intervention_progress_db
     global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
     global assignments_db, grade_entries_db
     global announcements_db, announcement_reads_db, event_workflows_db
-    global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_allocations_db
-    global time_off_requests_db
+    global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
+    global time_off_requests_db, payment_methods_db
 
     # Clear all in-memory lists
+    organizations_db = []
+    campuses_db = []
+    users_db = []
+    audit_logs_db = []
     students_db = []
     families_db = []
     parents_db = []
@@ -4974,14 +4979,14 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     payment_plans_db = []
     payment_schedules_db = []
     leads_db = []
-    campus_capacities_db = []
+    campus_capacity_db = []
     message_templates_db = []
     broadcast_messages_db = []
     automated_alerts_db = []
     academic_standards_db = []
     standard_assessments_db = []
     progress_reports_db = []
-    iep_plans_db = []
+    iep_504_plans_db = []
     accommodations_db = []
     iep_goals_db = []
     intervention_plans_db = []
@@ -4997,8 +5002,9 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_scholarships_db = []
     sufs_claims_db = []
     sufs_payments_db = []
-    sufs_allocations_db = []
+    sufs_payment_allocations_db = []
     time_off_requests_db = []
+    payment_methods_db = []
 
     # Wipe the database
     db_utils.reset_all_data()
