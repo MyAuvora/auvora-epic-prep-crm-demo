@@ -951,6 +951,38 @@ class TimeOffRequest(Base):
     review_date = Column(Date)
 
 
+class OAuthConnection(Base):
+    __tablename__ = "oauth_connections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(String, index=True, nullable=False)
+    provider = Column(String, nullable=False)  # "stripe" or "quickbooks"
+    connected = Column(Boolean, default=False)
+    # Common fields
+    account_name = Column(String)
+    account_id = Column(String)
+    connected_at = Column(String)
+    # Tokens (encrypted at rest in production)
+    access_token = Column(Text)
+    refresh_token = Column(Text)
+    token_expires_at = Column(String)
+    # Stripe-specific
+    stripe_user_id = Column(String)
+    mode = Column(String)  # "live" or "test"
+    # QuickBooks-specific
+    realm_id = Column(String)
+    company_name = Column(String)
+    company_id = Column(String)
+    last_sync = Column(String)
+    # Settings stored as JSON
+    settings_json = Column(Text)
+    # Sync history stored as JSON
+    sync_history_json = Column(Text)
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

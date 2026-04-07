@@ -4698,15 +4698,15 @@ async def download_export(export_id: str):
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://epic.myauvora.com")
 BACKEND_URL = os.environ.get("BACKEND_URL", "https://app-yaxzfnzh.fly.dev")
 
-# OAuth state tokens for CSRF protection: maps state -> (provider, created_at)
+# OAuth state tokens for CSRF protection: maps state -> (provider, created_at, org_id)
 oauth_state_tokens: Dict[str, tuple] = {}
 OAUTH_STATE_TTL_SECONDS = 600  # 10 minutes
 
 def _cleanup_expired_oauth_states():
     """Remove OAuth state tokens older than TTL"""
     now = datetime.now()
-    expired = [k for k, (_, created_at) in oauth_state_tokens.items()
-               if (now - created_at).total_seconds() > OAUTH_STATE_TTL_SECONDS]
+    expired = [k for k, v in oauth_state_tokens.items()
+               if (now - v[1]).total_seconds() > OAUTH_STATE_TTL_SECONDS]
     for k in expired:
         del oauth_state_tokens[k]
 
@@ -4724,38 +4724,82 @@ QB_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
 QB_REVOKE_URL = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke"
 QB_API_BASE = "https://quickbooks.api.intuit.com" if QB_ENVIRONMENT == "production" else "https://sandbox-quickbooks.api.intuit.com"
 
-# In-memory storage for QuickBooks connection status
-quickbooks_connection = {
-    "connected": False,
-    "company_name": None,
-    "company_id": None,
-    "connected_at": None,
-    "last_sync": None,
-    "access_token": None,
-    "refresh_token": None,
-    "token_expires_at": None,
-    "realm_id": None,
-    "sync_settings": {
-        "auto_sync_invoices": True,
-        "auto_sync_payments": True,
-        "sync_frequency": "daily"
-    }
+# Default org ID (for backward-compatible single-tenant usage)
+DEFAULT_ORG_ID = "org_1"
+
+# Default settings for new connections
+DEFAULT_QB_SETTINGS = {
+    "auto_sync_invoices": True,
+    "auto_sync_payments": True,
+    "sync_frequency": "daily"
 }
 
-# Simulated sync history
-quickbooks_sync_history = []
+DEFAULT_STRIPE_SETTINGS = {
+    "auto_create_invoices": True,
+    "send_payment_receipts": True,
+    "default_currency": "usd",
+    "payment_methods": ["card"],
+    "late_fee_enabled": False,
+    "late_fee_percentage": 5.0,
+    "late_fee_grace_days": 7
+}
+
+
+def _get_qb_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
+    """Get QuickBooks connection from database, returning defaults if none exists."""
+    conn = db_utils.get_oauth_connection(org_id, "quickbooks")
+    if conn:
+        return conn
+    return {
+        "organization_id": org_id,
+        "provider": "quickbooks",
+        "connected": False,
+        "company_name": None,
+        "company_id": None,
+        "connected_at": None,
+        "last_sync": None,
+        "access_token": None,
+        "refresh_token": None,
+        "token_expires_at": None,
+        "realm_id": None,
+        "settings": dict(DEFAULT_QB_SETTINGS),
+        "sync_history": [],
+    }
+
+
+def _get_stripe_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
+    """Get Stripe connection from database, returning defaults if none exists."""
+    conn = db_utils.get_oauth_connection(org_id, "stripe")
+    if conn:
+        return conn
+    return {
+        "organization_id": org_id,
+        "provider": "stripe",
+        "connected": False,
+        "account_name": None,
+        "account_id": None,
+        "connected_at": None,
+        "stripe_user_id": None,
+        "access_token": None,
+        "refresh_token": None,
+        "mode": "live" if STRIPE_SECRET_KEY and STRIPE_SECRET_KEY.startswith("sk_live_") else "test",
+        "settings": dict(DEFAULT_STRIPE_SETTINGS),
+        "sync_history": [],
+    }
+
 
 @app.get("/api/quickbooks/status")
-async def get_quickbooks_status():
+async def get_quickbooks_status(org_id: str = DEFAULT_ORG_ID):
     """Get QuickBooks connection status"""
+    qb_conn = _get_qb_connection(org_id)
     # Return safe version without tokens
-    safe_connection = {k: v for k, v in quickbooks_connection.items()
-                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id")}
+    safe_connection = {k: v for k, v in qb_conn.items()
+                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id", "organization_id", "provider")}
     safe_connection["configured"] = bool(QB_CLIENT_ID and QB_CLIENT_SECRET)
     return safe_connection
 
 @app.get("/api/quickbooks/connect")
-async def quickbooks_connect_redirect():
+async def quickbooks_connect_redirect(org_id: str = DEFAULT_ORG_ID):
     """Get QuickBooks OAuth URL to connect account"""
     if not QB_CLIENT_ID or not QB_CLIENT_SECRET:
         raise HTTPException(
@@ -4765,7 +4809,7 @@ async def quickbooks_connect_redirect():
 
     _cleanup_expired_oauth_states()
     state = secrets.token_urlsafe(32)
-    oauth_state_tokens[state] = ("quickbooks", datetime.now())
+    oauth_state_tokens[state] = ("quickbooks", datetime.now(), org_id)
 
     auth_url = (
         f"{QB_AUTH_BASE}"
@@ -4785,9 +4829,10 @@ async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: st
         from urllib.parse import quote
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(error), safe='')}")
 
-    # Verify state token
+    # Verify state token and extract org_id
     if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "quickbooks":
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error=Invalid+state+token")
+    org_id = oauth_state_tokens[state][2] if len(oauth_state_tokens[state]) > 2 else DEFAULT_ORG_ID
     del oauth_state_tokens[state]
 
     try:
@@ -4815,16 +4860,17 @@ async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: st
 
         token_data = token_response.json()
 
-        # Store connection info
-        quickbooks_connection["connected"] = True
-        quickbooks_connection["realm_id"] = realmId
-        quickbooks_connection["company_id"] = realmId
-        quickbooks_connection["access_token"] = token_data.get("access_token")
-        quickbooks_connection["refresh_token"] = token_data.get("refresh_token")
-        quickbooks_connection["token_expires_at"] = (
+        # Build connection data and persist to database
+        qb_conn = _get_qb_connection(org_id)
+        qb_conn["connected"] = True
+        qb_conn["realm_id"] = realmId
+        qb_conn["company_id"] = realmId
+        qb_conn["access_token"] = token_data.get("access_token")
+        qb_conn["refresh_token"] = token_data.get("refresh_token")
+        qb_conn["token_expires_at"] = (
             datetime.now() + timedelta(seconds=token_data.get("expires_in", 3600))
         ).isoformat()
-        quickbooks_connection["connected_at"] = datetime.now().isoformat()
+        qb_conn["connected_at"] = datetime.now().isoformat()
 
         # Fetch company info
         try:
@@ -4839,21 +4885,23 @@ async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: st
             if company_response.status_code == 200:
                 company_data = company_response.json()
                 company_info = company_data.get("CompanyInfo", {})
-                quickbooks_connection["company_name"] = company_info.get("CompanyName", "Connected Company")
+                qb_conn["company_name"] = company_info.get("CompanyName", "Connected Company")
             else:
-                quickbooks_connection["company_name"] = "Connected Company"
+                qb_conn["company_name"] = "Connected Company"
         except Exception:
-            quickbooks_connection["company_name"] = "Connected Company"
+            qb_conn["company_name"] = "Connected Company"
 
+        db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_connected=true")
 
     except Exception as e:
         from urllib.parse import quote
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(e), safe='')}")
 
-async def refresh_quickbooks_token():
+async def refresh_quickbooks_token(org_id: str = DEFAULT_ORG_ID):
     """Refresh QuickBooks access token using refresh token"""
-    if not quickbooks_connection.get("refresh_token"):
+    qb_conn = _get_qb_connection(org_id)
+    if not qb_conn.get("refresh_token"):
         return False
 
     try:
@@ -4870,48 +4918,52 @@ async def refresh_quickbooks_token():
                 },
                 data={
                     "grant_type": "refresh_token",
-                    "refresh_token": quickbooks_connection["refresh_token"],
+                    "refresh_token": qb_conn["refresh_token"],
                 },
             )
 
         if token_response.status_code == 200:
             token_data = token_response.json()
-            quickbooks_connection["access_token"] = token_data.get("access_token")
-            quickbooks_connection["refresh_token"] = token_data.get("refresh_token")
-            quickbooks_connection["token_expires_at"] = (
+            qb_conn["access_token"] = token_data.get("access_token")
+            qb_conn["refresh_token"] = token_data.get("refresh_token")
+            qb_conn["token_expires_at"] = (
                 datetime.now() + timedelta(seconds=token_data.get("expires_in", 3600))
             ).isoformat()
+            db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
             return True
     except Exception:
         pass
     return False
 
 @app.post("/api/quickbooks/connect")
-async def connect_quickbooks(data: dict):
+async def connect_quickbooks(data: dict, org_id: str = DEFAULT_ORG_ID):
     """Connect to QuickBooks (OAuth redirect or demo mode)"""
     if QB_CLIENT_ID and QB_CLIENT_SECRET:
         # OAuth configured - tell frontend to use GET /api/quickbooks/connect
         raise HTTPException(status_code=400, detail="Use GET /api/quickbooks/connect to initiate OAuth flow")
 
     # Demo mode - simulate connection
-    quickbooks_connection["connected"] = True
-    quickbooks_connection["company_name"] = data.get("company_name", "EPIC Prep Academy")
-    quickbooks_connection["company_id"] = f"qb_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    quickbooks_connection["connected_at"] = datetime.now().isoformat()
+    qb_conn = _get_qb_connection(org_id)
+    qb_conn["connected"] = True
+    qb_conn["company_name"] = data.get("company_name", "EPIC Prep Academy")
+    qb_conn["company_id"] = f"qb_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    qb_conn["connected_at"] = datetime.now().isoformat()
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
 
     return {
         "success": True,
         "message": "Connected to QuickBooks (demo mode - set QUICKBOOKS_CLIENT_ID for real OAuth)",
         "auth_url": None,
-        "connection": {k: v for k, v in quickbooks_connection.items()
-                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id")}
+        "connection": {k: v for k, v in qb_conn.items()
+                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id", "organization_id", "provider")}
     }
 
 @app.post("/api/quickbooks/disconnect")
-async def disconnect_quickbooks():
+async def disconnect_quickbooks(org_id: str = DEFAULT_ORG_ID):
     """Disconnect from QuickBooks"""
+    qb_conn = _get_qb_connection(org_id)
     # Revoke tokens if we have them
-    if quickbooks_connection.get("access_token") and QB_CLIENT_ID and QB_CLIENT_SECRET:
+    if qb_conn.get("access_token") and QB_CLIENT_ID and QB_CLIENT_SECRET:
         try:
             import base64
             auth_header = base64.b64encode(f"{QB_CLIENT_ID}:{QB_CLIENT_SECRET}".encode()).decode()
@@ -4922,19 +4974,12 @@ async def disconnect_quickbooks():
                         "Authorization": f"Basic {auth_header}",
                         "Content-Type": "application/json",
                     },
-                    json={"token": quickbooks_connection["access_token"]},
+                    json={"token": qb_conn["access_token"]},
                 )
         except Exception:
             pass  # Best effort revocation
 
-    quickbooks_connection["connected"] = False
-    quickbooks_connection["company_name"] = None
-    quickbooks_connection["company_id"] = None
-    quickbooks_connection["connected_at"] = None
-    quickbooks_connection["access_token"] = None
-    quickbooks_connection["refresh_token"] = None
-    quickbooks_connection["token_expires_at"] = None
-    quickbooks_connection["realm_id"] = None
+    db_utils.delete_oauth_connection(org_id, "quickbooks")
 
     return {
         "success": True,
@@ -4942,30 +4987,33 @@ async def disconnect_quickbooks():
     }
 
 @app.put("/api/quickbooks/settings")
-async def update_quickbooks_settings(settings: dict):
+async def update_quickbooks_settings(settings: dict, org_id: str = DEFAULT_ORG_ID):
     """Update QuickBooks sync settings"""
+    qb_conn = _get_qb_connection(org_id)
+    qb_settings = qb_conn.get("settings", dict(DEFAULT_QB_SETTINGS))
     if "auto_sync_invoices" in settings:
-        quickbooks_connection["sync_settings"]["auto_sync_invoices"] = settings["auto_sync_invoices"]
+        qb_settings["auto_sync_invoices"] = settings["auto_sync_invoices"]
     if "auto_sync_payments" in settings:
-        quickbooks_connection["sync_settings"]["auto_sync_payments"] = settings["auto_sync_payments"]
+        qb_settings["auto_sync_payments"] = settings["auto_sync_payments"]
     if "sync_frequency" in settings:
-        quickbooks_connection["sync_settings"]["sync_frequency"] = settings["sync_frequency"]
+        qb_settings["sync_frequency"] = settings["sync_frequency"]
+    qb_conn["settings"] = qb_settings
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
 
     return {
         "success": True,
-        "settings": quickbooks_connection["sync_settings"]
+        "settings": qb_settings
     }
 
 @app.post("/api/quickbooks/sync/invoices")
-async def sync_invoices_to_quickbooks():
+async def sync_invoices_to_quickbooks(org_id: str = DEFAULT_ORG_ID):
     """Sync invoices to QuickBooks"""
-    if not quickbooks_connection["connected"]:
+    qb_conn = _get_qb_connection(org_id)
+    if not qb_conn["connected"]:
         raise HTTPException(status_code=400, detail="QuickBooks not connected")
     
-    # Get all invoices
     invoices_count = len(invoices_db)
     
-    # Simulate sync
     sync_record = {
         "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "type": "invoices",
@@ -4975,8 +5023,11 @@ async def sync_invoices_to_quickbooks():
         "timestamp": datetime.now().isoformat(),
         "details": f"Exported {invoices_count} invoices to QuickBooks"
     }
-    quickbooks_sync_history.insert(0, sync_record)
-    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    sync_history = qb_conn.get("sync_history", [])
+    sync_history.insert(0, sync_record)
+    qb_conn["sync_history"] = sync_history
+    qb_conn["last_sync"] = datetime.now().isoformat()
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
     
     return {
         "success": True,
@@ -4985,16 +5036,15 @@ async def sync_invoices_to_quickbooks():
     }
 
 @app.post("/api/quickbooks/sync/payments")
-async def sync_payments_to_quickbooks():
+async def sync_payments_to_quickbooks(org_id: str = DEFAULT_ORG_ID):
     """Sync payments to QuickBooks"""
-    if not quickbooks_connection["connected"]:
+    qb_conn = _get_qb_connection(org_id)
+    if not qb_conn["connected"]:
         raise HTTPException(status_code=400, detail="QuickBooks not connected")
     
-    # Get all payment records
     payments = [b for b in billing_records_db if b.type == "Payment"]
     payments_count = len(payments)
     
-    # Simulate sync
     sync_record = {
         "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "type": "payments",
@@ -5004,8 +5054,11 @@ async def sync_payments_to_quickbooks():
         "timestamp": datetime.now().isoformat(),
         "details": f"Exported {payments_count} payments to QuickBooks"
     }
-    quickbooks_sync_history.insert(0, sync_record)
-    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    sync_history = qb_conn.get("sync_history", [])
+    sync_history.insert(0, sync_record)
+    qb_conn["sync_history"] = sync_history
+    qb_conn["last_sync"] = datetime.now().isoformat()
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
     
     return {
         "success": True,
@@ -5014,15 +5067,14 @@ async def sync_payments_to_quickbooks():
     }
 
 @app.post("/api/quickbooks/sync/customers")
-async def sync_customers_to_quickbooks():
+async def sync_customers_to_quickbooks(org_id: str = DEFAULT_ORG_ID):
     """Sync families as customers to QuickBooks"""
-    if not quickbooks_connection["connected"]:
+    qb_conn = _get_qb_connection(org_id)
+    if not qb_conn["connected"]:
         raise HTTPException(status_code=400, detail="QuickBooks not connected")
     
-    # Get all families
     families_count = len(families_db)
     
-    # Simulate sync
     sync_record = {
         "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "type": "customers",
@@ -5032,8 +5084,11 @@ async def sync_customers_to_quickbooks():
         "timestamp": datetime.now().isoformat(),
         "details": f"Exported {families_count} families as customers to QuickBooks"
     }
-    quickbooks_sync_history.insert(0, sync_record)
-    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    sync_history = qb_conn.get("sync_history", [])
+    sync_history.insert(0, sync_record)
+    qb_conn["sync_history"] = sync_history
+    qb_conn["last_sync"] = datetime.now().isoformat()
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
     
     return {
         "success": True,
@@ -5042,9 +5097,10 @@ async def sync_customers_to_quickbooks():
     }
 
 @app.post("/api/quickbooks/sync/all")
-async def sync_all_to_quickbooks():
+async def sync_all_to_quickbooks(org_id: str = DEFAULT_ORG_ID):
     """Sync all data to QuickBooks"""
-    if not quickbooks_connection["connected"]:
+    qb_conn = _get_qb_connection(org_id)
+    if not qb_conn["connected"]:
         raise HTTPException(status_code=400, detail="QuickBooks not connected")
     
     families_count = len(families_db)
@@ -5054,7 +5110,6 @@ async def sync_all_to_quickbooks():
     
     total_records = families_count + invoices_count + payments_count
     
-    # Simulate sync
     sync_record = {
         "sync_id": f"sync_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "type": "full_sync",
@@ -5064,8 +5119,11 @@ async def sync_all_to_quickbooks():
         "timestamp": datetime.now().isoformat(),
         "details": f"Full sync: {families_count} customers, {invoices_count} invoices, {payments_count} payments"
     }
-    quickbooks_sync_history.insert(0, sync_record)
-    quickbooks_connection["last_sync"] = datetime.now().isoformat()
+    sync_history = qb_conn.get("sync_history", [])
+    sync_history.insert(0, sync_record)
+    qb_conn["sync_history"] = sync_history
+    qb_conn["last_sync"] = datetime.now().isoformat()
+    db_utils.save_oauth_connection(org_id, "quickbooks", qb_conn)
     
     return {
         "success": True,
@@ -5079,9 +5137,10 @@ async def sync_all_to_quickbooks():
     }
 
 @app.get("/api/quickbooks/sync/history")
-async def get_sync_history():
+async def get_sync_history(org_id: str = DEFAULT_ORG_ID):
     """Get QuickBooks sync history"""
-    return quickbooks_sync_history[:20]  # Return last 20 syncs
+    qb_conn = _get_qb_connection(org_id)
+    return qb_conn.get("sync_history", [])[:20]
 
 @app.get("/api/quickbooks/export/preview")
 async def preview_quickbooks_export():
@@ -5153,8 +5212,6 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
-    global stripe_connection, stripe_transactions
-    global quickbooks_connection, quickbooks_sync_history
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5214,45 +5271,8 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_payment_allocations_db = []
     time_off_requests_db = []
     payment_methods_db = []
-    stripe_transactions = []
-    stripe_connection.update({
-        "connected": False,
-        "account_name": None,
-        "account_id": None,
-        "connected_at": None,
-        "mode": "test",
-        "stripe_user_id": None,
-        "access_token": None,
-        "refresh_token": None,
-        "settings": {
-            "auto_create_invoices": True,
-            "send_payment_receipts": True,
-            "default_currency": "usd",
-            "payment_methods": ["card"],
-            "late_fee_enabled": False,
-            "late_fee_percentage": 5.0,
-            "late_fee_grace_days": 7
-        }
-    })
-    quickbooks_sync_history.clear()
-    quickbooks_connection.update({
-        "connected": False,
-        "company_name": None,
-        "company_id": None,
-        "connected_at": None,
-        "last_sync": None,
-        "access_token": None,
-        "refresh_token": None,
-        "token_expires_at": None,
-        "realm_id": None,
-        "sync_settings": {
-            "auto_sync_invoices": True,
-            "auto_sync_payments": True,
-            "sync_frequency": "daily"
-        }
-    })
 
-    # Wipe the database
+    # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()
 
     return {
@@ -5324,41 +5344,17 @@ STRIPE_CLIENT_ID = os.environ.get("STRIPE_CLIENT_ID", "")
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
 
-# In-memory storage for Stripe connection status
-stripe_connection = {
-    "connected": False,
-    "account_name": None,
-    "account_id": None,
-    "connected_at": None,
-    "mode": "live" if STRIPE_SECRET_KEY and STRIPE_SECRET_KEY.startswith("sk_live_") else "test",
-    "stripe_user_id": None,
-    "access_token": None,
-    "refresh_token": None,
-    "settings": {
-        "auto_create_invoices": True,
-        "send_payment_receipts": True,
-        "default_currency": "usd",
-        "payment_methods": ["card"],
-        "late_fee_enabled": False,
-        "late_fee_percentage": 5.0,
-        "late_fee_grace_days": 7
-    }
-}
-
-# Simulated Stripe transactions
-stripe_transactions = []
-
 @app.get("/api/stripe/status")
-async def get_stripe_status():
+async def get_stripe_status(org_id: str = DEFAULT_ORG_ID):
     """Get Stripe connection status"""
-    # Return safe version without tokens
-    safe_connection = {k: v for k, v in stripe_connection.items()
-                       if k not in ("access_token", "refresh_token", "stripe_user_id")}
+    stripe_conn = _get_stripe_connection(org_id)
+    safe_connection = {k: v for k, v in stripe_conn.items()
+                       if k not in ("access_token", "refresh_token", "stripe_user_id", "organization_id", "provider")}
     safe_connection["configured"] = bool(STRIPE_SECRET_KEY)
     return safe_connection
 
 @app.get("/api/stripe/connect")
-async def stripe_connect_redirect():
+async def stripe_connect_redirect(org_id: str = DEFAULT_ORG_ID):
     """Redirect to Stripe OAuth to connect account"""
     if not STRIPE_CLIENT_ID:
         raise HTTPException(
@@ -5368,9 +5364,8 @@ async def stripe_connect_redirect():
 
     _cleanup_expired_oauth_states()
     state = secrets.token_urlsafe(32)
-    oauth_state_tokens[state] = ("stripe", datetime.now())
+    oauth_state_tokens[state] = ("stripe", datetime.now(), org_id)
 
-    # Stripe Connect OAuth URL
     stripe_oauth_url = (
         f"https://connect.stripe.com/oauth/authorize"
         f"?response_type=code"
@@ -5389,9 +5384,10 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
         from urllib.parse import quote
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(error_description or error), safe='')}")
 
-    # Verify state token
+    # Verify state token and extract org_id
     if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "stripe":
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error=Invalid+state+token")
+    org_id = oauth_state_tokens[state][2] if len(oauth_state_tokens[state]) > 2 else DEFAULT_ORG_ID
     del oauth_state_tokens[state]
 
     try:
@@ -5401,22 +5397,24 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
             code=code,
         )
 
-        # Store connection info
-        stripe_connection["connected"] = True
-        stripe_connection["stripe_user_id"] = response.get("stripe_user_id")
-        stripe_connection["access_token"] = response.get("access_token")
-        stripe_connection["refresh_token"] = response.get("refresh_token")
-        stripe_connection["account_id"] = response.get("stripe_user_id")
-        stripe_connection["connected_at"] = datetime.now().isoformat()
-        stripe_connection["mode"] = "live" if response.get("livemode") else "test"
+        # Build connection data and persist to database
+        stripe_conn = _get_stripe_connection(org_id)
+        stripe_conn["connected"] = True
+        stripe_conn["stripe_user_id"] = response.get("stripe_user_id")
+        stripe_conn["access_token"] = response.get("access_token")
+        stripe_conn["refresh_token"] = response.get("refresh_token")
+        stripe_conn["account_id"] = response.get("stripe_user_id")
+        stripe_conn["connected_at"] = datetime.now().isoformat()
+        stripe_conn["mode"] = "live" if response.get("livemode") else "test"
 
         # Fetch account details
         try:
             account = stripe.Account.retrieve(response.get("stripe_user_id"))
-            stripe_connection["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or "Connected Account"
+            stripe_conn["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or "Connected Account"
         except Exception:
-            stripe_connection["account_name"] = "Connected Account"
+            stripe_conn["account_name"] = "Connected Account"
 
+        db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_connected=true")
 
     except Exception as e:
@@ -5424,24 +5422,25 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
 
 @app.post("/api/stripe/connect")
-async def connect_stripe(data: dict):
+async def connect_stripe(data: dict, org_id: str = DEFAULT_ORG_ID):
     """Connect Stripe account (manual key entry fallback)"""
     api_key = data.get("api_key", "")
     if api_key:
         # Direct API key connection (no OAuth needed)
-        # Use per-request api_key param instead of mutating global stripe.api_key
         try:
             account = stripe.Account.retrieve(api_key=api_key)
-            stripe_connection["connected"] = True
-            stripe_connection["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or data.get("account_name", "EPIC Prep Academy")
-            stripe_connection["account_id"] = account.get("id")
-            stripe_connection["connected_at"] = datetime.now().isoformat()
-            stripe_connection["mode"] = "live" if api_key.startswith("sk_live_") else "test"
-            stripe_connection["access_token"] = api_key
+            stripe_conn = _get_stripe_connection(org_id)
+            stripe_conn["connected"] = True
+            stripe_conn["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or data.get("account_name", "EPIC Prep Academy")
+            stripe_conn["account_id"] = account.get("id")
+            stripe_conn["connected_at"] = datetime.now().isoformat()
+            stripe_conn["mode"] = "live" if api_key.startswith("sk_live_") else "test"
+            stripe_conn["access_token"] = api_key
+            db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
             return {
                 "success": True,
                 "message": "Successfully connected to Stripe",
-                "connection": {k: v for k, v in stripe_connection.items() if k not in ("access_token", "refresh_token")}
+                "connection": {k: v for k, v in stripe_conn.items() if k not in ("access_token", "refresh_token", "organization_id", "provider")}
             }
         except stripe.error.AuthenticationError:
             raise HTTPException(status_code=401, detail="Invalid Stripe API key")
@@ -5450,39 +5449,36 @@ async def connect_stripe(data: dict):
     else:
         # If no API key provided and no OAuth configured, simulate for demo
         if not STRIPE_CLIENT_ID:
-            stripe_connection["connected"] = True
-            stripe_connection["account_name"] = data.get("account_name", "EPIC Prep Academy")
-            stripe_connection["account_id"] = f"acct_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            stripe_connection["connected_at"] = datetime.now().isoformat()
-            stripe_connection["mode"] = data.get("mode", "test")
+            stripe_conn = _get_stripe_connection(org_id)
+            stripe_conn["connected"] = True
+            stripe_conn["account_name"] = data.get("account_name", "EPIC Prep Academy")
+            stripe_conn["account_id"] = f"acct_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            stripe_conn["connected_at"] = datetime.now().isoformat()
+            stripe_conn["mode"] = data.get("mode", "test")
+            db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
             return {
                 "success": True,
                 "message": "Connected to Stripe (demo mode - set STRIPE_CLIENT_ID for real OAuth)",
-                "connection": {k: v for k, v in stripe_connection.items() if k not in ("access_token", "refresh_token", "stripe_user_id")}
+                "connection": {k: v for k, v in stripe_conn.items() if k not in ("access_token", "refresh_token", "stripe_user_id", "organization_id", "provider")}
             }
         else:
             raise HTTPException(status_code=400, detail="Use GET /api/stripe/connect to initiate OAuth flow")
 
 @app.post("/api/stripe/disconnect")
-async def disconnect_stripe():
+async def disconnect_stripe(org_id: str = DEFAULT_ORG_ID):
     """Disconnect from Stripe"""
+    stripe_conn = _get_stripe_connection(org_id)
     # If we have a connected account via OAuth, deauthorize it
-    if stripe_connection.get("stripe_user_id") and STRIPE_CLIENT_ID:
+    if stripe_conn.get("stripe_user_id") and STRIPE_CLIENT_ID:
         try:
             stripe.OAuth.deauthorize(
                 client_id=STRIPE_CLIENT_ID,
-                stripe_user_id=stripe_connection["stripe_user_id"],
+                stripe_user_id=stripe_conn["stripe_user_id"],
             )
         except Exception:
             pass  # Best effort deauthorization
 
-    stripe_connection["connected"] = False
-    stripe_connection["account_name"] = None
-    stripe_connection["account_id"] = None
-    stripe_connection["connected_at"] = None
-    stripe_connection["stripe_user_id"] = None
-    stripe_connection["access_token"] = None
-    stripe_connection["refresh_token"] = None
+    db_utils.delete_oauth_connection(org_id, "stripe")
 
     return {
         "success": True,
@@ -5490,21 +5486,26 @@ async def disconnect_stripe():
     }
 
 @app.put("/api/stripe/settings")
-async def update_stripe_settings(settings: dict):
+async def update_stripe_settings(settings: dict, org_id: str = DEFAULT_ORG_ID):
     """Update Stripe settings"""
+    stripe_conn = _get_stripe_connection(org_id)
+    stripe_settings = stripe_conn.get("settings", dict(DEFAULT_STRIPE_SETTINGS))
     for key in settings:
-        if key in stripe_connection["settings"]:
-            stripe_connection["settings"][key] = settings[key]
+        if key in stripe_settings:
+            stripe_settings[key] = settings[key]
+    stripe_conn["settings"] = stripe_settings
+    db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
 
     return {
         "success": True,
-        "settings": stripe_connection["settings"]
+        "settings": stripe_settings
     }
 
 @app.post("/api/stripe/create-invoice")
-async def create_stripe_invoice(data: dict):
+async def create_stripe_invoice(data: dict, org_id: str = DEFAULT_ORG_ID):
     """Create a Stripe invoice for a family"""
-    if not stripe_connection["connected"]:
+    stripe_conn = _get_stripe_connection(org_id)
+    if not stripe_conn["connected"]:
         raise HTTPException(status_code=400, detail="Stripe not connected")
 
     family_id = data.get("family_id")
@@ -5530,7 +5531,10 @@ async def create_stripe_invoice(data: dict):
         "paid_at": None,
         "stripe_invoice_id": f"in_{invoice_id}"
     }
-    stripe_transactions.insert(0, transaction)
+    sync_history = stripe_conn.get("sync_history", [])
+    sync_history.insert(0, transaction)
+    stripe_conn["sync_history"] = sync_history
+    db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
 
     return {
         "success": True,
@@ -5539,9 +5543,10 @@ async def create_stripe_invoice(data: dict):
     }
 
 @app.post("/api/stripe/process-payment")
-async def process_stripe_payment(data: dict):
+async def process_stripe_payment(data: dict, org_id: str = DEFAULT_ORG_ID):
     """Process a payment through Stripe"""
-    if not stripe_connection["connected"]:
+    stripe_conn = _get_stripe_connection(org_id)
+    if not stripe_conn["connected"]:
         raise HTTPException(status_code=400, detail="Stripe not connected")
 
     family_id = data.get("family_id")
@@ -5567,7 +5572,10 @@ async def process_stripe_payment(data: dict):
         "paid_at": datetime.now().isoformat(),
         "stripe_payment_id": f"pi_{payment_id}"
     }
-    stripe_transactions.insert(0, transaction)
+    sync_history = stripe_conn.get("sync_history", [])
+    sync_history.insert(0, transaction)
+    stripe_conn["sync_history"] = sync_history
+    db_utils.save_oauth_connection(org_id, "stripe", stripe_conn)
 
     # Update family balance
     family.current_balance = max(0, family.current_balance - amount)
@@ -5580,22 +5588,25 @@ async def process_stripe_payment(data: dict):
     }
 
 @app.get("/api/stripe/transactions")
-async def get_stripe_transactions(family_id: Optional[str] = None, transaction_type: Optional[str] = None):
+async def get_stripe_transactions(family_id: Optional[str] = None, transaction_type: Optional[str] = None, org_id: str = DEFAULT_ORG_ID):
     """Get Stripe transaction history"""
-    result = stripe_transactions
+    stripe_conn = _get_stripe_connection(org_id)
+    result = stripe_conn.get("sync_history", [])
     if family_id:
-        result = [t for t in result if t["family_id"] == family_id]
+        result = [t for t in result if t.get("family_id") == family_id]
     if transaction_type:
-        result = [t for t in result if t["type"] == transaction_type]
+        result = [t for t in result if t.get("type") == transaction_type]
     return result[:50]
 
 @app.get("/api/stripe/summary")
-async def get_stripe_summary():
+async def get_stripe_summary(org_id: str = DEFAULT_ORG_ID):
     """Get Stripe payment summary"""
-    total_invoiced = sum(t["amount"] for t in stripe_transactions if t["type"] == "invoice")
-    total_collected = sum(t["amount"] for t in stripe_transactions if t["type"] == "payment" and t["status"] == "completed")
-    pending_invoices = [t for t in stripe_transactions if t["type"] == "invoice" and t["status"] == "pending"]
-    recent_payments = [t for t in stripe_transactions if t["type"] == "payment"][:10]
+    stripe_conn = _get_stripe_connection(org_id)
+    transactions = stripe_conn.get("sync_history", [])
+    total_invoiced = sum(t.get("amount", 0) for t in transactions if t.get("type") == "invoice")
+    total_collected = sum(t.get("amount", 0) for t in transactions if t.get("type") == "payment" and t.get("status") == "completed")
+    pending_invoices = [t for t in transactions if t.get("type") == "invoice" and t.get("status") == "pending"]
+    recent_payments = [t for t in transactions if t.get("type") == "payment"][:10]
 
     return {
         "total_invoiced": total_invoiced,
@@ -5603,5 +5614,5 @@ async def get_stripe_summary():
         "outstanding_balance": total_invoiced - total_collected,
         "pending_invoice_count": len(pending_invoices),
         "recent_payments": recent_payments,
-        "families_with_balance": len(set(t["family_id"] for t in pending_invoices))
+        "families_with_balance": len(set(t.get("family_id", "") for t in pending_invoices))
     }

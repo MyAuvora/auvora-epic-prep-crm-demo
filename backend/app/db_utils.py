@@ -1317,11 +1317,105 @@ def save_time_off_request(pydantic_req):
         db.close()
 
 
+def get_oauth_connection(organization_id: str, provider: str) -> Optional[Dict]:
+    """Load an OAuth connection from the database for a given org and provider."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.OAuthConnection).filter(
+            models.OAuthConnection.organization_id == organization_id,
+            models.OAuthConnection.provider == provider,
+        ).first()
+        if not row:
+            return None
+        return {
+            "organization_id": row.organization_id,
+            "provider": row.provider,
+            "connected": row.connected or False,
+            "account_name": row.account_name,
+            "account_id": row.account_id,
+            "connected_at": row.connected_at,
+            "access_token": row.access_token,
+            "refresh_token": row.refresh_token,
+            "token_expires_at": row.token_expires_at,
+            "stripe_user_id": row.stripe_user_id,
+            "mode": row.mode,
+            "realm_id": row.realm_id,
+            "company_name": row.company_name,
+            "company_id": row.company_id,
+            "last_sync": row.last_sync,
+            "settings": _json_loads(row.settings_json, default={}),
+            "sync_history": _json_loads(row.sync_history_json, default=[]),
+        }
+    finally:
+        db.close()
+
+
+def save_oauth_connection(organization_id: str, provider: str, data: Dict):
+    """Save or update an OAuth connection in the database."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.OAuthConnection).filter(
+            models.OAuthConnection.organization_id == organization_id,
+            models.OAuthConnection.provider == provider,
+        ).first()
+        if not row:
+            row = models.OAuthConnection(
+                organization_id=organization_id,
+                provider=provider,
+            )
+            db.add(row)
+        # Update all fields from data dict
+        row.connected = data.get("connected", False)
+        row.account_name = data.get("account_name")
+        row.account_id = data.get("account_id")
+        row.connected_at = data.get("connected_at")
+        row.access_token = data.get("access_token")
+        row.refresh_token = data.get("refresh_token")
+        row.token_expires_at = data.get("token_expires_at")
+        row.stripe_user_id = data.get("stripe_user_id")
+        row.mode = data.get("mode")
+        row.realm_id = data.get("realm_id")
+        row.company_name = data.get("company_name")
+        row.company_id = data.get("company_id")
+        row.last_sync = data.get("last_sync")
+        if "settings" in data:
+            row.settings_json = _json_dumps(data["settings"])
+        if "sync_history" in data:
+            row.sync_history_json = _json_dumps(data["sync_history"])
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_oauth_connection(organization_id: str, provider: str):
+    """Delete an OAuth connection from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.OAuthConnection).filter(
+            models.OAuthConnection.organization_id == organization_id,
+            models.OAuthConnection.provider == provider,
+        ).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_all_oauth_connections():
+    """Delete all OAuth connections from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.OAuthConnection).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
 def reset_all_data():
     """Wipe all data from all tables for production reset."""
     db = SessionLocal()
     try:
         # Delete in reverse dependency order
+        db.query(models.OAuthConnection).delete()
         db.query(models.TimeOffRequest).delete()
         db.query(models.AuditLog).delete()
         db.query(models.SUFSPaymentAllocation).delete()
