@@ -4710,7 +4710,7 @@ QB_ENVIRONMENT = os.environ.get("QUICKBOOKS_ENVIRONMENT", "production")  # "sand
 QB_REDIRECT_URI = f"{BACKEND_URL}/api/quickbooks/callback"
 
 # QuickBooks OAuth URLs
-QB_AUTH_BASE = "https://appcenter.intuit.com/connect/oauth2" if QB_ENVIRONMENT == "production" else "https://appcenter.intuit.com/connect/oauth2"
+QB_AUTH_BASE = "https://appcenter.intuit.com/connect/oauth2"
 QB_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
 QB_REVOKE_URL = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke"
 QB_API_BASE = "https://quickbooks.api.intuit.com" if QB_ENVIRONMENT == "production" else "https://sandbox-quickbooks.api.intuit.com"
@@ -5209,6 +5209,9 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
         "account_id": None,
         "connected_at": None,
         "mode": "test",
+        "stripe_user_id": None,
+        "access_token": None,
+        "refresh_token": None,
         "settings": {
             "auto_create_invoices": True,
             "send_payment_receipts": True,
@@ -5226,6 +5229,10 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
         "company_id": None,
         "connected_at": None,
         "last_sync": None,
+        "access_token": None,
+        "refresh_token": None,
+        "token_expires_at": None,
+        "realm_id": None,
         "sync_settings": {
             "auto_sync_invoices": True,
             "auto_sync_payments": True,
@@ -5438,7 +5445,7 @@ async def connect_stripe(data: dict):
             return {
                 "success": True,
                 "message": "Connected to Stripe (demo mode - set STRIPE_CLIENT_ID for real OAuth)",
-                "connection": stripe_connection
+                "connection": {k: v for k, v in stripe_connection.items() if k not in ("access_token", "refresh_token", "stripe_user_id")}
             }
         else:
             raise HTTPException(status_code=400, detail="Use GET /api/stripe/connect to initiate OAuth flow")
