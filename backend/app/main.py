@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from datetime import datetime, date, timedelta
 import random
 import os
+import uuid
 from enum import Enum
 import csv
 import io
@@ -1296,6 +1297,32 @@ async def create_student(student: Student):
     
     return student
 
+@app.put("/api/students/{student_id}", response_model=Student)
+async def update_student(student_id: str, student_data: dict):
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    for key, value in student_data.items():
+        if hasattr(student, key) and key != "student_id":
+            setattr(student, key, value)
+    db_utils.save_student(student)
+    return student
+
+@app.delete("/api/students/{student_id}")
+async def delete_student(student_id: str):
+    global students_db
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    # Remove student from family's student_ids
+    family = next((f for f in families_db if f.family_id == student.family_id), None)
+    if family and student_id in family.student_ids:
+        family.student_ids.remove(student_id)
+        db_utils.save_family(family)
+    students_db = [s for s in students_db if s.student_id != student_id]
+    db_utils.delete_student(student_id)
+    return {"message": "Student deleted successfully"}
+
 @app.get("/api/students/export/csv")
 async def export_students_csv(campus_id: Optional[str] = None):
     filtered_students = students_db
@@ -1340,6 +1367,35 @@ async def get_family(family_id: str):
         raise HTTPException(status_code=404, detail="Family not found")
     return family
 
+@app.post("/api/families", response_model=Family)
+async def create_family(family: Family):
+    if any(f.family_id == family.family_id for f in families_db):
+        raise HTTPException(status_code=400, detail="Family ID already exists")
+    families_db.append(family)
+    db_utils.save_family(family)
+    return family
+
+@app.put("/api/families/{family_id}", response_model=Family)
+async def update_family(family_id: str, family_data: dict):
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    for key, value in family_data.items():
+        if hasattr(family, key) and key != "family_id":
+            setattr(family, key, value)
+    db_utils.save_family(family)
+    return family
+
+@app.delete("/api/families/{family_id}")
+async def delete_family(family_id: str):
+    global families_db
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    families_db = [f for f in families_db if f.family_id != family_id]
+    db_utils.delete_family(family_id)
+    return {"message": "Family deleted successfully"}
+
 @app.get("/api/parents", response_model=List[Parent])
 async def get_parents():
     return parents_db
@@ -1350,6 +1406,35 @@ async def get_parent(parent_id: str):
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
     return parent
+
+@app.post("/api/parents", response_model=Parent)
+async def create_parent(parent: Parent):
+    if any(p.parent_id == parent.parent_id for p in parents_db):
+        raise HTTPException(status_code=400, detail="Parent ID already exists")
+    parents_db.append(parent)
+    db_utils.save_parent(parent)
+    return parent
+
+@app.put("/api/parents/{parent_id}", response_model=Parent)
+async def update_parent(parent_id: str, parent_data: dict):
+    parent = next((p for p in parents_db if p.parent_id == parent_id), None)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    for key, value in parent_data.items():
+        if hasattr(parent, key) and key != "parent_id":
+            setattr(parent, key, value)
+    db_utils.save_parent(parent)
+    return parent
+
+@app.delete("/api/parents/{parent_id}")
+async def delete_parent(parent_id: str):
+    global parents_db
+    parent = next((p for p in parents_db if p.parent_id == parent_id), None)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    parents_db = [p for p in parents_db if p.parent_id != parent_id]
+    db_utils.delete_parent(parent_id)
+    return {"message": "Parent deleted successfully"}
 
 @app.get("/api/staff", response_model=List[Staff])
 async def get_staff():
@@ -1366,9 +1451,31 @@ async def get_staff_member(staff_id: str):
 async def get_grades(student_id: str):
     return [g for g in grade_records_db if g.student_id == student_id]
 
+@app.post("/api/grades", response_model=GradeRecord)
+async def create_grade_record(grade_record: GradeRecord):
+    if any(g.grade_record_id == grade_record.grade_record_id for g in grade_records_db):
+        raise HTTPException(status_code=400, detail="Grade record ID already exists")
+    student = next((s for s in students_db if s.student_id == grade_record.student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    grade_records_db.append(grade_record)
+    db_utils.save_grade_record(grade_record)
+    return grade_record
+
 @app.get("/api/behavior/{student_id}", response_model=List[BehaviorNote])
 async def get_behavior_notes(student_id: str):
     return [b for b in behavior_notes_db if b.student_id == student_id]
+
+@app.post("/api/behavior", response_model=BehaviorNote)
+async def create_behavior_note(behavior_note: BehaviorNote):
+    if any(b.behavior_note_id == behavior_note.behavior_note_id for b in behavior_notes_db):
+        raise HTTPException(status_code=400, detail="Behavior note ID already exists")
+    student = next((s for s in students_db if s.student_id == behavior_note.student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    behavior_notes_db.append(behavior_note)
+    db_utils.save_behavior_note(behavior_note)
+    return behavior_note
 
 @app.get("/api/attendance/{student_id}", response_model=List[AttendanceRecord])
 async def get_attendance(student_id: str):
@@ -1403,7 +1510,7 @@ async def take_attendance(attendance_list: List[AttendanceSubmission]):
             db_utils.save_attendance(existing)
             created_records.append(existing)
         else:
-            attendance_id = f"att_{len(attendance_records_db) + 1}"
+            attendance_id = f"att_{uuid.uuid4().hex[:8]}"
             new_record = AttendanceRecord(
                 attendance_id=attendance_id,
                 student_id=submission.student_id,
@@ -1459,6 +1566,23 @@ async def get_all_acellus_courses():
 async def get_billing_records(family_id: str):
     return [b for b in billing_records_db if b.family_id == family_id]
 
+@app.post("/api/billing", response_model=BillingRecord)
+async def create_billing_record(billing_record: BillingRecord):
+    if any(b.billing_record_id == billing_record.billing_record_id for b in billing_records_db):
+        raise HTTPException(status_code=400, detail="Billing record ID already exists")
+    family = next((f for f in families_db if f.family_id == billing_record.family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    billing_records_db.append(billing_record)
+    db_utils.save_billing_record(billing_record)
+    # Update family balance if it's a payment
+    if billing_record.type == "Payment":
+        family.current_balance = max(0, family.current_balance - billing_record.amount)
+        family.last_payment_date = billing_record.date
+        family.last_payment_amount = billing_record.amount
+        db_utils.save_family(family)
+    return billing_record
+
 @app.get("/api/conferences", response_model=List[Conference])
 async def get_conferences(student_id: Optional[str] = None, parent_id: Optional[str] = None):
     conferences = conferences_db
@@ -1468,6 +1592,25 @@ async def get_conferences(student_id: Optional[str] = None, parent_id: Optional[
         conferences = [c for c in conferences if c.parent_id == parent_id]
     return conferences
 
+@app.post("/api/conferences", response_model=Conference)
+async def create_conference(conference: Conference):
+    if any(c.conference_id == conference.conference_id for c in conferences_db):
+        raise HTTPException(status_code=400, detail="Conference ID already exists")
+    conferences_db.append(conference)
+    db_utils.save_conference(conference)
+    return conference
+
+@app.put("/api/conferences/{conference_id}", response_model=Conference)
+async def update_conference(conference_id: str, conference_data: dict):
+    conference = next((c for c in conferences_db if c.conference_id == conference_id), None)
+    if not conference:
+        raise HTTPException(status_code=404, detail="Conference not found")
+    for key, value in conference_data.items():
+        if hasattr(conference, key) and key != "conference_id":
+            setattr(conference, key, value)
+    db_utils.save_conference(conference)
+    return conference
+
 @app.get("/api/messages", response_model=List[Message])
 async def get_messages(parent_id: Optional[str] = None, staff_id: Optional[str] = None):
     messages = messages_db
@@ -1476,6 +1619,14 @@ async def get_messages(parent_id: Optional[str] = None, staff_id: Optional[str] 
     if staff_id:
         messages = [m for m in messages if m.sender_id == staff_id or m.recipient_id == staff_id]
     return messages
+
+@app.post("/api/messages", response_model=Message)
+async def create_message(message: Message):
+    if any(m.message_id == message.message_id for m in messages_db):
+        raise HTTPException(status_code=400, detail="Message ID already exists")
+    messages_db.append(message)
+    db_utils.save_message(message)
+    return message
 
 @app.get("/api/dashboard/admin")
 async def get_admin_dashboard(campus_id: Optional[str] = None):
@@ -1752,6 +1903,35 @@ async def get_event(event_id: str):
 @app.get("/api/events/{event_id}/rsvps")
 async def get_event_rsvps(event_id: str):
     return [r for r in event_rsvps_db if r.event_id == event_id]
+
+@app.post("/api/events", response_model=Event)
+async def create_event(event: Event):
+    if any(e.event_id == event.event_id for e in events_db):
+        raise HTTPException(status_code=400, detail="Event ID already exists")
+    events_db.append(event)
+    db_utils.save_event(event)
+    return event
+
+@app.put("/api/events/{event_id}", response_model=Event)
+async def update_event(event_id: str, event_data: dict):
+    event = next((e for e in events_db if e.event_id == event_id), None)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    for key, value in event_data.items():
+        if hasattr(event, key) and key != "event_id":
+            setattr(event, key, value)
+    db_utils.save_event(event)
+    return event
+
+@app.delete("/api/events/{event_id}")
+async def delete_event(event_id: str):
+    global events_db
+    event = next((e for e in events_db if e.event_id == event_id), None)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    events_db = [e for e in events_db if e.event_id != event_id]
+    db_utils.delete_event(event_id)
+    return {"message": "Event deleted successfully"}
 
 @app.get("/api/rsvps")
 async def get_rsvps(family_id: Optional[str] = None):
@@ -2158,14 +2338,13 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
         families = [f for f in families if any(s.student_id in student_ids for s in students_db if s.family_id == f.family_id)]
     
     generated_invoices = []
-    invoice_counter = len(invoices_db) + 1
-    
     for family in families:
         campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
         family_students = [s for s in students_db if s.family_id == family.family_id]
         
-        invoice_id = f"inv_{invoice_counter}"
-        invoice_number = f"INV-{invoice_date.year}-{invoice_date.month:02d}-{invoice_counter:04d}"
+        inv_uid = uuid.uuid4().hex[:8]
+        invoice_id = f"inv_{inv_uid}"
+        invoice_number = f"INV-{invoice_date.year}-{invoice_date.month:02d}-{inv_uid}"
         
         subtotal = 0.0
         line_items = []
@@ -2173,7 +2352,7 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
         for student in family_students:
             monthly_tuition = family.monthly_tuition_amount / len(family_students)
             line_item = InvoiceLineItem(
-                line_item_id=f"line_{invoice_counter}_{student.student_id}",
+                line_item_id=f"line_{uuid.uuid4().hex[:8]}",
                 invoice_id=invoice_id,
                 description=f"Monthly Tuition - {student.first_name} {student.last_name}",
                 category=BillingCategory.TUITION,
@@ -2213,7 +2392,6 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
             db_utils.save_invoice_line_item(li)
         invoice_line_items_db.extend(line_items)
         generated_invoices.append(invoice)
-        invoice_counter += 1
     
     return {
         'count': len(generated_invoices),
@@ -3197,7 +3375,7 @@ async def approve_announcement(announcement_id: str, approved_by: str):
 @app.post("/api/announcements/{announcement_id}/read")
 async def mark_announcement_read(announcement_id: str, user_id: str):
     read_record = AnnouncementRead(
-        read_id=f"read_{len(announcement_reads_db) + 1}",
+        read_id=f"read_{uuid.uuid4().hex[:8]}",
         announcement_id=announcement_id,
         user_id=user_id,
         read_date=date.today()
@@ -4731,3 +4909,154 @@ async def preview_quickbooks_export():
             "total_outstanding": total_outstanding
         }
     }
+
+
+# ============================================================================
+# Admin: Database Reset Endpoint
+# ============================================================================
+
+@app.post("/api/admin/reset-database")
+async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM_RESET' to proceed")):
+    """
+    Wipe ALL data from the database and in-memory lists for production deployment.
+    Requires confirm='CONFIRM_RESET' as a safety measure.
+    After reset, the database will be empty — no demo data will be seeded.
+    """
+    if confirm != "CONFIRM_RESET":
+        raise HTTPException(
+            status_code=400,
+            detail="You must pass confirm='CONFIRM_RESET' to wipe all data. This action is irreversible."
+        )
+
+    global students_db, families_db, parents_db, staff_db, grade_records_db
+    global behavior_notes_db, attendance_records_db, ixl_summaries_db
+    global acellus_courses_db, acellus_summaries_db, billing_records_db
+    global conferences_db, messages_db, events_db, event_rsvps_db
+    global documents_db, document_signatures_db, products_db, orders_db
+    global photo_albums_db, incidents_db, health_records_db
+    global invoices_db, invoice_line_items_db, payment_plans_db, payment_schedules_db
+    global leads_db, campus_capacities_db, message_templates_db
+    global broadcast_messages_db, automated_alerts_db
+    global academic_standards_db, standard_assessments_db, progress_reports_db
+    global iep_plans_db, accommodations_db, iep_goals_db
+    global intervention_plans_db, intervention_progress_db
+    global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
+    global assignments_db, grade_entries_db
+    global announcements_db, announcement_reads_db, event_workflows_db
+    global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_allocations_db
+    global time_off_requests_db
+
+    # Clear all in-memory lists
+    students_db = []
+    families_db = []
+    parents_db = []
+    staff_db = []
+    grade_records_db = []
+    behavior_notes_db = []
+    attendance_records_db = []
+    ixl_summaries_db = []
+    acellus_courses_db = []
+    acellus_summaries_db = []
+    billing_records_db = []
+    conferences_db = []
+    messages_db = []
+    events_db = []
+    event_rsvps_db = []
+    documents_db = []
+    document_signatures_db = []
+    products_db = []
+    orders_db = []
+    photo_albums_db = []
+    incidents_db = []
+    health_records_db = []
+    invoices_db = []
+    invoice_line_items_db = []
+    payment_plans_db = []
+    payment_schedules_db = []
+    leads_db = []
+    campus_capacities_db = []
+    message_templates_db = []
+    broadcast_messages_db = []
+    automated_alerts_db = []
+    academic_standards_db = []
+    standard_assessments_db = []
+    progress_reports_db = []
+    iep_plans_db = []
+    accommodations_db = []
+    iep_goals_db = []
+    intervention_plans_db = []
+    intervention_progress_db = []
+    at_risk_assessments_db = []
+    retention_predictions_db = []
+    enrollment_forecasts_db = []
+    assignments_db = []
+    grade_entries_db = []
+    announcements_db = []
+    announcement_reads_db = []
+    event_workflows_db = []
+    sufs_scholarships_db = []
+    sufs_claims_db = []
+    sufs_payments_db = []
+    sufs_allocations_db = []
+    time_off_requests_db = []
+
+    # Wipe the database
+    db_utils.reset_all_data()
+
+    return {
+        "message": "Database reset complete. All demo data has been wiped.",
+        "status": "success"
+    }
+
+
+# ============================================================================
+# Time-Off Requests (Staff)
+# ============================================================================
+
+class TimeOffRequestStatus(str, Enum):
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    DENIED = "Denied"
+
+class TimeOffRequest(BaseModel):
+    request_id: str
+    staff_id: str
+    start_date: date
+    end_date: date
+    reason: str
+    status: TimeOffRequestStatus = TimeOffRequestStatus.PENDING
+    submitted_date: Optional[date] = None
+    reviewed_by: Optional[str] = None
+    review_date: Optional[date] = None
+
+time_off_requests_db: List[TimeOffRequest] = []
+
+@app.get("/api/time-off-requests", response_model=List[TimeOffRequest])
+async def get_time_off_requests(staff_id: Optional[str] = None):
+    if staff_id:
+        return [r for r in time_off_requests_db if r.staff_id == staff_id]
+    return time_off_requests_db
+
+@app.post("/api/time-off-requests", response_model=TimeOffRequest)
+async def create_time_off_request(request: TimeOffRequest):
+    if any(r.request_id == request.request_id for r in time_off_requests_db):
+        raise HTTPException(status_code=400, detail="Time-off request ID already exists")
+    staff = next((s for s in staff_db if s.staff_id == request.staff_id), None)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+    if not request.submitted_date:
+        request.submitted_date = date.today()
+    time_off_requests_db.append(request)
+    db_utils.save_time_off_request(request)
+    return request
+
+@app.put("/api/time-off-requests/{request_id}")
+async def update_time_off_request(request_id: str, status: TimeOffRequestStatus, reviewed_by: Optional[str] = None):
+    request = next((r for r in time_off_requests_db if r.request_id == request_id), None)
+    if not request:
+        raise HTTPException(status_code=404, detail="Time-off request not found")
+    request.status = status
+    request.reviewed_by = reviewed_by
+    request.review_date = date.today()
+    db_utils.save_time_off_request(request)
+    return request

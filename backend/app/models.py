@@ -936,6 +936,21 @@ class PaymentMethod(Base):
     created_date = Column(DateTime, default=datetime.utcnow)
 
 
+class TimeOffRequest(Base):
+    __tablename__ = "time_off_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(String, unique=True, index=True)
+    staff_id = Column(String)
+    start_date = Column(Date)
+    end_date = Column(Date)
+    reason = Column(String)
+    status = Column(String, default="Pending")
+    submitted_date = Column(Date)
+    reviewed_by = Column(String)
+    review_date = Column(Date)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

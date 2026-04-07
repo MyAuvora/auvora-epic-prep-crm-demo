@@ -1174,6 +1174,216 @@ def save_event(pydantic_evt):
         db.close()
 
 
+def save_parent(pydantic_parent):
+    """Persist a parent to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            parent_id=pydantic_parent.parent_id,
+            family_id=pydantic_parent.family_id,
+            first_name=pydantic_parent.first_name,
+            last_name=pydantic_parent.last_name,
+            email=pydantic_parent.email,
+            phone=pydantic_parent.phone,
+            relationship_type=getattr(pydantic_parent, 'relationship', None) or getattr(pydantic_parent, 'relationship_type', None),
+            primary_guardian=pydantic_parent.primary_guardian,
+            preferred_contact_method=getattr(pydantic_parent, 'preferred_contact_method', 'Email'),
+        )
+        _upsert(db, models.Parent, "parent_id", pydantic_parent.parent_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_conference(pydantic_conf):
+    """Persist a conference to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            conference_id=pydantic_conf.conference_id,
+            student_id=pydantic_conf.student_id,
+            parent_id=pydantic_conf.parent_id,
+            staff_id=pydantic_conf.staff_id,
+            date_time=pydantic_conf.date_time,
+            location=pydantic_conf.location,
+            status=_enum_val(pydantic_conf.status),
+            notes=getattr(pydantic_conf, 'notes', None),
+        )
+        _upsert(db, models.Conference, "conference_id", pydantic_conf.conference_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_behavior_note(pydantic_bn):
+    """Persist a behavior note to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            behavior_note_id=pydantic_bn.behavior_note_id,
+            campus_id=pydantic_bn.campus_id,
+            student_id=pydantic_bn.student_id,
+            date=pydantic_bn.date,
+            type=_enum_val(pydantic_bn.type),
+            summary=pydantic_bn.summary,
+            flag_for_followup=pydantic_bn.flag_for_followup,
+            recorded_by=getattr(pydantic_bn, 'recorded_by', None),
+        )
+        _upsert(db, models.BehaviorNote, "behavior_note_id", pydantic_bn.behavior_note_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_grade_record(pydantic_gr):
+    """Persist a grade record to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            grade_record_id=pydantic_gr.grade_record_id,
+            campus_id=pydantic_gr.campus_id,
+            student_id=pydantic_gr.student_id,
+            subject=pydantic_gr.subject,
+            term=pydantic_gr.term,
+            grade_value=pydantic_gr.grade_value,
+            grade_percentage=pydantic_gr.grade_percentage,
+            is_failing=pydantic_gr.is_failing,
+            recorded_date=getattr(pydantic_gr, 'recorded_date', None),
+        )
+        _upsert(db, models.GradeRecord, "grade_record_id", pydantic_gr.grade_record_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_student(student_id: str):
+    """Delete a student from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.Student).filter(models.Student.student_id == student_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_family(family_id: str):
+    """Delete a family from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.Family).filter(models.Family.family_id == family_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_parent(parent_id: str):
+    """Delete a parent from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.Parent).filter(models.Parent.parent_id == parent_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_event(event_id: str):
+    """Delete an event from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.Event).filter(models.Event.event_id == event_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_time_off_request(pydantic_req):
+    """Persist a time-off request to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            request_id=pydantic_req.request_id,
+            staff_id=pydantic_req.staff_id,
+            start_date=pydantic_req.start_date,
+            end_date=pydantic_req.end_date,
+            reason=pydantic_req.reason,
+            status=_enum_val(pydantic_req.status),
+            submitted_date=pydantic_req.submitted_date,
+            reviewed_by=pydantic_req.reviewed_by,
+            review_date=pydantic_req.review_date,
+        )
+        _upsert(db, models.TimeOffRequest, "request_id", pydantic_req.request_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def reset_all_data():
+    """Wipe all data from all tables for production reset."""
+    db = SessionLocal()
+    try:
+        # Delete in reverse dependency order
+        db.query(models.TimeOffRequest).delete()
+        db.query(models.AuditLog).delete()
+        db.query(models.SUFSPaymentAllocation).delete()
+        db.query(models.SUFSPayment).delete()
+        db.query(models.SUFSClaim).delete()
+        db.query(models.SUFSScholarship).delete()
+        db.query(models.AnnouncementRead).delete()
+        db.query(models.Announcement).delete()
+        db.query(models.GradeEntry).delete()
+        db.query(models.Assignment).delete()
+        db.query(models.EventWorkflow).delete()
+        db.query(models.InterventionProgress).delete()
+        db.query(models.InterventionPlan).delete()
+        db.query(models.IEPGoal).delete()
+        db.query(models.Accommodation).delete()
+        db.query(models.IEP504Plan).delete()
+        db.query(models.RetentionPrediction).delete()
+        db.query(models.AtRiskAssessment).delete()
+        db.query(models.EnrollmentForecast).delete()
+        db.query(models.ProgressReport).delete()
+        db.query(models.StandardAssessment).delete()
+        db.query(models.AcademicStandard).delete()
+        db.query(models.AutomatedAlert).delete()
+        db.query(models.BroadcastMessage).delete()
+        db.query(models.MessageTemplate).delete()
+        db.query(models.CampusCapacity).delete()
+        db.query(models.PaymentSchedule).delete()
+        db.query(models.PaymentPlan).delete()
+        db.query(models.InvoiceLineItem).delete()
+        db.query(models.Invoice).delete()
+        db.query(models.DocumentSignature).delete()
+        db.query(models.Document).delete()
+        db.query(models.PhotoAlbum).delete()
+        db.query(models.Order).delete()
+        db.query(models.Product).delete()
+        db.query(models.Incident).delete()
+        db.query(models.HealthRecord).delete()
+        db.query(models.Conference).delete()
+        db.query(models.Message).delete()
+        db.query(models.EventRSVP).delete()
+        db.query(models.Event).delete()
+        db.query(models.BillingRecord).delete()
+        db.query(models.AcellusSummary).delete()
+        db.query(models.AcellusCourse).delete()
+        db.query(models.IXLSummary).delete()
+        db.query(models.AttendanceRecord).delete()
+        db.query(models.BehaviorNote).delete()
+        db.query(models.GradeRecord).delete()
+        db.query(models.Lead).delete()
+        db.query(models.PaymentMethod).delete()
+        db.query(models.Parent).delete()
+        db.query(models.Student).delete()
+        db.query(models.Family).delete()
+        db.query(models.Staff).delete()
+        db.query(models.User).delete()
+        db.query(models.Campus).delete()
+        db.query(models.Organization).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
 # ============================================================================
 # SQLAlchemy -> dict converters (for loading from DB to Pydantic)
 # ============================================================================
