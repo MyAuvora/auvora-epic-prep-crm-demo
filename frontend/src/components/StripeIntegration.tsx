@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { RefreshCw, Link2, Unlink, CreditCard, DollarSign, FileText, CheckCircle, AlertCircle, Clock, Settings, Shield } from 'lucide-react'
+import { RefreshCw, Link2, Unlink, CreditCard, DollarSign, FileText, CheckCircle, AlertCircle, Settings, Shield } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
