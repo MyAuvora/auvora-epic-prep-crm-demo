@@ -4956,6 +4956,8 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
+    global stripe_connection, stripe_transactions
+    global quickbooks_connection, quickbooks_sync_history
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5015,6 +5017,36 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_payment_allocations_db = []
     time_off_requests_db = []
     payment_methods_db = []
+    stripe_transactions = []
+    stripe_connection.update({
+        "connected": False,
+        "account_name": None,
+        "account_id": None,
+        "connected_at": None,
+        "mode": "test",
+        "settings": {
+            "auto_create_invoices": True,
+            "send_payment_receipts": True,
+            "default_currency": "usd",
+            "payment_methods": ["card"],
+            "late_fee_enabled": False,
+            "late_fee_percentage": 5.0,
+            "late_fee_grace_days": 7
+        }
+    })
+    quickbooks_sync_history.clear()
+    quickbooks_connection.update({
+        "connected": False,
+        "company_name": None,
+        "company_id": None,
+        "connected_at": None,
+        "last_sync": None,
+        "sync_settings": {
+            "auto_sync_invoices": True,
+            "auto_sync_payments": True,
+            "sync_frequency": "daily"
+        }
+    })
 
     # Wipe the database
     db_utils.reset_all_data()
@@ -5217,6 +5249,7 @@ async def process_stripe_payment(data: dict):
 
     # Update family balance
     family.current_balance = max(0, family.current_balance - amount)
+    db_utils.save_family(family)
 
     return {
         "success": True,
