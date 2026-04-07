@@ -1126,6 +1126,16 @@ def load_data_from_db():
 
     data = db_utils.load_all_from_db()
 
+    # Migrate old role values to new ones
+    role_migration = {
+        "Super Admin": "Owner",
+        "Campus Admin": "Admin",
+        "Teacher": "Coach",
+    }
+    for user_dict in data.get("users", []):
+        if user_dict.get("role") in role_migration:
+            user_dict["role"] = role_migration[user_dict["role"]]
+
     # Convert dicts back to Pydantic models for each entity type
     organizations_db = [Organization(**d) for d in data.get("organizations", [])]
     campuses_db = [Campus(**d) for d in data.get("campuses", [])]
