@@ -1180,7 +1180,7 @@ def save_parent(pydantic_parent):
     try:
         fields = dict(
             parent_id=pydantic_parent.parent_id,
-            family_id=pydantic_parent.family_id,
+            family_id=getattr(pydantic_parent, 'family_id', None),
             first_name=pydantic_parent.first_name,
             last_name=pydantic_parent.last_name,
             email=pydantic_parent.email,
@@ -1246,7 +1246,7 @@ def save_grade_record(pydantic_gr):
             subject=pydantic_gr.subject,
             term=pydantic_gr.term,
             grade_value=pydantic_gr.grade_value,
-            grade_percentage=pydantic_gr.grade_percentage,
+            grade_percentage=getattr(pydantic_gr, 'grade_percentage', None),
             is_failing=pydantic_gr.is_failing,
             recorded_date=getattr(pydantic_gr, 'recorded_date', None),
         )
