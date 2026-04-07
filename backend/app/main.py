@@ -4698,8 +4698,17 @@ async def download_export(export_id: str):
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://epic.myauvora.com")
 BACKEND_URL = os.environ.get("BACKEND_URL", "https://app-yaxzfnzh.fly.dev")
 
-# OAuth state tokens for CSRF protection
-oauth_state_tokens: Dict[str, str] = {}
+# OAuth state tokens for CSRF protection: maps state -> (provider, created_at)
+oauth_state_tokens: Dict[str, tuple] = {}
+OAUTH_STATE_TTL_SECONDS = 600  # 10 minutes
+
+def _cleanup_expired_oauth_states():
+    """Remove OAuth state tokens older than TTL"""
+    now = datetime.now()
+    expired = [k for k, (_, created_at) in oauth_state_tokens.items()
+               if (now - created_at).total_seconds() > OAUTH_STATE_TTL_SECONDS]
+    for k in expired:
+        del oauth_state_tokens[k]
 
 # ============== QuickBooks Integration ==============
 
@@ -4754,8 +4763,9 @@ async def quickbooks_connect_redirect():
             detail="QuickBooks is not configured. Please set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET environment variables."
         )
 
+    _cleanup_expired_oauth_states()
     state = secrets.token_urlsafe(32)
-    oauth_state_tokens[state] = "quickbooks"
+    oauth_state_tokens[state] = ("quickbooks", datetime.now())
 
     auth_url = (
         f"{QB_AUTH_BASE}"
@@ -4776,7 +4786,7 @@ async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: st
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(error), safe='')}")
 
     # Verify state token
-    if state not in oauth_state_tokens or oauth_state_tokens[state] != "quickbooks":
+    if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "quickbooks":
         return RedirectResponse(url=f"{FRONTEND_URL}?qb_error=Invalid+state+token")
     del oauth_state_tokens[state]
 
@@ -5356,8 +5366,9 @@ async def stripe_connect_redirect():
             detail="Stripe is not configured. Please set STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, and STRIPE_PUBLISHABLE_KEY environment variables."
         )
 
+    _cleanup_expired_oauth_states()
     state = secrets.token_urlsafe(32)
-    oauth_state_tokens[state] = "stripe"
+    oauth_state_tokens[state] = ("stripe", datetime.now())
 
     # Stripe Connect OAuth URL
     stripe_oauth_url = (
@@ -5379,7 +5390,7 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(error_description or error), safe='')}")
 
     # Verify state token
-    if state not in oauth_state_tokens or oauth_state_tokens[state] != "stripe":
+    if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "stripe":
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error=Invalid+state+token")
     del oauth_state_tokens[state]
 
@@ -5408,9 +5419,6 @@ async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional
 
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_connected=true")
 
-    except stripe.oauth_error.OAuthError as e:
-        from urllib.parse import quote
-        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
     except Exception as e:
         from urllib.parse import quote
         return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
