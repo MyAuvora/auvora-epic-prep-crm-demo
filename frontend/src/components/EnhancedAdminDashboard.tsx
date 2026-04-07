@@ -30,6 +30,7 @@ import { AdminEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { LearningProgressImport } from './LearningProgressImport'
 import { FeeProductManagement } from './FeeProductManagement'
 import { QuickBooksIntegration } from './QuickBooksIntegration'
+import { StripeIntegration } from './StripeIntegration'
 import UserManagement from './UserManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -87,9 +88,10 @@ interface EnhancedAdminDashboardProps {
   searchNavigation?: { type: 'student' | 'family'; id: string } | null
   onClearSearch?: () => void
   selectedCampusId?: string | null
+  currentRole?: 'owner' | 'admin' | 'coach' | 'parent'
 }
 
-export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null }: EnhancedAdminDashboardProps) {
+export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
@@ -869,16 +871,24 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                             <TabsContent value="reports" className="mt-6">
                               {/* Consolidated Reports Section */}
                               <Tabs defaultValue="revenue" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 mb-4">
+                                <TabsList className={`grid w-full mb-4 ${currentRole === 'owner' ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                   <TabsTrigger value="revenue">Revenue Reports</TabsTrigger>
-                                  <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
+                                  <TabsTrigger value="stripe">Stripe</TabsTrigger>
+                                  {currentRole === 'owner' && (
+                                    <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
+                                  )}
                                 </TabsList>
                                 <TabsContent value="revenue">
                                   <AdminRevenueReports role="admin" />
                                 </TabsContent>
-                                <TabsContent value="quickbooks">
-                                  <QuickBooksIntegration />
+                                <TabsContent value="stripe">
+                                  <StripeIntegration />
                                 </TabsContent>
+                                {currentRole === 'owner' && (
+                                  <TabsContent value="quickbooks">
+                                    <QuickBooksIntegration />
+                                  </TabsContent>
+                                )}
                               </Tabs>
                             </TabsContent>
             </Tabs>

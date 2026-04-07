@@ -83,7 +83,7 @@ function AuthenticatedApp() {
         />
         
         <main className="flex-1">
-          {(currentRole === 'owner' || currentRole === 'admin') && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} />}
+          {(currentRole === 'owner' || currentRole === 'admin') && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} currentRole={currentRole} />}
           {currentRole === 'coach' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
           {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
         </main>
