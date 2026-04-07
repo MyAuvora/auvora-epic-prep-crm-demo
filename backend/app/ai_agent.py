@@ -935,11 +935,12 @@ IMPORTANT: Even if the parent phrases the question indirectly (e.g., "How many s
 """
 }
 ROLE_PROMPTS["coach"] = ROLE_PROMPTS["teacher"]
+ROLE_PROMPTS["owner"] = ROLE_PROMPTS["admin"]
 
 
 def get_functions_for_role(user_role: str) -> list:
     """Return the list of available functions filtered by user role."""
-    if user_role == "admin":
+    if user_role in ("admin", "owner"):
         return AVAILABLE_FUNCTIONS
     
     if user_role == "teacher" or user_role == "coach":
@@ -957,7 +958,7 @@ def get_functions_for_role(user_role: str) -> list:
 
 def filter_data_context_by_role(data_context: dict, user_role: str) -> dict:
     """Filter the data context based on the user's role to prevent data leaks."""
-    if user_role == "admin":
+    if user_role in ("admin", "owner"):
         return data_context  # Admins get full access
     
     if user_role == "teacher" or user_role == "coach":
