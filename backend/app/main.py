@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime, date, timedelta
@@ -10,6 +10,10 @@ import uuid
 from enum import Enum
 import csv
 import io
+import stripe
+import httpx
+import json
+import secrets
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -4690,7 +4694,35 @@ async def download_export(export_id: str):
     )
 
 
+# ============== Shared OAuth Configuration ==============
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://epic.myauvora.com")
+BACKEND_URL = os.environ.get("BACKEND_URL", "https://app-yaxzfnzh.fly.dev")
+
+# OAuth state tokens for CSRF protection: maps state -> (provider, created_at)
+oauth_state_tokens: Dict[str, tuple] = {}
+OAUTH_STATE_TTL_SECONDS = 600  # 10 minutes
+
+def _cleanup_expired_oauth_states():
+    """Remove OAuth state tokens older than TTL"""
+    now = datetime.now()
+    expired = [k for k, (_, created_at) in oauth_state_tokens.items()
+               if (now - created_at).total_seconds() > OAUTH_STATE_TTL_SECONDS]
+    for k in expired:
+        del oauth_state_tokens[k]
+
 # ============== QuickBooks Integration ==============
+
+# QuickBooks OAuth 2.0 configuration
+QB_CLIENT_ID = os.environ.get("QUICKBOOKS_CLIENT_ID", "")
+QB_CLIENT_SECRET = os.environ.get("QUICKBOOKS_CLIENT_SECRET", "")
+QB_ENVIRONMENT = os.environ.get("QUICKBOOKS_ENVIRONMENT", "production")  # "sandbox" or "production"
+QB_REDIRECT_URI = f"{BACKEND_URL}/api/quickbooks/callback"
+
+# QuickBooks OAuth URLs
+QB_AUTH_BASE = "https://appcenter.intuit.com/connect/oauth2"
+QB_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
+QB_REVOKE_URL = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke"
+QB_API_BASE = "https://quickbooks.api.intuit.com" if QB_ENVIRONMENT == "production" else "https://sandbox-quickbooks.api.intuit.com"
 
 # In-memory storage for QuickBooks connection status
 quickbooks_connection = {
@@ -4699,6 +4731,10 @@ quickbooks_connection = {
     "company_id": None,
     "connected_at": None,
     "last_sync": None,
+    "access_token": None,
+    "refresh_token": None,
+    "token_expires_at": None,
+    "realm_id": None,
     "sync_settings": {
         "auto_sync_invoices": True,
         "auto_sync_payments": True,
@@ -4712,33 +4748,194 @@ quickbooks_sync_history = []
 @app.get("/api/quickbooks/status")
 async def get_quickbooks_status():
     """Get QuickBooks connection status"""
-    return quickbooks_connection
+    # Return safe version without tokens
+    safe_connection = {k: v for k, v in quickbooks_connection.items()
+                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id")}
+    safe_connection["configured"] = bool(QB_CLIENT_ID and QB_CLIENT_SECRET)
+    return safe_connection
+
+@app.get("/api/quickbooks/connect")
+async def quickbooks_connect_redirect():
+    """Get QuickBooks OAuth URL to connect account"""
+    if not QB_CLIENT_ID or not QB_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=400,
+            detail="QuickBooks is not configured. Please set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET environment variables."
+        )
+
+    _cleanup_expired_oauth_states()
+    state = secrets.token_urlsafe(32)
+    oauth_state_tokens[state] = ("quickbooks", datetime.now())
+
+    auth_url = (
+        f"{QB_AUTH_BASE}"
+        f"?client_id={QB_CLIENT_ID}"
+        f"&response_type=code"
+        f"&scope=com.intuit.quickbooks.accounting"
+        f"&redirect_uri={QB_REDIRECT_URI}"
+        f"&state={state}"
+    )
+
+    return {"auth_url": auth_url}
+
+@app.get("/api/quickbooks/callback")
+async def quickbooks_oauth_callback(code: str = "", state: str = "", realmId: str = "", error: Optional[str] = None):
+    """Handle QuickBooks OAuth callback"""
+    if error:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(error), safe='')}")
+
+    # Verify state token
+    if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "quickbooks":
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error=Invalid+state+token")
+    del oauth_state_tokens[state]
+
+    try:
+        # Exchange authorization code for tokens
+        import base64
+        auth_header = base64.b64encode(f"{QB_CLIENT_ID}:{QB_CLIENT_SECRET}".encode()).decode()
+
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                QB_TOKEN_URL,
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": f"Basic {auth_header}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": QB_REDIRECT_URI,
+                },
+            )
+
+        if token_response.status_code != 200:
+            return RedirectResponse(url=f"{FRONTEND_URL}?qb_error=Token+exchange+failed")
+
+        token_data = token_response.json()
+
+        # Store connection info
+        quickbooks_connection["connected"] = True
+        quickbooks_connection["realm_id"] = realmId
+        quickbooks_connection["company_id"] = realmId
+        quickbooks_connection["access_token"] = token_data.get("access_token")
+        quickbooks_connection["refresh_token"] = token_data.get("refresh_token")
+        quickbooks_connection["token_expires_at"] = (
+            datetime.now() + timedelta(seconds=token_data.get("expires_in", 3600))
+        ).isoformat()
+        quickbooks_connection["connected_at"] = datetime.now().isoformat()
+
+        # Fetch company info
+        try:
+            async with httpx.AsyncClient() as client:
+                company_response = await client.get(
+                    f"{QB_API_BASE}/v3/company/{realmId}/companyinfo/{realmId}",
+                    headers={
+                        "Authorization": f"Bearer {token_data.get('access_token')}",
+                        "Accept": "application/json",
+                    },
+                )
+            if company_response.status_code == 200:
+                company_data = company_response.json()
+                company_info = company_data.get("CompanyInfo", {})
+                quickbooks_connection["company_name"] = company_info.get("CompanyName", "Connected Company")
+            else:
+                quickbooks_connection["company_name"] = "Connected Company"
+        except Exception:
+            quickbooks_connection["company_name"] = "Connected Company"
+
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_connected=true")
+
+    except Exception as e:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?qb_error={quote(str(e), safe='')}")
+
+async def refresh_quickbooks_token():
+    """Refresh QuickBooks access token using refresh token"""
+    if not quickbooks_connection.get("refresh_token"):
+        return False
+
+    try:
+        import base64
+        auth_header = base64.b64encode(f"{QB_CLIENT_ID}:{QB_CLIENT_SECRET}".encode()).decode()
+
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                QB_TOKEN_URL,
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": f"Basic {auth_header}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": quickbooks_connection["refresh_token"],
+                },
+            )
+
+        if token_response.status_code == 200:
+            token_data = token_response.json()
+            quickbooks_connection["access_token"] = token_data.get("access_token")
+            quickbooks_connection["refresh_token"] = token_data.get("refresh_token")
+            quickbooks_connection["token_expires_at"] = (
+                datetime.now() + timedelta(seconds=token_data.get("expires_in", 3600))
+            ).isoformat()
+            return True
+    except Exception:
+        pass
+    return False
 
 @app.post("/api/quickbooks/connect")
 async def connect_quickbooks(data: dict):
-    """Initiate QuickBooks OAuth connection"""
-    # In production, this would redirect to QuickBooks OAuth
-    # For demo, we simulate a successful connection
+    """Connect to QuickBooks (OAuth redirect or demo mode)"""
+    if QB_CLIENT_ID and QB_CLIENT_SECRET:
+        # OAuth configured - tell frontend to use GET /api/quickbooks/connect
+        raise HTTPException(status_code=400, detail="Use GET /api/quickbooks/connect to initiate OAuth flow")
+
+    # Demo mode - simulate connection
     quickbooks_connection["connected"] = True
     quickbooks_connection["company_name"] = data.get("company_name", "EPIC Prep Academy")
     quickbooks_connection["company_id"] = f"qb_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     quickbooks_connection["connected_at"] = datetime.now().isoformat()
-    
+
     return {
         "success": True,
-        "message": "Successfully connected to QuickBooks",
-        "auth_url": None,  # In production, this would be the OAuth URL
-        "connection": quickbooks_connection
+        "message": "Connected to QuickBooks (demo mode - set QUICKBOOKS_CLIENT_ID for real OAuth)",
+        "auth_url": None,
+        "connection": {k: v for k, v in quickbooks_connection.items()
+                       if k not in ("access_token", "refresh_token", "token_expires_at", "realm_id")}
     }
 
 @app.post("/api/quickbooks/disconnect")
 async def disconnect_quickbooks():
     """Disconnect from QuickBooks"""
+    # Revoke tokens if we have them
+    if quickbooks_connection.get("access_token") and QB_CLIENT_ID and QB_CLIENT_SECRET:
+        try:
+            import base64
+            auth_header = base64.b64encode(f"{QB_CLIENT_ID}:{QB_CLIENT_SECRET}".encode()).decode()
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    QB_REVOKE_URL,
+                    headers={
+                        "Authorization": f"Basic {auth_header}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"token": quickbooks_connection["access_token"]},
+                )
+        except Exception:
+            pass  # Best effort revocation
+
     quickbooks_connection["connected"] = False
     quickbooks_connection["company_name"] = None
     quickbooks_connection["company_id"] = None
     quickbooks_connection["connected_at"] = None
-    
+    quickbooks_connection["access_token"] = None
+    quickbooks_connection["refresh_token"] = None
+    quickbooks_connection["token_expires_at"] = None
+    quickbooks_connection["realm_id"] = None
+
     return {
         "success": True,
         "message": "Disconnected from QuickBooks"
@@ -4753,7 +4950,7 @@ async def update_quickbooks_settings(settings: dict):
         quickbooks_connection["sync_settings"]["auto_sync_payments"] = settings["auto_sync_payments"]
     if "sync_frequency" in settings:
         quickbooks_connection["sync_settings"]["sync_frequency"] = settings["sync_frequency"]
-    
+
     return {
         "success": True,
         "settings": quickbooks_connection["sync_settings"]
@@ -5024,6 +5221,9 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
         "account_id": None,
         "connected_at": None,
         "mode": "test",
+        "stripe_user_id": None,
+        "access_token": None,
+        "refresh_token": None,
         "settings": {
             "auto_create_invoices": True,
             "send_payment_receipts": True,
@@ -5041,6 +5241,10 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
         "company_id": None,
         "connected_at": None,
         "last_sync": None,
+        "access_token": None,
+        "refresh_token": None,
+        "token_expires_at": None,
+        "realm_id": None,
         "sync_settings": {
             "auto_sync_invoices": True,
             "auto_sync_payments": True,
@@ -5112,13 +5316,24 @@ async def update_time_off_request(request_id: str, status: TimeOffRequestStatus,
 
 # ============== Stripe Integration ==============
 
+# Stripe configuration from environment
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_CLIENT_ID = os.environ.get("STRIPE_CLIENT_ID", "")
+
+if STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
+
 # In-memory storage for Stripe connection status
 stripe_connection = {
     "connected": False,
     "account_name": None,
     "account_id": None,
     "connected_at": None,
-    "mode": "test",
+    "mode": "live" if STRIPE_SECRET_KEY and STRIPE_SECRET_KEY.startswith("sk_live_") else "test",
+    "stripe_user_id": None,
+    "access_token": None,
+    "refresh_token": None,
     "settings": {
         "auto_create_invoices": True,
         "send_payment_receipts": True,
@@ -5136,31 +5351,138 @@ stripe_transactions = []
 @app.get("/api/stripe/status")
 async def get_stripe_status():
     """Get Stripe connection status"""
-    return stripe_connection
+    # Return safe version without tokens
+    safe_connection = {k: v for k, v in stripe_connection.items()
+                       if k not in ("access_token", "refresh_token", "stripe_user_id")}
+    safe_connection["configured"] = bool(STRIPE_SECRET_KEY)
+    return safe_connection
+
+@app.get("/api/stripe/connect")
+async def stripe_connect_redirect():
+    """Redirect to Stripe OAuth to connect account"""
+    if not STRIPE_CLIENT_ID:
+        raise HTTPException(
+            status_code=400,
+            detail="Stripe is not configured. Please set STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, and STRIPE_PUBLISHABLE_KEY environment variables."
+        )
+
+    _cleanup_expired_oauth_states()
+    state = secrets.token_urlsafe(32)
+    oauth_state_tokens[state] = ("stripe", datetime.now())
+
+    # Stripe Connect OAuth URL
+    stripe_oauth_url = (
+        f"https://connect.stripe.com/oauth/authorize"
+        f"?response_type=code"
+        f"&client_id={STRIPE_CLIENT_ID}"
+        f"&scope=read_write"
+        f"&redirect_uri={BACKEND_URL}/api/stripe/callback"
+        f"&state={state}"
+    )
+
+    return {"auth_url": stripe_oauth_url}
+
+@app.get("/api/stripe/callback")
+async def stripe_oauth_callback(code: str = "", state: str = "", error: Optional[str] = None, error_description: Optional[str] = None):
+    """Handle Stripe OAuth callback"""
+    if error:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(error_description or error), safe='')}")
+
+    # Verify state token
+    if state not in oauth_state_tokens or oauth_state_tokens[state][0] != "stripe":
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error=Invalid+state+token")
+    del oauth_state_tokens[state]
+
+    try:
+        # Exchange authorization code for access token
+        response = stripe.OAuth.token(
+            grant_type="authorization_code",
+            code=code,
+        )
+
+        # Store connection info
+        stripe_connection["connected"] = True
+        stripe_connection["stripe_user_id"] = response.get("stripe_user_id")
+        stripe_connection["access_token"] = response.get("access_token")
+        stripe_connection["refresh_token"] = response.get("refresh_token")
+        stripe_connection["account_id"] = response.get("stripe_user_id")
+        stripe_connection["connected_at"] = datetime.now().isoformat()
+        stripe_connection["mode"] = "live" if response.get("livemode") else "test"
+
+        # Fetch account details
+        try:
+            account = stripe.Account.retrieve(response.get("stripe_user_id"))
+            stripe_connection["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or "Connected Account"
+        except Exception:
+            stripe_connection["account_name"] = "Connected Account"
+
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_connected=true")
+
+    except Exception as e:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"{FRONTEND_URL}?stripe_error={quote(str(e), safe='')}")
 
 @app.post("/api/stripe/connect")
 async def connect_stripe(data: dict):
-    """Connect Stripe account"""
-    # In production, this would redirect to Stripe OAuth / Connect
-    stripe_connection["connected"] = True
-    stripe_connection["account_name"] = data.get("account_name", "EPIC Prep Academy")
-    stripe_connection["account_id"] = f"acct_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    stripe_connection["connected_at"] = datetime.now().isoformat()
-    stripe_connection["mode"] = data.get("mode", "test")
-
-    return {
-        "success": True,
-        "message": "Successfully connected to Stripe",
-        "connection": stripe_connection
-    }
+    """Connect Stripe account (manual key entry fallback)"""
+    api_key = data.get("api_key", "")
+    if api_key:
+        # Direct API key connection (no OAuth needed)
+        # Use per-request api_key param instead of mutating global stripe.api_key
+        try:
+            account = stripe.Account.retrieve(api_key=api_key)
+            stripe_connection["connected"] = True
+            stripe_connection["account_name"] = account.get("business_profile", {}).get("name") or account.get("settings", {}).get("dashboard", {}).get("display_name") or data.get("account_name", "EPIC Prep Academy")
+            stripe_connection["account_id"] = account.get("id")
+            stripe_connection["connected_at"] = datetime.now().isoformat()
+            stripe_connection["mode"] = "live" if api_key.startswith("sk_live_") else "test"
+            stripe_connection["access_token"] = api_key
+            return {
+                "success": True,
+                "message": "Successfully connected to Stripe",
+                "connection": {k: v for k, v in stripe_connection.items() if k not in ("access_token", "refresh_token")}
+            }
+        except stripe.error.AuthenticationError:
+            raise HTTPException(status_code=401, detail="Invalid Stripe API key")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to connect to Stripe: {str(e)}")
+    else:
+        # If no API key provided and no OAuth configured, simulate for demo
+        if not STRIPE_CLIENT_ID:
+            stripe_connection["connected"] = True
+            stripe_connection["account_name"] = data.get("account_name", "EPIC Prep Academy")
+            stripe_connection["account_id"] = f"acct_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            stripe_connection["connected_at"] = datetime.now().isoformat()
+            stripe_connection["mode"] = data.get("mode", "test")
+            return {
+                "success": True,
+                "message": "Connected to Stripe (demo mode - set STRIPE_CLIENT_ID for real OAuth)",
+                "connection": {k: v for k, v in stripe_connection.items() if k not in ("access_token", "refresh_token", "stripe_user_id")}
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Use GET /api/stripe/connect to initiate OAuth flow")
 
 @app.post("/api/stripe/disconnect")
 async def disconnect_stripe():
     """Disconnect from Stripe"""
+    # If we have a connected account via OAuth, deauthorize it
+    if stripe_connection.get("stripe_user_id") and STRIPE_CLIENT_ID:
+        try:
+            stripe.OAuth.deauthorize(
+                client_id=STRIPE_CLIENT_ID,
+                stripe_user_id=stripe_connection["stripe_user_id"],
+            )
+        except Exception:
+            pass  # Best effort deauthorization
+
     stripe_connection["connected"] = False
     stripe_connection["account_name"] = None
     stripe_connection["account_id"] = None
     stripe_connection["connected_at"] = None
+    stripe_connection["stripe_user_id"] = None
+    stripe_connection["access_token"] = None
+    stripe_connection["refresh_token"] = None
 
     return {
         "success": True,
