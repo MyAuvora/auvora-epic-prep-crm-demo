@@ -167,9 +167,17 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   const fetchParentData = async () => {
     try {
       const response = await fetch(`${API_URL}/api/dashboard/parent/${parentId}`)
+      if (!response.ok) {
+        console.error('Parent data not found')
+        return
+      }
       const data = await response.json()
+      if (!data.parent) {
+        console.error('Invalid parent data response')
+        return
+      }
       setParentData(data)
-      if (data.children.length > 0) {
+      if (data.children && data.children.length > 0) {
         setSelectedChild(data.children[0])
       }
     } catch (error) {
@@ -257,7 +265,16 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
   };
 
   if (!parentData) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Parent Dashboard</h2>
+          <p className="text-gray-600 mb-4">No parent account is linked to this profile yet.</p>
+          <p className="text-sm text-gray-500">Please contact your school administrator to set up your parent account.</p>
+        </div>
+      </div>
+    )
   }
 
     const parentNavItems = [
