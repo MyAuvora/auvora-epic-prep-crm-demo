@@ -111,16 +111,26 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   const fetchTeacherData = async () => {
     try {
       const response = await fetch(`${API_URL}/api/dashboard/teacher/${staffId}`)
+      if (!response.ok) {
+        console.error('Teacher data not found')
+        return
+      }
       const data = await response.json()
+      if (!data.staff) {
+        console.error('Invalid teacher data response')
+        return
+      }
       setTeacherData(data)
-      if (data.rooms.length > 0) {
+      if (data.rooms && data.rooms.length > 0) {
         setSelectedRoom(data.rooms[0])
       }
       
       const staffResponse = await fetch(`${API_URL}/api/staff/${staffId}`)
-      const staffData = await staffResponse.json()
-      if (staffData.campus_ids && staffData.campus_ids.length > 0) {
-        setCampusId(staffData.campus_ids[0])
+      if (staffResponse.ok) {
+        const staffData = await staffResponse.json()
+        if (staffData.campus_ids && staffData.campus_ids.length > 0) {
+          setCampusId(staffData.campus_ids[0])
+        }
       }
     } catch (error) {
       console.error('Error fetching teacher data:', error)
@@ -216,7 +226,16 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   }
 
   if (!teacherData) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Coach Dashboard</h2>
+          <p className="text-gray-600 mb-4">No staff account is linked to this profile yet.</p>
+          <p className="text-sm text-gray-500">Please contact your school administrator to set up your coach account.</p>
+        </div>
+      </div>
+    )
   }
 
   // If viewing a full account, show the FullAccountView instead
