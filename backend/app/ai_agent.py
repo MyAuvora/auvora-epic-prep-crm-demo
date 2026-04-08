@@ -58,20 +58,51 @@ You must be able to answer ANY question about how to use this CRM. Below is comp
 
 ## ROLE-BASED ACCESS
 
-The CRM has three user roles with different access levels:
+The CRM has four user roles with different access levels:
 
-### OWNER / DIRECTOR (School Leadership)
-Full access to all features. Can manage students, families, staff, billing, admissions, and all school operations.
+### OWNER (School Owner / Director)
+Full access to ALL features. This is the highest-level role.
+- Everything an Admin can do, PLUS:
+- **QuickBooks integration** (connect QuickBooks account, export invoices)
+- **Stripe integration** (connect Stripe account, view payment dashboard)
+- **Settings** (manage users, assign roles)
+- Can see Revenue Reports, Stripe dashboard, and QuickBooks export tabs under Reports
 
-### COACH
-Access to their assigned rooms/classrooms, student information, gradebook, messaging, and can upload learning progress data.
+### ADMIN (School Administrator)
+Access to almost all features except Owner-level integrations.
+- Full student, family, staff, billing, admissions management
+- Revenue Reports under Reports tab
+- Stripe dashboard under Reports tab
+- Cannot see QuickBooks integration (Owner only)
+- Cannot manage user roles in Settings (Owner only)
+
+### COACH (Teacher)
+Access to their assigned classrooms and students.
+- My Rooms (assigned classrooms and students)
+- Take attendance, view student records
+- Gradebook (enter and view grades)
+- Learning Progress import (IXL/Acellus CSV upload)
+- Announcements, Events, Documents, Photos
+- Messaging (with parents and other staff)
+- Incident reporting, Health records
+- Ask Auvora AI assistant
 
 ### PARENT
-Access to their children's information, billing, events, messaging with staff, and re-enrollment.
+Access to their own children's information only.
+- My Children (grades, attendance, learning progress, re-enrollment)
+- Billing (family balance, payment history, tuition breakdown)
+- Events (school events, RSVP, permission slips)
+- Documents & Forms
+- School Store
+- Photos
+- Messages (with school staff)
+- Health records
+- Enrollment forms
+- Ask Auvora AI assistant
 
 ---
 
-## ADMIN DASHBOARD FEATURES
+## OWNER & ADMIN DASHBOARD FEATURES (Navigation tabs at the top)
 
 ### 1. Dashboard (Home)
 **What it shows:** Overview of key metrics
@@ -246,6 +277,65 @@ Access to their children's information, billing, events, messaging with staff, a
 - "How do I see at-risk students?" → Analytics → At-Risk Report
 - "Where do I find school performance data?" → Analytics → Advanced Analytics
 
+### 11. Reports (Owner & Admin)
+**What it shows:** Financial reports and integrations
+
+**Sub-tabs:**
+- **Revenue Reports:** School revenue breakdown, payment trends, outstanding balances (Owner & Admin)
+- **Stripe:** Stripe Connect payment dashboard - view connected account status, recent transactions (Owner & Admin)
+- **QuickBooks:** QuickBooks integration - export invoices and sync financial data (Owner ONLY - not visible to Admin)
+
+**How to connect Stripe (Owner only):**
+1. Go to Reports tab in the top navigation
+2. Click the "Stripe" sub-tab
+3. Click "Connect Stripe Account"
+4. You will be redirected to Stripe to authorize the connection
+5. After authorizing, you'll be redirected back to the CRM
+6. Your Stripe account is now connected and payments will sync
+
+**How to connect QuickBooks (Owner only):**
+1. Go to Reports tab in the top navigation
+2. Click the "QuickBooks" sub-tab
+3. Click "Connect QuickBooks"
+4. You will be redirected to Intuit to authorize the connection
+5. After authorizing, you'll be redirected back to the CRM
+6. Your QuickBooks account is now connected
+
+**How to export invoices to QuickBooks (Owner only):**
+1. Go to Reports → QuickBooks
+2. You'll see a list of invoices ready to export
+3. Click "Preview Export" to see what will be sent
+4. Click "Export to QuickBooks" to sync invoices
+5. QuickBooks will receive the invoice data automatically
+
+**Common questions:**
+- "How do I see revenue reports?" → Reports → Revenue Reports
+- "How do I connect Stripe?" → Reports → Stripe → Connect Stripe Account (Owner only)
+- "How do I connect QuickBooks?" → Reports → QuickBooks → Connect QuickBooks (Owner only)
+- "How do I export invoices?" → Reports → QuickBooks → Export to QuickBooks (Owner only)
+- "Where do I see payment transactions?" → Reports → Stripe
+- "Why can't I see QuickBooks?" → QuickBooks is only available to the Owner account. Contact your school owner for access.
+
+### 12. Settings (Owner & Admin)
+**What it shows:** User management and system settings
+
+**Features:**
+- **User Management:** View all CRM users, their roles, and email addresses
+- **Assign Roles:** Owner can change user roles (Owner, Admin, Coach, Parent)
+- **Add Users:** New users are added through Clerk (the authentication system) - they appear here automatically
+
+**How to manage users:**
+1. Go to Settings in the top navigation
+2. You'll see a list of all users with their current roles
+3. To change a role: click on the user and select the new role from the dropdown
+4. Changes take effect immediately
+
+**Common questions:**
+- "How do I change someone's role?" → Settings → Click user → Change role dropdown
+- "How do I add a new user?" → New users sign up through the login page and appear in Settings automatically
+- "Where do I see all users?" → Settings → User Management
+- "How do I make someone an admin?" → Settings → Click user → Change role to Admin (Owner only)
+
 ---
 
 ## COACH/TEACHER DASHBOARD FEATURES
@@ -393,7 +483,9 @@ Access to their children's information, billing, events, messaging with staff, a
 
 ## COMMON TASKS - STEP BY STEP
 
-### How to add a new student (Admin):
+### OWNER TASKS:
+
+#### How to add a new student:
 1. Go to Students page
 2. Click "Add Student" button
 3. Fill in student information (name, grade, session, room)
@@ -401,14 +493,14 @@ Access to their children's information, billing, events, messaging with staff, a
 5. Set funding source (Step-Up, Out-of-Pocket, or Mixed)
 6. Submit
 
-### How to record a payment (Admin):
+#### How to record a payment:
 1. Go to Families & Finance
 2. Click on the family name
 3. Click "Record Payment"
 4. Enter payment amount and method
 5. Submit
 
-### How to send a school-wide announcement (Admin):
+#### How to send a school-wide announcement:
 1. Go to Communications
 2. Click Announcements tab
 3. Click "New Announcement"
@@ -416,13 +508,13 @@ Access to their children's information, billing, events, messaging with staff, a
 5. Select audience (All, Parents, Staff)
 6. Publish
 
-### How to view a student's full record (Admin/Teacher):
+#### How to view a student's full record:
 1. Find the student in your list
 2. Click on their name
 3. Click "View Full Student & Family Account"
 4. Navigate between student info, grades, attendance, and family account
 
-### How to check billing status (Admin):
+#### How to check billing status:
 1. Go to Families & Finance
 2. View billing status colors:
    - Green = Current (paid up)
@@ -430,11 +522,213 @@ Access to their children's information, billing, events, messaging with staff, a
    - Red = Overdue (past due)
 3. Click on family for details
 
-### How to track SUFS scholarship payments (Admin):
+#### How to track SUFS scholarship payments:
 1. Go to Families & Finance
 2. Click SUFS Payment Queue tab
 3. View pending payments by period (Aug, Oct, Dec, Feb, Apr, Jun)
 4. Click "Record Payment" when payment received
+
+#### How to connect Stripe:
+1. Go to Reports → Stripe tab
+2. Click "Connect Stripe Account"
+3. Authorize on Stripe's website
+4. You're connected - payments will sync automatically
+
+#### How to connect QuickBooks:
+1. Go to Reports → QuickBooks tab
+2. Click "Connect QuickBooks"
+3. Authorize on Intuit's website
+4. You're connected - you can now export invoices
+
+#### How to export invoices to QuickBooks:
+1. Go to Reports → QuickBooks
+2. Click "Preview Export" to review
+3. Click "Export to QuickBooks"
+
+#### How to manage user roles:
+1. Go to Settings
+2. Find the user in the list
+3. Click the role dropdown next to their name
+4. Select the new role (Owner, Admin, Coach, or Parent)
+5. Changes take effect immediately
+
+#### How to add a new lead (prospective family):
+1. Go to Admissions
+2. Click "Add Lead"
+3. Fill in parent name, student name, grade interest, source
+4. Submit - the lead appears in the pipeline
+
+#### How to manage the enrollment pipeline:
+1. Go to Admissions
+2. View leads organized by stage (New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled)
+3. Click a lead to update their stage or add notes
+4. Move leads through stages as they progress
+
+#### How to create a school event:
+1. Go to Operations → Events
+2. Click "Add Event"
+3. Fill in event details (title, date, time, location, description)
+4. Set event type and whether RSVP is required
+5. Submit
+
+#### How to set enrollment fees:
+1. Go to Operations → Fees & Products
+2. Click "Create New"
+3. Select category "Enrollment Fee"
+4. Set the price
+5. Save - this fee appears for parents during re-enrollment
+
+#### How to view submitted enrollment forms:
+1. Go to Operations → Enrollment Forms
+2. View all submitted forms from parents
+3. Click on a form to see full details
+
+#### How to manage staff:
+1. Go to Operations → Staff
+2. View all staff members and their roles
+3. Click on a staff member to see details or edit
+
+### ADMIN TASKS:
+(Admins can do everything Owners can EXCEPT: QuickBooks integration, managing user roles in Settings)
+All Owner tasks above apply to Admins except connecting QuickBooks and managing roles.
+
+### COACH TASKS:
+
+#### How to take attendance:
+1. Click on "My Rooms" tab
+2. Select your room
+3. Click "Take Attendance"
+4. Mark each student as Present, Absent, or Tardy
+5. Submit
+
+#### How to enter grades:
+1. Click "Gradebook" tab
+2. Select the student
+3. Enter grades for each subject/standard
+4. Save
+
+#### How to view a student's full record:
+1. Click on the student's name in your room
+2. Click "View Full Student & Family Account"
+3. Navigate between student info, grades, attendance, and family sections
+
+#### How to upload IXL progress:
+1. Click "Learning Progress" tab
+2. Click "Import Progress Data"
+3. Select "IXL" tab
+4. Upload your CSV file exported from IXL
+5. System matches students by name and updates records automatically
+
+#### How to upload Acellus progress:
+1. Click "Learning Progress" tab
+2. Click "Import Progress Data"
+3. Select "Acellus" tab
+4. Upload your CSV file exported from Acellus
+5. System updates all student records automatically
+
+#### How to report an incident:
+1. Click "Incidents" tab
+2. Click "Report Incident"
+3. Select the student involved
+4. Choose incident type and severity
+5. Write description of what happened
+6. Submit
+
+#### How to message a parent:
+1. Click "Messages" tab
+2. Click "New Message"
+3. Select "Parent" as recipient type
+4. Select the specific parent from dropdown
+5. Type and send message
+
+#### How to message another staff member:
+1. Click "Messages" tab
+2. Click "New Message"
+3. Select "Staff Member" as recipient type
+4. Select staff member from dropdown
+5. Type and send message
+
+#### How to create an announcement:
+1. Click "Announcements" tab
+2. Click "New Announcement"
+3. Enter title and message
+4. Select audience
+5. Publish
+
+### PARENT TASKS:
+
+#### How to view my child's grades:
+1. Click "My Children" tab
+2. Select your child (if multiple children)
+3. Grades summary is displayed with subject breakdown
+
+#### How to view my child's attendance:
+1. Click "My Children" tab
+2. Select your child
+3. Attendance summary shows present, absent, and tardy counts
+
+#### How to re-enroll my child:
+1. Click "My Children" tab
+2. Scroll to the Re-Enrollment section
+3. Click "Re-Enroll for [Year]"
+4. Payment modal opens with the enrollment fee
+5. Click "Pay" to process payment
+6. Your child is re-enrolled for next year
+
+#### How to view my billing:
+1. Click "Billing" tab
+2. View current balance, payment history, and tuition breakdown
+3. SUFS scholarship status is shown if applicable
+
+#### How to RSVP to an event:
+1. Click "Events" tab
+2. Find the upcoming event
+3. Click "RSVP" or "Respond"
+4. Select your response (Attending, Not Attending, Maybe)
+5. Submit
+
+#### How to message a teacher:
+1. Click "Messages" tab
+2. Click "New Message"
+3. Select the staff member from dropdown
+4. Type and send your message
+
+#### How to view and sign documents:
+1. Click "Documents" tab
+2. View school documents and forms
+3. Click on a document to view or download
+4. For forms that require signatures, click "Sign"
+
+#### How to shop in the school store:
+1. Click "Store" tab
+2. Browse available items
+3. Click on an item to view details
+4. Click "Add to Cart" or "Purchase"
+
+#### How to view my child's health records:
+1. Click "Health" tab
+2. View your child's health information on file
+
+#### How to submit enrollment forms:
+1. Click "Enrollment" tab
+2. View required enrollment forms
+3. Fill out and submit each form
+
+---
+
+## ASK AUVORA - AI ASSISTANT
+
+The "Ask Auvora" button (floating chat bubble in the bottom right) is available on ALL account types. It opens this AI assistant.
+
+**What each role can ask about:**
+
+**Owner:** Everything - school data, financials, billing, students, families, staff, scholarships, leads, events, incidents, reports, integrations, and how to use any feature.
+
+**Admin:** Same as Owner except cannot ask about QuickBooks integration details.
+
+**Coach:** Student academic information, attendance, grades, learning progress, events, announcements, messaging, incidents, health records. Cannot ask about financial data, billing, scholarships, leads, or re-enrollment stats.
+
+**Parent:** Their own children's info, general school events, announcements, school policies, and how to use parent features (messaging, viewing child info, re-enrollment, billing, store). Cannot ask about other students, other families, school-wide data, or business operations.
 
 ---
 
@@ -475,8 +769,24 @@ Users may ask the same question in many ways. Here are examples:
 - "What's the process for..."
 - "Walk me through..."
 - "Help me with..."
+- "Train me on..."
+- "Show me around..."
+- "What can I do?"
+- "What features do I have?"
 
-Always interpret the user's intent and provide helpful guidance, whether they're asking for data or instructions.
+**Asking about integrations:**
+- "How do I connect Stripe?" / "Set up Stripe" / "Link my Stripe"
+- "How do I connect QuickBooks?" / "Set up QuickBooks" / "Link QuickBooks"
+- "How do I export invoices?" / "Send invoices to QuickBooks"
+- "Where are my payment reports?"
+
+**Asking about roles and permissions:**
+- "What can I access?" / "What's available to me?"
+- "Why can't I see [feature]?" → Explain role-based access
+- "What's the difference between Owner and Admin?"
+- "How do I change someone's role?"
+
+Always interpret the user's intent and provide helpful guidance, whether they're asking for data, instructions, or training on how to use the CRM. When a user asks to be "trained" or asks "how do I use this", give them a comprehensive overview of all features available to their role with step-by-step instructions.
 
 === END OF KNOWLEDGE BASE ===
 """
@@ -824,17 +1134,17 @@ AVAILABLE_FUNCTIONS = [
         "type": "function",
         "function": {
             "name": "get_crm_help",
-            "description": "Get help and guidance on how to use the CRM. Use this when users ask 'how do I', 'where do I', 'help me with', 'walk me through', or any question about using the CRM features.",
+            "description": "Get help and guidance on how to use the CRM. Use this when users ask 'how do I', 'where do I', 'help me with', 'walk me through', 'train me', or any question about using the CRM features, roles, integrations, or permissions.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "description": "The topic or feature the user needs help with (e.g., 'add student', 'record payment', 'take attendance', 'send message', 'upload IXL', 're-enroll')"
+                        "description": "The topic or feature the user needs help with (e.g., 'add student', 'record payment', 'take attendance', 'send message', 'upload IXL', 're-enroll', 'connect stripe', 'connect quickbooks', 'manage users', 'change role', 'export invoices', 'revenue reports')"
                     },
                     "user_role": {
                         "type": "string",
-                        "enum": ["admin", "teacher", "parent"],
+                        "enum": ["owner", "admin", "coach", "parent"],
                         "description": "The role of the user asking for help"
                     }
                 },
@@ -846,13 +1156,13 @@ AVAILABLE_FUNCTIONS = [
         "type": "function",
         "function": {
             "name": "get_available_features",
-            "description": "Get a list of all available features for a specific user role. Use this when users ask 'what can I do', 'what features are available', 'show me the menu', or want to know their options.",
+            "description": "Get a list of all available features for a specific user role. Use this when users ask 'what can I do', 'what features are available', 'show me the menu', 'train me', 'show me around', or want to know their options.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "user_role": {
                         "type": "string",
-                        "enum": ["admin", "teacher", "parent"],
+                        "enum": ["owner", "admin", "coach", "parent"],
                         "description": "The role of the user"
                     }
                 },
@@ -890,16 +1200,34 @@ TEACHER_RESTRICTED_FUNCTIONS = {
 
 # Role-specific system prompt additions
 ROLE_PROMPTS = {
-    "admin": """
-You are speaking with a SCHOOL ADMINISTRATOR who has FULL ACCESS to all school data and operations.
-You may share any information requested including student data, family details, billing, scholarships, leads, staff info, and all operational data.
+    "owner": """
+You are speaking with the SCHOOL OWNER who has FULL ACCESS to ALL features and data.
+This is the highest-level role. You may share any information requested including student data, family details, billing, scholarships, leads, staff info, and all operational data.
+The Owner can also:
+- Connect and manage Stripe integration (Reports → Stripe)
+- Connect and manage QuickBooks integration (Reports → QuickBooks)
+- Export invoices to QuickBooks
+- View revenue reports
+- Manage user roles in Settings (assign Owner, Admin, Coach, or Parent roles)
+When training the Owner on the CRM, cover ALL features including integrations and settings.
 """,
-    "teacher": """
-You are speaking with a COACH. Their access is LIMITED to:
+    "admin": """
+You are speaking with a SCHOOL ADMINISTRATOR who has access to almost all school data and operations.
+You may share any information requested including student data, family details, billing, scholarships, leads, staff info, and all operational data.
+The Admin can do almost everything the Owner can EXCEPT:
+- Cannot access QuickBooks integration (Owner only)
+- Cannot change user roles in Settings (Owner only)
+If the Admin asks about QuickBooks or changing user roles, politely explain these are Owner-only features and they should contact the school owner.
+When training the Admin on the CRM, cover all features except Owner-only integrations.
+""",
+    "coach": """
+You are speaking with a COACH (teacher). Their access is LIMITED to:
 - Student academic information (grades, attendance, learning progress)
 - Classroom and student support data
 - School events and announcements
-- Messaging
+- Messaging with parents and staff
+- Incident reporting and health records
+- Learning progress import (IXL/Acellus CSV upload)
 
 You must NOT share or discuss:
 - Financial information (billing, tuition, balances, payment plans)
@@ -908,13 +1236,16 @@ You must NOT share or discuss:
 - Re-enrollment statistics
 - Detailed family financial status
 - Staff salary or HR information
+- Reports, analytics, or integrations (Stripe/QuickBooks)
+- Settings or user management
 
-If a teacher asks about restricted topics, politely explain that this information is only available to administrators.
+If a coach asks about restricted topics, politely explain that this information is only available to administrators or the school owner.
+When training a Coach on the CRM, focus on: My Rooms, Gradebook, Attendance, Learning Progress, Announcements, Events, Documents, Photos, Messages, Incidents, Health Records.
 """,
     "parent": """
 You are speaking with a PARENT. Their access is VERY LIMITED:
 - They can ONLY ask about general school events, announcements, and school policies
-- They can ask for help using the parent features of the CRM (messaging, viewing their child's info, re-enrollment)
+- They can ask for help using the parent features of the CRM (messaging, viewing their child's info, re-enrollment, billing, store, documents, photos, health, enrollment)
 - They can ask general questions about the school
 
 You must NEVER share or discuss:
@@ -932,10 +1263,10 @@ If a parent asks about school-wide data, other families, financial information, 
 "I'm sorry, but I can only help you with information about your own family's account. For school-wide questions, please contact the school administrator directly."
 
 IMPORTANT: Even if the parent phrases the question indirectly (e.g., "How many students go here?", "What's the school's revenue?", "Tell me about the Smith family"), you must decline to share that information.
+When training a Parent on the CRM, focus on: My Children, Billing, Events, Documents, Store, Photos, Messages, Health, Enrollment, and Re-enrollment.
 """
 }
-ROLE_PROMPTS["coach"] = ROLE_PROMPTS["teacher"]
-ROLE_PROMPTS["owner"] = ROLE_PROMPTS["admin"]
+ROLE_PROMPTS["teacher"] = ROLE_PROMPTS["coach"]
 
 
 def get_functions_for_role(user_role: str) -> list:
@@ -1623,7 +1954,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Student management
             "add student": {
                 "title": "How to Add a New Student",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to the Students page by clicking 'Students' in the top navigation",
                     "Click the 'Add Student' button in the top right",
@@ -1635,7 +1966,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "view student": {
                 "title": "How to View Student Details",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "Go to Students page (Admin) or My Rooms (Teacher)",
                     "Find the student in the list",
@@ -1645,7 +1976,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "student grades": {
                 "title": "How to View/Enter Student Grades",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "For Admin: Go to Academics → Standards Gradebook",
                     "For Teacher: Click the Gradebook tab in your dashboard",
@@ -1657,7 +1988,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Attendance
             "take attendance": {
                 "title": "How to Take Attendance",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "Go to My Rooms (Teacher) or Students page (Admin)",
                     "Select the room/class",
@@ -1669,7 +2000,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "attendance": {
                 "title": "How to View Attendance",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Admin: Dashboard shows today's attendance summary, or go to Students → click student → view attendance history",
                     "Teacher: My Rooms shows attendance for your classes",
@@ -1679,7 +2010,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Billing and payments
             "record payment": {
                 "title": "How to Record a Payment",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Families & Finance",
                     "Find and click on the family name",
@@ -1692,7 +2023,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "billing": {
                 "title": "How to Check Billing Status",
-                "roles": ["admin", "parent"],
+                "roles": ["owner", "admin", "parent"],
                 "steps": [
                     "Admin: Go to Families & Finance to see all families with billing status colors (Green=current, Yellow=warning, Red=overdue)",
                     "Parent: Click the Billing tab to see your family's balance, payment history, and tuition breakdown"
@@ -1700,7 +2031,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "overdue": {
                 "title": "How to Find Families with Overdue Balances",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Families & Finance",
                     "Look for families with RED billing status",
@@ -1711,7 +2042,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # SUFS Scholarships
             "sufs": {
                 "title": "How to Manage SUFS Scholarships",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Families & Finance",
                     "Click the 'SUFS Scholarships' tab to view all scholarship recipients",
@@ -1722,7 +2053,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "scholarship": {
                 "title": "How to Track Scholarship Payments",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Families & Finance → SUFS Payment Queue",
                     "View pending payments organized by period (Aug, Oct, Dec, Feb, Apr, Jun)",
@@ -1733,7 +2064,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Messaging
             "send message": {
                 "title": "How to Send a Message",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Go to Communications (Admin) or Messages tab (Teacher/Parent)",
                     "Click 'New Message'",
@@ -1745,7 +2076,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "message": {
                 "title": "How to Use the Messaging System",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Access Messages from your dashboard (Communications for Admin, Messages tab for Teacher/Parent)",
                     "View your Inbox for received messages",
@@ -1757,7 +2088,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Learning Progress
             "upload ixl": {
                 "title": "How to Upload IXL Progress Data",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "Export your class data from IXL as a CSV file",
                     "Go to Academics → Import Progress (Admin) or Learning Progress tab (Teacher)",
@@ -1770,7 +2101,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "upload acellus": {
                 "title": "How to Upload Acellus Progress Data",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "Export your class data from Acellus as a CSV file",
                     "Go to Academics → Import Progress (Admin) or Learning Progress tab (Teacher)",
@@ -1783,7 +2114,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "learning progress": {
                 "title": "How to Track Learning Progress",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Admin: Go to Academics → Learning Progress to see all students' IXL/Acellus progress",
                     "Teacher: Click Learning Progress tab to see your students' progress and import new data",
@@ -1793,7 +2124,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Re-enrollment
             "re-enroll": {
                 "title": "How to Re-Enroll a Student",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Parent: Go to My Children, scroll to Re-Enrollment section, click 'Re-Enroll for [Year]', complete payment",
                     "Admin/Teacher: View student's full account, scroll to Re-Enrollment section, click 'Re-Enroll for [Year]'"
@@ -1801,7 +2132,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "enrollment fee": {
                 "title": "How to Set the Enrollment Fee",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Operations → Fees & Products",
                     "Click 'Create New'",
@@ -1814,7 +2145,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Events
             "add event": {
                 "title": "How to Add a School Event",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Operations → Events",
                     "Click 'Add Event'",
@@ -1826,7 +2157,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "events": {
                 "title": "How to View School Events",
-                "roles": ["admin", "teacher", "parent"],
+                "roles": ["owner", "admin", "coach", "parent"],
                 "steps": [
                     "Admin: Go to Operations → Events",
                     "Teacher: Click the Events tab",
@@ -1836,7 +2167,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Incidents
             "report incident": {
                 "title": "How to Report an Incident",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
                     "Go to Incidents tab",
                     "Click 'Report Incident'",
@@ -1851,7 +2182,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Admissions
             "add lead": {
                 "title": "How to Add a New Lead",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Admissions",
                     "Click 'Add Lead'",
@@ -1864,7 +2195,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             },
             "admissions": {
                 "title": "How to Manage Admissions Pipeline",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Admissions to see all leads",
                     "Leads are organized by stage: New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled",
@@ -1875,7 +2206,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Staff
             "manage staff": {
                 "title": "How to Manage Staff",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Operations → Staff",
                     "View all staff members with their roles and contact info",
@@ -1886,7 +2217,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # Documents
             "upload document": {
                 "title": "How to Upload a Document",
-                "roles": ["admin"],
+                "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Documents & Forms → Document Library",
                     "Click 'Upload'",
@@ -1899,11 +2230,170 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             # At-risk students
             "at-risk": {
                 "title": "How to View At-Risk Students",
-                "roles": ["admin", "teacher"],
+                "roles": ["owner", "admin", "coach"],
                 "steps": [
-                    "Admin: Go to Analytics → At-Risk Report, or check Dashboard alerts",
-                    "Teacher: Look for students with red risk flags in your rooms",
+                    "Owner/Admin: Go to Analytics → At-Risk Report, or check Dashboard alerts",
+                    "Coach: Look for students with red risk flags in your rooms",
                     "Click on a student to see why they're flagged (attendance issues, grade issues, etc.)"
+                ]
+            },
+            # Stripe integration
+            "connect stripe": {
+                "title": "How to Connect Stripe",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to the Reports tab in the top navigation",
+                    "Click the 'Stripe' sub-tab",
+                    "Click 'Connect Stripe Account'",
+                    "You'll be redirected to Stripe to authorize the connection",
+                    "After authorizing, you'll be redirected back to the CRM",
+                    "Your Stripe account is now connected and payments will sync"
+                ]
+            },
+            "stripe": {
+                "title": "How to View Stripe Dashboard",
+                "roles": ["owner", "admin"],
+                "steps": [
+                    "Go to the Reports tab in the top navigation",
+                    "Click the 'Stripe' sub-tab",
+                    "View your connected account status and recent transactions",
+                    "Note: Only the Owner can initially connect the Stripe account"
+                ]
+            },
+            # QuickBooks integration
+            "connect quickbooks": {
+                "title": "How to Connect QuickBooks",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to the Reports tab in the top navigation",
+                    "Click the 'QuickBooks' sub-tab (Owner only)",
+                    "Click 'Connect QuickBooks'",
+                    "You'll be redirected to Intuit to authorize the connection",
+                    "After authorizing, you'll be redirected back to the CRM",
+                    "Your QuickBooks account is now connected"
+                ]
+            },
+            "quickbooks": {
+                "title": "How to Use QuickBooks Integration",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to Reports → QuickBooks tab",
+                    "If not connected, click 'Connect QuickBooks' first",
+                    "Once connected, you'll see invoices ready to export",
+                    "Click 'Preview Export' to review what will be sent",
+                    "Click 'Export to QuickBooks' to sync invoices",
+                    "Note: QuickBooks is only visible to the Owner account"
+                ]
+            },
+            "export invoices": {
+                "title": "How to Export Invoices to QuickBooks",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to Reports → QuickBooks tab",
+                    "Make sure your QuickBooks account is connected",
+                    "Click 'Preview Export' to see what invoices will be sent",
+                    "Click 'Export to QuickBooks' to sync all invoices",
+                    "QuickBooks will receive the invoice data automatically"
+                ]
+            },
+            # Revenue reports
+            "revenue reports": {
+                "title": "How to View Revenue Reports",
+                "roles": ["owner", "admin"],
+                "steps": [
+                    "Go to the Reports tab in the top navigation",
+                    "Click the 'Revenue Reports' sub-tab",
+                    "View revenue breakdown, payment trends, and outstanding balances",
+                    "Use filters to drill down by date range or category"
+                ]
+            },
+            "reports": {
+                "title": "How to Access Reports",
+                "roles": ["owner", "admin"],
+                "steps": [
+                    "Go to the Reports tab in the top navigation",
+                    "Revenue Reports: School revenue breakdown and payment trends",
+                    "Stripe: View connected Stripe account and transactions",
+                    "QuickBooks (Owner only): Export invoices to QuickBooks"
+                ]
+            },
+            # Settings / User management
+            "manage users": {
+                "title": "How to Manage Users",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to Settings in the top navigation",
+                    "View all CRM users with their current roles",
+                    "Click on a user to change their role",
+                    "Select the new role: Owner, Admin, Coach, or Parent",
+                    "Changes take effect immediately"
+                ]
+            },
+            "settings": {
+                "title": "How to Access Settings",
+                "roles": ["owner", "admin"],
+                "steps": [
+                    "Go to Settings in the top navigation",
+                    "View the User Management section",
+                    "See all users, their email addresses, and their roles",
+                    "Owner can change user roles; Admin can view but not change roles"
+                ]
+            },
+            "change role": {
+                "title": "How to Change a User's Role",
+                "roles": ["owner"],
+                "steps": [
+                    "Go to Settings in the top navigation",
+                    "Find the user in the list",
+                    "Click the role dropdown next to their name",
+                    "Select the new role: Owner, Admin, Coach, or Parent",
+                    "The change takes effect immediately",
+                    "Note: Only Owner accounts can change user roles"
+                ]
+            },
+            # Store (parent)
+            "store": {
+                "title": "How to Use the School Store",
+                "roles": ["parent"],
+                "steps": [
+                    "Click the 'Store' tab in your dashboard",
+                    "Browse available items",
+                    "Click on an item to view details",
+                    "Click 'Add to Cart' or 'Purchase' to buy"
+                ]
+            },
+            # Health records
+            "health": {
+                "title": "How to View Health Records",
+                "roles": ["owner", "admin", "coach", "parent"],
+                "steps": [
+                    "Owner/Admin: Go to a student's full record to see health information",
+                    "Coach: Click the Health Records tab in your dashboard",
+                    "Parent: Click the 'Health' tab to see your child's health records"
+                ]
+            },
+            # Photos
+            "photos": {
+                "title": "How to View/Upload Photos",
+                "roles": ["owner", "admin", "coach", "parent"],
+                "steps": [
+                    "Owner/Admin: Go to Operations → Photos, or Documents tab",
+                    "Coach: Click the Photos tab in your dashboard",
+                    "Parent: Click the 'Photos' tab to see school photos",
+                    "To upload: Click 'Upload Photos' and select images from your device"
+                ]
+            },
+            # Announcements
+            "announcement": {
+                "title": "How to Create an Announcement",
+                "roles": ["owner", "admin", "coach"],
+                "steps": [
+                    "Owner/Admin: Go to Communications → Announcements",
+                    "Coach: Click the Announcements tab in your dashboard",
+                    "Click 'New Announcement'",
+                    "Enter title and message content",
+                    "Select audience (All, Parents, Staff)",
+                    "Click 'Publish'"
                 ]
             }
         }
@@ -1912,7 +2402,11 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         matched_topic = None
         for key, value in help_topics.items():
             if key in topic or topic in key:
-                if user_role in value["roles"] or "admin" in value["roles"]:
+                # Check if the user's role has access, mapping legacy role names
+                check_role = user_role
+                if check_role == "teacher":
+                    check_role = "coach"
+                if check_role in value["roles"] or "owner" in value["roles"] and check_role in ("owner", "admin"):
                     matched_topic = value
                     break
         
@@ -1920,19 +2414,52 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             return {
                 "title": matched_topic["title"],
                 "steps": matched_topic["steps"],
-                "available_for_role": user_role in matched_topic["roles"]
+                "available_for_role": user_role in matched_topic["roles"] or (user_role == "teacher" and "coach" in matched_topic["roles"])
             }
         else:
             # Return general guidance
             return {
                 "message": f"I don't have specific step-by-step instructions for '{topic}', but I can help you find what you need. What are you trying to accomplish?",
-                "suggestion": "Try asking about: adding students, taking attendance, recording payments, sending messages, uploading IXL/Acellus data, re-enrollment, managing events, or viewing reports."
+                "suggestion": "Try asking about: adding students, taking attendance, recording payments, sending messages, uploading IXL/Acellus data, re-enrollment, managing events, viewing reports, connecting Stripe, connecting QuickBooks, exporting invoices, managing users, or changing roles."
             }
     
     elif function_name == "get_available_features":
         user_role = arguments.get("user_role", "admin").lower()
         
         features = {
+            "owner": {
+                "role": "Owner (Full Access)",
+                "dashboard_sections": [
+                    "Dashboard - Overview of key metrics, alerts, and daily devotional",
+                    "Students - Complete student roster, add/edit students, view full profiles",
+                    "Families & Finance - Family accounts, billing, SUFS scholarships, payment queue",
+                    "Admissions - Enrollment pipeline, leads management",
+                    "Academics - Standards gradebook, learning progress, IXL/Acellus import",
+                    "Student Support - IEP/504 management, interventions",
+                    "Communications - Direct messages, broadcasts, announcements",
+                    "Operations - Events, staff management, fees/products, enrollment forms, photos",
+                    "Documents & Forms - Document library, form management",
+                    "Analytics - At-risk reports, advanced analytics",
+                    "Reports - Revenue reports, Stripe payment dashboard, QuickBooks integration & invoice export",
+                    "Settings - User management, role assignment"
+                ],
+                "key_actions": [
+                    "Add/edit students and families",
+                    "Record payments and manage billing",
+                    "Track SUFS scholarship payments",
+                    "Send messages to parents and staff",
+                    "Create school events",
+                    "Import IXL/Acellus learning progress",
+                    "View at-risk student reports",
+                    "Manage enrollment pipeline",
+                    "Connect and manage Stripe integration",
+                    "Connect and manage QuickBooks integration",
+                    "Export invoices to QuickBooks",
+                    "View revenue reports",
+                    "Manage user roles (Owner, Admin, Coach, Parent)",
+                    "Ask Auvora AI for data insights and help"
+                ]
+            },
             "admin": {
                 "role": "Administrator",
                 "dashboard_sections": [
@@ -1943,9 +2470,11 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "Academics - Standards gradebook, learning progress, IXL/Acellus import",
                     "Student Support - IEP/504 management, interventions",
                     "Communications - Direct messages, broadcasts, announcements",
-                    "Operations - Events, staff management, fees/products, enrollment forms",
+                    "Operations - Events, staff management, fees/products, enrollment forms, photos",
                     "Documents & Forms - Document library, form management",
-                    "Analytics - At-risk reports, advanced analytics"
+                    "Analytics - At-risk reports, advanced analytics",
+                    "Reports - Revenue reports, Stripe payment dashboard (no QuickBooks - Owner only)",
+                    "Settings - User management (view only, role changes require Owner)"
                 ],
                 "key_actions": [
                     "Add/edit students and families",
@@ -1955,11 +2484,17 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "Create school events",
                     "Import IXL/Acellus learning progress",
                     "View at-risk student reports",
-                    "Manage enrollment pipeline"
+                    "Manage enrollment pipeline",
+                    "View revenue reports and Stripe dashboard",
+                    "Ask Auvora AI for data insights and help"
+                ],
+                "not_available": [
+                    "QuickBooks integration (Owner only)",
+                    "Assign/change user roles (Owner only)"
                 ]
             },
-            "teacher": {
-                "role": "Coach/Teacher",
+            "coach": {
+                "role": "Coach",
                 "dashboard_sections": [
                     "My Rooms - Your assigned classrooms and students",
                     "Gradebook - Enter and view grades",
@@ -1979,21 +2514,29 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "Message parents and other staff",
                     "Report incidents",
                     "Upload IXL/Acellus progress data",
-                    "Re-enroll students"
+                    "Create announcements",
+                    "Ask Auvora AI for help"
+                ],
+                "not_available": [
+                    "Billing and financial data",
+                    "Scholarship details",
+                    "Enrollment pipeline/leads",
+                    "Reports and analytics",
+                    "Settings and user management"
                 ]
             },
             "parent": {
                 "role": "Parent",
                 "dashboard_sections": [
-                    "My Children - Overview of your children's progress",
-                    "Billing - Your family's billing and payment history",
-                    "Events - School events and RSVPs",
-                    "Documents - School documents and forms",
-                    "Store - School store",
-                    "Photos - Photo gallery",
+                    "My Children - Overview of your children's grades, attendance, and learning progress",
+                    "Billing - Your family's billing, payment history, and tuition breakdown",
+                    "Events - School events, RSVPs, and permission slips",
+                    "Documents - School documents and forms to complete",
+                    "Store - School store for purchasing items",
+                    "Photos - School photo gallery",
                     "Messages - Messages with school staff",
                     "Health - Your child's health records",
-                    "Enrollment - Enrollment forms and status"
+                    "Enrollment - Enrollment forms and re-enrollment"
                 ],
                 "key_actions": [
                     "View your child's grades and attendance",
@@ -2001,10 +2544,23 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "RSVP to school events",
                     "Message teachers and staff",
                     "Re-enroll your child for next year",
-                    "Complete enrollment forms"
+                    "Complete enrollment forms",
+                    "Shop in the school store",
+                    "View and sign documents",
+                    "Ask Auvora AI for help"
+                ],
+                "not_available": [
+                    "Other students' or families' information",
+                    "School-wide data and analytics",
+                    "Financial summaries and revenue",
+                    "Staff management",
+                    "Admissions pipeline"
                 ]
             }
         }
+        # Map legacy role names
+        if user_role == "teacher":
+            user_role = "coach"
         
         return features.get(user_role, features["admin"])
     
