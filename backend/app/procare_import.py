@@ -356,6 +356,7 @@ async def import_students(
             imported += 1
 
         except Exception as e:
+            db.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -429,6 +430,7 @@ async def import_families(
             imported += 1
 
         except Exception as e:
+            db.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -529,6 +531,7 @@ async def import_parents(
             imported += 1
 
         except Exception as e:
+            db.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -625,6 +628,7 @@ async def import_staff(
             imported += 1
 
         except Exception as e:
+            db.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
