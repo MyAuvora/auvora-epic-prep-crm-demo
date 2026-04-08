@@ -412,10 +412,11 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                         <span>Privacy & Security</span>
                       </button>
 
-                      {/* Account Type Selection (Demo Only) */}
+                      {/* Account Type Selection - Only visible to Patrick's account for demo/setup purposes */}
+                      {user?.primaryEmailAddress?.emailAddress === 'patrickmetzger92@gmail.com' && (
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <div className="px-4 py-2">
-                          <p className="text-xs font-medium text-gray-500 uppercase">Switch View (Demo)</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase">Switch View</p>
                         </div>
                         <button
                           onClick={() => {
@@ -478,6 +479,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                           <span>Parent View</span>
                         </button>
                       </div>
+                      )}
 
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <button
