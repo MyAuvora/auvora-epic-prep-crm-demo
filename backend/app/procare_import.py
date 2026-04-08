@@ -296,9 +296,12 @@ async def import_students(
     family_cache: Dict[str, str] = {}  # procare_family_id -> our_family_id
 
     for i, row in enumerate(rows[1:], start=2):
+        current_procare_fid = ""
+        savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
             if not data:
+                savepoint.rollback()
                 skipped += 1
                 continue
 
@@ -309,12 +312,14 @@ async def import_students(
                 first_name, last_name = split_full_name(data["full_name"])
 
             if not first_name:
+                savepoint.rollback()
                 skipped += 1
                 errors.append(f"Row {i}: Missing student name")
                 continue
 
             # Handle family - create or find
             procare_family_id = data.get("family_id", "")
+            current_procare_fid = procare_family_id
             if procare_family_id and procare_family_id in family_cache:
                 family_id = family_cache[procare_family_id]
             else:
@@ -353,10 +358,14 @@ async def import_students(
                 step_up_percentage=0
             )
             db.add(student)
+            savepoint.commit()
             imported += 1
 
         except Exception as e:
-            db.rollback()
+            savepoint.rollback()
+            # Clear stale family_cache entries that were rolled back
+            if current_procare_fid and current_procare_fid in family_cache:
+                del family_cache[current_procare_fid]
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -403,14 +412,17 @@ async def import_families(
             raise HTTPException(status_code=400, detail="No campus exists. Please import students first or create a campus.")
 
     for i, row in enumerate(rows[1:], start=2):
+        savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
             if not data:
+                savepoint.rollback()
                 skipped += 1
                 continue
 
             family_name = data.get("family_name", "")
             if not family_name:
+                savepoint.rollback()
                 skipped += 1
                 errors.append(f"Row {i}: Missing family name")
                 continue
@@ -427,10 +439,11 @@ async def import_families(
                 billing_status="Green" if balance <= 0 else ("Yellow" if balance <= tuition else "Red")
             )
             db.add(family)
+            savepoint.commit()
             imported += 1
 
         except Exception as e:
-            db.rollback()
+            savepoint.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -471,9 +484,11 @@ async def import_parents(
     default_family = db.query(models.Family).first()
 
     for i, row in enumerate(rows[1:], start=2):
+        savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
             if not data:
+                savepoint.rollback()
                 skipped += 1
                 continue
 
@@ -483,6 +498,7 @@ async def import_parents(
                 first_name, last_name = split_full_name(data["full_name"])
 
             if not first_name:
+                savepoint.rollback()
                 skipped += 1
                 errors.append(f"Row {i}: Missing parent name")
                 continue
@@ -495,8 +511,9 @@ async def import_parents(
             # If the CSV has a family_id reference, try to match
             # (ProCare family IDs won't match ours directly, but we try name matching)
             parent_last = last_name or first_name
+            escaped_last = parent_last.replace("%", "\\%").replace("_", "\\_")
             matching_family = db.query(models.Family).filter(
-                models.Family.family_name.ilike(f"%{parent_last}%")
+                models.Family.family_name.ilike(f"%{escaped_last}%")
             ).first()
             if matching_family:
                 family_id = matching_family.family_id
@@ -528,10 +545,11 @@ async def import_parents(
                 primary_guardian=i == 2  # First parent is primary
             )
             db.add(parent)
+            savepoint.commit()
             imported += 1
 
         except Exception as e:
-            db.rollback()
+            savepoint.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -578,9 +596,11 @@ async def import_staff(
             raise HTTPException(status_code=400, detail="No campus exists. Please create a campus first.")
 
     for i, row in enumerate(rows[1:], start=2):
+        savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
             if not data:
+                savepoint.rollback()
                 skipped += 1
                 continue
 
@@ -590,6 +610,7 @@ async def import_staff(
                 first_name, last_name = split_full_name(data["full_name"])
 
             if not first_name:
+                savepoint.rollback()
                 skipped += 1
                 errors.append(f"Row {i}: Missing staff name")
                 continue
@@ -625,10 +646,11 @@ async def import_staff(
                 hire_date=hire_date or date.today()
             )
             db.add(staff)
+            savepoint.commit()
             imported += 1
 
         except Exception as e:
-            db.rollback()
+            savepoint.rollback()
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
