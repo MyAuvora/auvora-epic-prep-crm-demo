@@ -25,10 +25,11 @@ interface ImportResult {
 
 interface AutoDetectResult {
   detected_type: string
-  confidence: string
-  matched_columns: number
-  total_columns: number
-  matches: Record<string, string>
+  confidence_scores: Record<string, number>
+  total_rows: number
+  detected_columns: Record<string, string>
+  unmapped_columns: string[]
+  headers: string[]
 }
 
 const DATA_TYPE_CONFIG: Record<DataType, { label: string; icon: typeof Users; description: string; color: string }> = {
@@ -287,7 +288,7 @@ export function ProCareImport() {
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm font-medium text-blue-800">
                     Auto-detected: <span className="font-bold capitalize">{autoDetect.detected_type}</span>
-                    {' '}({autoDetect.confidence} confidence - {autoDetect.matched_columns}/{autoDetect.total_columns} columns matched)
+                    {' '}({Object.keys(autoDetect.detected_columns).length}/{autoDetect.headers.length} columns matched)
                   </p>
                 </div>
               )}

@@ -500,9 +500,12 @@ async def import_parents(
                 family_id = matching_family.family_id
             elif not family_id:
                 # Create a new family for this parent
+                campus = db.query(models.Campus).first()
+                if not campus:
+                    raise HTTPException(status_code=400, detail="No campus exists. Please create a campus before importing parents.")
                 family = models.Family(
                     family_id=generate_id("fam_"),
-                    campus_id=db.query(models.Campus).first().campus_id if db.query(models.Campus).first() else "campus_default",
+                    campus_id=campus.campus_id,
                     family_name=f"{parent_last} Family",
                     monthly_tuition_amount=0.0,
                     current_balance=0.0,
