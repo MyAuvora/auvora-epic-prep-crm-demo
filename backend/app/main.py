@@ -25,6 +25,9 @@ from .ai_agent import chat_with_auvora
 # Import Clerk user management router
 from .clerk_users import router as clerk_users_router
 
+# Import ProCare CSV import router
+from .procare_import import router as procare_import_router
+
 # Import database components
 from .database import engine, get_db, init_db, SessionLocal
 from . import models, crud
@@ -83,6 +86,9 @@ app.add_middleware(
 
 # Include Clerk user management router
 app.include_router(clerk_users_router)
+
+# Include ProCare CSV import router
+app.include_router(procare_import_router)
 
 class Session(str, Enum):
     MORNING = "Morning"
