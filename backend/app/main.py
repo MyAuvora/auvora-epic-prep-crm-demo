@@ -38,19 +38,24 @@ def startup_db():
     """Initialize database on startup and seed with demo data if empty"""
     init_db()
     print("Database initialized successfully")
-    # Check if database is empty and seed if needed
+
+    # First check if database was intentionally reset (don't re-seed)
     db = SessionLocal()
     try:
-        # Check if database was intentionally reset (don't re-seed)
         reset_marker = db.query(models.AppMetadata).filter(
             models.AppMetadata.key == "db_reset"
         ).first()
         if reset_marker:
             print("Database was intentionally reset, skipping demo data seed")
             db.close()
-            load_data_from_db()
             return
+        db.close()
+    except Exception:
+        db.close()
 
+    # Check if database is empty and seed if needed
+    db = SessionLocal()
+    try:
         if db.query(models.Organization).count() == 0:
             print("Database is empty, seeding with demo data...")
             db.close()
