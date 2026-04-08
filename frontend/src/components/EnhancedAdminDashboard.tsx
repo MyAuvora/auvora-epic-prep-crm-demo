@@ -1081,7 +1081,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
       />
 
       {/* Ask Auvora Widget */}
-      <AskAuvoraWidget userRole="admin" />
+      <AskAuvoraWidget userRole={currentRole || 'admin'} />
     </div>
   )
 }
