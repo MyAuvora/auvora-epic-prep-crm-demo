@@ -483,10 +483,16 @@ async def import_parents(
     # Get first family as fallback
     default_family = db.query(models.Family).first()
 
+    # Ensure campus exists before entering the loop so HTTPException propagates
+    fallback_campus = db.query(models.Campus).first()
+    if not default_family and not fallback_campus:
+        raise HTTPException(status_code=400, detail="No campus exists. Please create a campus before importing parents.")
+
     # Track which families already have a primary guardian assigned
     families_with_primary: set = set()
 
     for i, row in enumerate(rows[1:], start=2):
+        newly_added_primary_fid = None
         savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
@@ -522,12 +528,9 @@ async def import_parents(
                 family_id = matching_family.family_id
             elif not family_id:
                 # Create a new family for this parent
-                campus = db.query(models.Campus).first()
-                if not campus:
-                    raise HTTPException(status_code=400, detail="No campus exists. Please create a campus before importing parents.")
                 family = models.Family(
                     family_id=generate_id("fam_"),
-                    campus_id=campus.campus_id,
+                    campus_id=fallback_campus.campus_id,
                     family_name=f"{parent_last} Family",
                     monthly_tuition_amount=0.0,
                     current_balance=0.0,
@@ -552,12 +555,16 @@ async def import_parents(
             )
             if is_primary:
                 families_with_primary.add(family_id)
+                newly_added_primary_fid = family_id
             db.add(parent)
             savepoint.commit()
             imported += 1
 
         except Exception as e:
             savepoint.rollback()
+            # Clean up families_with_primary if this row added it
+            if newly_added_primary_fid and newly_added_primary_fid in families_with_primary:
+                families_with_primary.discard(newly_added_primary_fid)
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
