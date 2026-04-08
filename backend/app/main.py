@@ -41,6 +41,16 @@ def startup_db():
     # Check if database is empty and seed if needed
     db = SessionLocal()
     try:
+        # Check if database was intentionally reset (don't re-seed)
+        reset_marker = db.query(models.AppMetadata).filter(
+            models.AppMetadata.key == "db_reset"
+        ).first()
+        if reset_marker:
+            print("Database was intentionally reset, skipping demo data seed")
+            db.close()
+            load_data_from_db()
+            return
+
         if db.query(models.Organization).count() == 0:
             print("Database is empty, seeding with demo data...")
             db.close()
@@ -5283,6 +5293,19 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
 
     # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()
+
+    # Set a marker so startup doesn't re-seed demo data on next deploy
+    db = SessionLocal()
+    try:
+        from datetime import datetime as dt
+        existing = db.query(models.AppMetadata).filter(models.AppMetadata.key == "db_reset").first()
+        if not existing:
+            db.add(models.AppMetadata(key="db_reset", value=dt.now().isoformat()))
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
     return {
         "message": "Database reset complete. All demo data has been wiped.",
