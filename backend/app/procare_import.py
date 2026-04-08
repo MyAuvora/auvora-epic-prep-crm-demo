@@ -591,14 +591,16 @@ async def import_staff(
                 errors.append(f"Row {i}: Missing staff name")
                 continue
 
-            # Map ProCare roles to our roles
+            # Map ProCare roles to our roles (Owner, Director, Admin, Coach, Parent)
             raw_role = data.get("role", "Coach").strip()
             role = "Coach"  # Default
             role_lower = raw_role.lower()
-            if any(t in role_lower for t in ["owner", "director", "principal", "administrator"]):
+            if any(t in role_lower for t in ["owner", "principal"]):
                 role = "Owner"
+            elif any(t in role_lower for t in ["director", "administrator"]):
+                role = "Director"
             elif any(t in role_lower for t in ["admin", "office", "secretary", "coordinator"]):
-                role = "Coach"  # Admins in ProCare are usually staff-level in our system
+                role = "Admin"
             elif any(t in role_lower for t in ["teacher", "coach", "instructor", "aide", "assistant"]):
                 role = "Coach"
 
