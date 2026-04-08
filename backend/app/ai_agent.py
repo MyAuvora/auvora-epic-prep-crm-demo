@@ -2406,7 +2406,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                 check_role = user_role
                 if check_role == "teacher":
                     check_role = "coach"
-                if check_role in value["roles"] or ("owner" in value["roles"] and check_role in ("owner", "admin")):
+                if check_role in value["roles"]:
                     matched_topic = value
                     break
         
