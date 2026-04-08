@@ -5160,7 +5160,7 @@ async def preview_quickbooks_export():
     payments_count = len(payments)
     
     # Calculate totals
-    total_invoiced = sum(inv.total_amount for inv in invoices_db)
+    total_invoiced = sum(inv.total for inv in invoices_db)
     total_payments = sum(abs(p.amount) for p in payments)
     total_outstanding = sum(f.current_balance for f in families_db)
     
@@ -5172,7 +5172,7 @@ async def preview_quickbooks_export():
         "invoices": {
             "count": invoices_count,
             "total_amount": total_invoiced,
-            "sample": [{"number": inv.invoice_number, "amount": inv.total_amount, "status": inv.status.value} for inv in invoices_db[:5]]
+            "sample": [{"number": inv.invoice_number, "amount": inv.total, "status": inv.status.value} for inv in invoices_db[:5]]
         },
         "payments": {
             "count": payments_count,
