@@ -296,7 +296,7 @@ async def import_students(
     family_cache: Dict[str, str] = {}  # procare_family_id -> our_family_id
 
     for i, row in enumerate(rows[1:], start=2):
-        current_procare_fid = ""
+        newly_cached_fid = ""
         savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
@@ -319,7 +319,6 @@ async def import_students(
 
             # Handle family - create or find
             procare_family_id = data.get("family_id", "")
-            current_procare_fid = procare_family_id
             if procare_family_id and procare_family_id in family_cache:
                 family_id = family_cache[procare_family_id]
             else:
@@ -337,6 +336,7 @@ async def import_students(
                 family_id = family.family_id
                 if procare_family_id:
                     family_cache[procare_family_id] = family_id
+                    newly_cached_fid = procare_family_id
 
             # Parse dates
             dob = parse_date(data.get("date_of_birth", ""))
@@ -363,9 +363,9 @@ async def import_students(
 
         except Exception as e:
             savepoint.rollback()
-            # Clear stale family_cache entries that were rolled back
-            if current_procare_fid and current_procare_fid in family_cache:
-                del family_cache[current_procare_fid]
+            # Only clear family_cache if the family was newly created in this savepoint
+            if newly_cached_fid and newly_cached_fid in family_cache:
+                del family_cache[newly_cached_fid]
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
@@ -483,6 +483,9 @@ async def import_parents(
     # Get first family as fallback
     default_family = db.query(models.Family).first()
 
+    # Track which families already have a primary guardian assigned
+    families_with_primary: set = set()
+
     for i, row in enumerate(rows[1:], start=2):
         savepoint = db.begin_nested()
         try:
@@ -534,6 +537,9 @@ async def import_parents(
                 db.flush()
                 family_id = family.family_id
 
+            # Mark first parent per family as primary guardian
+            is_primary = family_id not in families_with_primary
+
             parent = models.Parent(
                 parent_id=generate_id("par_"),
                 family_id=family_id,
@@ -542,8 +548,10 @@ async def import_parents(
                 email=data.get("email", ""),
                 phone=data.get("phone", ""),
                 relationship_type=data.get("relationship_type", "Guardian"),
-                primary_guardian=i == 2  # First parent is primary
+                primary_guardian=is_primary
             )
+            if is_primary:
+                families_with_primary.add(family_id)
             db.add(parent)
             savepoint.commit()
             imported += 1
