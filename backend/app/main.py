@@ -55,21 +55,31 @@ def _seed_essential_infrastructure():
 
         # Ensure campuses exist
         campus_data = [
-            {"campus_id": "campus_1", "name": "Pace Campus", "location": "Pace, FL",
-             "address": "123 School St, Pace, FL 32571", "phone": "850-555-0100",
+            {"campus_id": "campus_1", "name": "Pace", "location": "Pace, FL",
+             "address": "4655 Chumuckla Hwy, Pace, FL 32571", "phone": "850-555-0100",
              "email": "pace@epicprepacademy.com"},
-            {"campus_id": "campus_2", "name": "Crestview Campus", "location": "Crestview, FL",
-             "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200",
-             "email": "crestview@epicprepacademy.com"},
-            {"campus_id": "campus_3", "name": "Navarre Campus", "location": "Navarre, FL",
-             "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300",
+            {"campus_id": "campus_2", "name": "Crestview North", "location": "Crestview, FL",
+             "address": "Crestview, FL 32536", "phone": "850-555-0200",
+             "email": "crestviewnorth@epicprepacademy.com"},
+            {"campus_id": "campus_3", "name": "Navarre", "location": "Navarre, FL",
+             "address": "Navarre, FL 32566", "phone": "850-555-0300",
              "email": "navarre@epicprepacademy.com"},
+            {"campus_id": "campus_4", "name": "Crestview Main Street", "location": "Crestview, FL",
+             "address": "Crestview, FL 32536", "phone": "850-555-0400",
+             "email": "crestviewmainst@epicprepacademy.com"},
         ]
         for c in campus_data:
             existing = db.query(models.Campus).filter(
                 models.Campus.campus_id == c["campus_id"]
             ).first()
-            if not existing:
+            if existing:
+                # Update existing campus names/details if they changed
+                existing.name = c["name"]
+                existing.location = c["location"]
+                existing.address = c["address"]
+                existing.phone = c["phone"]
+                existing.email = c["email"]
+            else:
                 campus = models.Campus(
                     campus_id=c["campus_id"],
                     organization_id="org_1",
