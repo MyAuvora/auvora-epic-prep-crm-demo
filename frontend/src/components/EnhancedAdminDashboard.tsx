@@ -32,6 +32,7 @@ import { FeeProductManagement } from './FeeProductManagement'
 import { QuickBooksIntegration } from './QuickBooksIntegration'
 import { StripeIntegration } from './StripeIntegration'
 import UserManagement from './UserManagement'
+import { ProCareImport } from './ProCareImport'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -1096,6 +1097,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               {view === 'settings' && (
                 <div className="space-y-6">
                   <UserManagement />
+                  {currentRole === 'owner' && (
+                    <ProCareImport />
+                  )}
                 </div>
               )}
             </div>
