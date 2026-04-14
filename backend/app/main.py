@@ -5765,6 +5765,11 @@ async def public_enroll(enrollment: PublicEnrollmentRequest):
     Creates family, parent(s), student(s), and health records in the CRM."""
     import time
 
+    if not enrollment.parents:
+        raise HTTPException(status_code=422, detail="At least one parent is required")
+    if not enrollment.students:
+        raise HTTPException(status_code=422, detail="At least one student is required")
+
     campus = next((c for c in campuses_db if c.campus_id == enrollment.campus_id), None)
     if not campus and campuses_db:
         campus = campuses_db[0]
