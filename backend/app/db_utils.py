@@ -929,6 +929,41 @@ def save_billing_record(pydantic_br):
         db.close()
 
 
+def save_organization(pydantic_org):
+    """Persist an organization to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            organization_id=pydantic_org.organization_id,
+            name=pydantic_org.name,
+            created_date=pydantic_org.created_date,
+        )
+        _upsert(db, models.Organization, "organization_id", pydantic_org.organization_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_campus(pydantic_campus):
+    """Persist a campus to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            campus_id=pydantic_campus.campus_id,
+            organization_id=pydantic_campus.organization_id,
+            name=pydantic_campus.name,
+            location=pydantic_campus.location,
+            address=pydantic_campus.address,
+            phone=pydantic_campus.phone,
+            email=pydantic_campus.email,
+            active=pydantic_campus.active,
+        )
+        _upsert(db, models.Campus, "campus_id", pydantic_campus.campus_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
 def save_family(pydantic_fam):
     """Persist a family to the database (without parent_ids/student_ids which are relational)."""
     db = SessionLocal()

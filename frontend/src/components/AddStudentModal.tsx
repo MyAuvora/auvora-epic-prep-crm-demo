@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Plus } from 'lucide-react';
 
 interface Campus {
   campus_id: string;
@@ -28,6 +28,8 @@ export function AddStudentModal({ open, onClose, onStudentAdded, selectedCampusI
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creatingFamily, setCreatingFamily] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState('');
   const [formData, setFormData] = useState({
     student_id: '',
     campus_id: selectedCampusId || '',
@@ -78,6 +80,40 @@ export function AddStudentModal({ open, onClose, onStudentAdded, selectedCampusI
       setFamilies(data);
     } catch (error) {
       console.error('Error fetching families:', error);
+    }
+  };
+
+  const handleCreateFamily = async () => {
+    if (!newFamilyName.trim()) return;
+    try {
+      const familyId = `family_${Date.now()}`;
+      const campusId = formData.campus_id || (campuses.length > 0 ? campuses[0].campus_id : 'campus_1');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/families`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          family_id: familyId,
+          campus_id: campusId,
+          family_name: newFamilyName.trim(),
+          primary_parent_id: '',
+          parent_ids: [],
+          student_ids: [],
+          monthly_tuition_amount: 0,
+          current_balance: 0,
+          billing_status: 'Green',
+          last_payment_date: null,
+          last_payment_amount: null,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to create family');
+      const newFamily = await response.json();
+      setFamilies(prev => [...prev, newFamily]);
+      setFormData(prev => ({ ...prev, family_id: newFamily.family_id }));
+      setCreatingFamily(false);
+      setNewFamilyName('');
+    } catch (error) {
+      console.error('Error creating family:', error);
+      alert('Failed to create family. Please try again.');
     }
   };
 
@@ -217,18 +253,40 @@ export function AddStudentModal({ open, onClose, onStudentAdded, selectedCampusI
 
             <div className="space-y-2">
               <Label htmlFor="family">Family *</Label>
-              <Select value={formData.family_id} onValueChange={(value) => setFormData({ ...formData, family_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select family" />
-                </SelectTrigger>
-                <SelectContent>
-                  {families.map((family) => (
-                    <SelectItem key={family.family_id} value={family.family_id}>
-                      {family.family_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {creatingFamily ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. The Smith Family"
+                    value={newFamilyName}
+                    onChange={(e) => setNewFamilyName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateFamily())}
+                  />
+                  <Button type="button" size="sm" onClick={handleCreateFamily} disabled={!newFamilyName.trim()}>
+                    Save
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setCreatingFamily(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Select value={formData.family_id} onValueChange={(value) => setFormData({ ...formData, family_id: value })}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={families.length === 0 ? 'No families yet — create one →' : 'Select family'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {families.map((family) => (
+                        <SelectItem key={family.family_id} value={family.family_id}>
+                          {family.family_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setCreatingFamily(true)} title="Create new family">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
