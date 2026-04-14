@@ -165,7 +165,7 @@ export function PublicEnrollmentPage() {
     if (parents.length > 1) {
       const remaining = parents.filter(p => p.id !== id);
       if (!remaining.some(p => p.isPrimary)) {
-        remaining[0].isPrimary = true;
+        remaining[0] = { ...remaining[0], isPrimary: true };
       }
       setParents([...remaining]);
     }
