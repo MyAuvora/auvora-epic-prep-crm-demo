@@ -9,6 +9,7 @@ import { TermsOfService } from './components/TermsOfService'
 import { PrivacyPolicy } from './components/PrivacyPolicy'
 import { SignInPage } from './components/SignInPage'
 import { SignUpPage } from './components/SignUpPage'
+import { PublicEnrollmentPage } from './components/PublicEnrollmentPage'
 
 type Role = 'owner' | 'admin' | 'coach' | 'parent'
 type Page = 'dashboard' | 'terms' | 'privacy'
@@ -133,6 +134,11 @@ function App() {
       window.location.hash = ''
     }
   }, [isSignedIn, hashPath])
+
+  // Public enrollment form - no auth required
+  if (hashPath.startsWith('#/enroll')) {
+    return <PublicEnrollmentPage />
+  }
 
   // Handle hash-based routing for sign-up (only for unauthenticated users)
   // Use isSignedIn === false to avoid flashing sign-up page during Clerk loading

@@ -5706,6 +5706,217 @@ async def process_stripe_payment(data: dict, org_id: str = DEFAULT_ORG_ID):
         "payment": transaction
     }
 
+# ==================== PUBLIC ENROLLMENT ====================
+
+class PublicEnrollmentStudent(BaseModel):
+    firstName: str
+    lastName: str
+    dateOfBirth: str
+    allergies: str = ""
+    medication: str = ""
+    addressLine: str = ""
+    city: str = ""
+    state: str = ""
+    zipcode: str = ""
+    iepInfo: str = ""
+    academicInfo: str = ""
+    stepUpApplied: str = ""
+    gradeLevel: str
+    sessionPreference: str = ""
+
+class PublicEnrollmentParent(BaseModel):
+    firstName: str
+    lastName: str
+    relationship: str = ""
+    email: str
+    phone: str
+    workPhone: str = ""
+    employer: str = ""
+    isPrimary: bool = False
+
+class PublicEnrollmentPickup(BaseModel):
+    name: str
+    relationship: str
+    phone: str
+
+class PublicEnrollmentPolicies(BaseModel):
+    photoRelease: bool = False
+    liabilityWaiver: bool = False
+    medicalAuthorization: bool = False
+    parentHandbook: bool = False
+    electronicSignature: str = ""
+    signatureDate: str = ""
+
+class PublicEnrollmentRequest(BaseModel):
+    campus_id: str = "campus_1"
+    students: List[PublicEnrollmentStudent]
+    parents: List[PublicEnrollmentParent]
+    authorizedPickups: List[PublicEnrollmentPickup] = []
+    policyAgreements: PublicEnrollmentPolicies
+
+@app.get("/api/public/campuses")
+async def get_public_campuses():
+    """Public endpoint - returns campus list for enrollment form (no auth required)"""
+    return [{"campus_id": c.campus_id, "name": c.name, "location": c.location} for c in campuses_db]
+
+@app.post("/api/public/enroll")
+async def public_enroll(enrollment: PublicEnrollmentRequest):
+    """Public endpoint - accepts enrollment form submissions from parents (no auth required).
+    Creates family, parent(s), student(s), and health records in the CRM."""
+    import time
+
+    campus = next((c for c in campuses_db if c.campus_id == enrollment.campus_id), None)
+    if not campus and campuses_db:
+        campus = campuses_db[0]
+    campus_id = campus.campus_id if campus else "campus_1"
+
+    # Create family from primary parent's last name
+    primary_parent = next((p for p in enrollment.parents if p.isPrimary), enrollment.parents[0])
+    family_id = f"family_{int(time.time() * 1000)}"
+    family_name = f"The {primary_parent.lastName} Family"
+
+    family = Family(
+        family_id=family_id,
+        family_name=family_name,
+        primary_parent_id="",
+        parent_ids=[],
+        student_ids=[],
+        monthly_tuition_amount=0,
+        current_balance=0,
+        billing_status=BillingStatus.GREEN,
+        last_payment_date=None,
+        last_payment_amount=None,
+    )
+    families_db.append(family)
+    db_utils.save_family(family)
+
+    # Create parent records
+    created_parents = []
+    for i, p in enumerate(enrollment.parents):
+        parent_id = f"parent_{int(time.time() * 1000)}_{i}"
+        parent = Parent(
+            parent_id=parent_id,
+            first_name=p.firstName,
+            last_name=p.lastName,
+            email=p.email,
+            phone=p.phone,
+            relationship=p.relationship or "parent",
+            primary_guardian=p.isPrimary,
+            preferred_contact_method="email",
+            student_ids=[],
+        )
+        parents_db.append(parent)
+        db_utils.save_parent(parent)
+        family.parent_ids.append(parent_id)
+        if p.isPrimary:
+            family.primary_parent_id = parent_id
+        created_parents.append(parent)
+
+    # Create student records
+    created_students = []
+    for i, s in enumerate(enrollment.students):
+        student_id = f"student_{int(time.time() * 1000)}_{i}"
+
+        session_val = Session.MORNING
+        if s.sessionPreference and "afternoon" in s.sessionPreference.lower():
+            session_val = Session.AFTERNOON
+
+        funding = FundingSource.OUT_OF_POCKET
+        step_pct = 0
+        if s.stepUpApplied in ("yes_approved", "yes_pending"):
+            funding = FundingSource.STEP_UP
+            step_pct = 100 if s.stepUpApplied == "yes_approved" else 0
+
+        student = Student(
+            student_id=student_id,
+            campus_id=campus_id,
+            first_name=s.firstName,
+            last_name=s.lastName,
+            date_of_birth=date.fromisoformat(s.dateOfBirth) if s.dateOfBirth else date.today(),
+            grade=s.gradeLevel or "K",
+            session=session_val,
+            room=Room.ROOM_1,
+            status=StudentStatus.WAITLISTED,
+            family_id=family_id,
+            enrollment_start_date=date.today(),
+            enrollment_end_date=None,
+            attendance_present_count=0,
+            attendance_absent_count=0,
+            attendance_tardy_count=0,
+            overall_grade_flag=GradeFlag.ON_TRACK,
+            ixl_status_flag=IXLStatus.ON_TRACK,
+            overall_risk_flag=RiskFlag.NONE,
+            funding_source=funding,
+            step_up_percentage=step_pct,
+        )
+        students_db.append(student)
+        db_utils.save_student(student)
+        family.student_ids.append(student_id)
+
+        # Update parent student_ids
+        for cp in created_parents:
+            cp.student_ids.append(student_id)
+            db_utils.save_parent(cp)
+
+        # Create health record if medical info provided
+        if s.allergies or s.medication:
+            hr_id = f"health_{int(time.time() * 1000)}_{i}"
+            health_record = HealthRecord(
+                health_record_id=hr_id,
+                campus_id=campus_id,
+                student_id=student_id,
+                allergies=[a.strip() for a in s.allergies.split(",") if a.strip()] if s.allergies and s.allergies.lower() != "none" else [],
+                medications=[m.strip() for m in s.medication.split(",") if m.strip()] if s.medication and s.medication.lower() != "none" else [],
+                medical_conditions=[],
+                emergency_contact_name=f"{primary_parent.firstName} {primary_parent.lastName}",
+                emergency_contact_phone=primary_parent.phone,
+                emergency_contact_relationship=primary_parent.relationship or "parent",
+                physician_name=None,
+                physician_phone=None,
+                last_updated=date.today(),
+            )
+            health_records_db.append(health_record)
+            db_utils.save_health_record(health_record)
+
+        created_students.append(student)
+
+    # Save updated family with all IDs
+    db_utils.save_family(family)
+
+    return {
+        "success": True,
+        "message": f"Enrollment submitted for {', '.join(s.firstName + ' ' + s.lastName for s in enrollment.students)}",
+        "family_id": family_id,
+        "student_ids": [s.student_id for s in created_students],
+    }
+
+@app.get("/api/enrollment-submissions")
+async def get_enrollment_submissions(status: Optional[str] = None):
+    """Get enrollment submissions - returns students with Waitlisted status (pending enrollment review)"""
+    waitlisted = [s for s in students_db if s.status == StudentStatus.WAITLISTED]
+    results = []
+    for student in waitlisted:
+        family = next((f for f in families_db if f.family_id == student.family_id), None)
+        parent = None
+        if family and family.primary_parent_id:
+            parent = next((p for p in parents_db if p.parent_id == family.primary_parent_id), None)
+        results.append({
+            "student_id": student.student_id,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "grade": student.grade,
+            "campus_id": student.campus_id,
+            "campus_name": next((c.name for c in campuses_db if c.campus_id == student.campus_id), "Unknown"),
+            "family_name": family.family_name if family else "Unknown",
+            "parent_name": f"{parent.first_name} {parent.last_name}" if parent else "Unknown",
+            "parent_email": parent.email if parent else "",
+            "parent_phone": parent.phone if parent else "",
+            "enrollment_date": str(student.enrollment_start_date),
+            "status": student.status.value,
+        })
+    return results
+
+# ==================== END PUBLIC ENROLLMENT ====================
+
 @app.get("/api/stripe/transactions")
 async def get_stripe_transactions(family_id: Optional[str] = None, transaction_type: Optional[str] = None, org_id: str = DEFAULT_ORG_ID):
     """Get Stripe transaction history"""
