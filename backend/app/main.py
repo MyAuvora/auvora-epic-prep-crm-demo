@@ -33,13 +33,75 @@ from sqlalchemy.orm import Session as DBSession
 
 app = FastAPI()
 
+
+def _seed_essential_infrastructure():
+    """Ensure organization and campuses always exist (real locations, not demo data).
+    This runs on every startup regardless of the reset marker."""
+    db = SessionLocal()
+    try:
+        # Ensure organization exists
+        org = db.query(models.Organization).filter(
+            models.Organization.organization_id == "org_1"
+        ).first()
+        if not org:
+            org = models.Organization(
+                organization_id="org_1",
+                name="Epic Prep Academy",
+                created_date=date(2020, 1, 1)
+            )
+            db.add(org)
+            db.flush()
+            print("Created organization: Epic Prep Academy")
+
+        # Ensure campuses exist
+        campus_data = [
+            {"campus_id": "campus_1", "name": "Pace Campus", "location": "Pace, FL",
+             "address": "123 School St, Pace, FL 32571", "phone": "850-555-0100",
+             "email": "pace@epicprepacademy.com"},
+            {"campus_id": "campus_2", "name": "Crestview Campus", "location": "Crestview, FL",
+             "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200",
+             "email": "crestview@epicprepacademy.com"},
+            {"campus_id": "campus_3", "name": "Navarre Campus", "location": "Navarre, FL",
+             "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300",
+             "email": "navarre@epicprepacademy.com"},
+        ]
+        for c in campus_data:
+            existing = db.query(models.Campus).filter(
+                models.Campus.campus_id == c["campus_id"]
+            ).first()
+            if not existing:
+                campus = models.Campus(
+                    campus_id=c["campus_id"],
+                    organization_id="org_1",
+                    name=c["name"],
+                    location=c["location"],
+                    address=c["address"],
+                    phone=c["phone"],
+                    email=c["email"],
+                    active=True
+                )
+                db.add(campus)
+                print(f"Created campus: {c['name']}")
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error seeding infrastructure: {e}")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def startup_db():
     """Initialize database on startup and seed with demo data if empty"""
     init_db()
     print("Database initialized successfully")
 
-    # First check if database was intentionally reset (don't re-seed)
+    # Always ensure essential infrastructure exists (org + campuses)
+    # These are real school locations, not demo data
+    _seed_essential_infrastructure()
+
+    # First check if database was intentionally reset (don't re-seed demo data)
     db = SessionLocal()
     try:
         reset_marker = db.query(models.AppMetadata).filter(
@@ -48,6 +110,8 @@ def startup_db():
         if reset_marker:
             print("Database was intentionally reset, skipping demo data seed")
             db.close()
+            # Still load whatever data exists into memory
+            load_data_from_db()
             return
         db.close()
     except Exception:
@@ -56,13 +120,13 @@ def startup_db():
     # Check if database is empty and seed if needed
     db = SessionLocal()
     try:
-        if db.query(models.Organization).count() == 0:
-            print("Database is empty, seeding with demo data...")
-            db.close()
+        has_students = db.query(models.Student).count() > 0
+        db.close()
+        if not has_students:
+            print("No students in database, seeding with demo data...")
             db_utils.seed_from_demo_data()
         else:
             print("Database has existing data, skipping seed")
-            db.close()
     except Exception as e:
         db.close()
         print(f"Error checking database: {e}")
@@ -1246,6 +1310,14 @@ async def get_campus(campus_id: str):
     campus = next((c for c in campuses_db if c.campus_id == campus_id), None)
     if not campus:
         raise HTTPException(status_code=404, detail="Campus not found")
+    return campus
+
+@app.post("/api/campuses", response_model=Campus)
+async def create_campus(campus: Campus):
+    if any(c.campus_id == campus.campus_id for c in campuses_db):
+        raise HTTPException(status_code=400, detail="Campus ID already exists")
+    campuses_db.append(campus)
+    db_utils.save_campus(campus)
     return campus
 
 @app.get("/api/users", response_model=List[User])
