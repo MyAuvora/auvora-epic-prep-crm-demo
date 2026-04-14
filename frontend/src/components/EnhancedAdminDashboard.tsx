@@ -322,11 +322,12 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
           setSubView(item.subView)
           setDrillDownView(null)
           setAskAuvoraResults(null)
+          setSettingsMenuOpen(false)
           if (item.action) item.action()
           setMobileMenuOpen(false)
         }
 
-        const currentNavLabel = navItems.find(item => item.id === view)?.label || 'Dashboard'
+        const currentNavLabel = view === 'settings' ? 'Settings' : (navItems.find(item => item.id === view)?.label || 'Dashboard')
 
         return (
           <div className="min-h-screen bg-gray-50">
