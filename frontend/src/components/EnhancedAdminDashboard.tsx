@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -89,6 +89,44 @@ interface EnhancedAdminDashboardProps {
   onClearSearch?: () => void
   selectedCampusId?: string | null
   currentRole?: 'owner' | 'admin' | 'coach' | 'parent'
+}
+
+function EnrollmentLinkButton() {
+  const [copied, setCopied] = useState(false);
+  const enrollmentUrl = `${window.location.origin}${window.location.pathname}#/enroll`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(enrollmentUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="hidden sm:flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+        <Link className="w-4 h-4 text-blue-600 flex-shrink-0" />
+        <span className="text-sm text-blue-800 truncate max-w-xs">{enrollmentUrl}</span>
+      </div>
+      <Button
+        onClick={handleCopy}
+        variant={copied ? "default" : "outline"}
+        className={copied ? "bg-green-600 hover:bg-green-700" : "border-blue-300 text-blue-700 hover:bg-blue-50"}
+      >
+        {copied ? (
+          <>
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Copied!
+          </>
+        ) : (
+          <>
+            <Copy className="w-4 h-4 mr-2" />
+            Copy Enrollment Link
+          </>
+        )}
+      </Button>
+    </div>
+  );
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
@@ -899,6 +937,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
                       <h2 className="text-3xl font-bold text-gray-900">Admissions</h2>
+                      <EnrollmentLinkButton />
                     </div>
                     <Tabs value={subView} onValueChange={setSubView} className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
