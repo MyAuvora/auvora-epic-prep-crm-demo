@@ -95,9 +95,14 @@ export function AddStudentModal({ open, onClose, onStudentAdded, selectedCampusI
           family_id: familyId,
           campus_id: campusId,
           family_name: newFamilyName.trim(),
+          primary_parent_id: '',
+          parent_ids: [],
+          student_ids: [],
           monthly_tuition_amount: 0,
           current_balance: 0,
           billing_status: 'Green',
+          last_payment_date: null,
+          last_payment_amount: null,
         }),
       });
       if (!response.ok) throw new Error('Failed to create family');

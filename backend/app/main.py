@@ -97,10 +97,6 @@ def startup_db():
     init_db()
     print("Database initialized successfully")
 
-    # Always ensure essential infrastructure exists (org + campuses)
-    # These are real school locations, not demo data
-    _seed_essential_infrastructure()
-
     # First check if database was intentionally reset (don't re-seed demo data)
     db = SessionLocal()
     try:
@@ -110,7 +106,10 @@ def startup_db():
         if reset_marker:
             print("Database was intentionally reset, skipping demo data seed")
             db.close()
-            # Still load whatever data exists into memory
+            # Ensure essential infrastructure exists (org + campuses)
+            # These are real school locations, not demo data
+            _seed_essential_infrastructure()
+            # Load whatever data exists into memory
             load_data_from_db()
             return
         db.close()
@@ -120,13 +119,15 @@ def startup_db():
     # Check if database is empty and seed if needed
     db = SessionLocal()
     try:
-        has_students = db.query(models.Student).count() > 0
-        db.close()
-        if not has_students:
-            print("No students in database, seeding with demo data...")
+        if db.query(models.Organization).count() == 0:
+            print("Database is empty, seeding with demo data...")
+            db.close()
             db_utils.seed_from_demo_data()
         else:
             print("Database has existing data, skipping seed")
+            db.close()
+            # Ensure campuses exist in case they were deleted
+            _seed_essential_infrastructure()
     except Exception as e:
         db.close()
         print(f"Error checking database: {e}")
@@ -356,14 +357,14 @@ class Student(BaseModel):
 class Family(BaseModel):
     family_id: str
     family_name: str
-    primary_parent_id: str
-    parent_ids: List[str]
-    student_ids: List[str]
-    monthly_tuition_amount: float
-    current_balance: float
-    billing_status: BillingStatus
-    last_payment_date: Optional[date]
-    last_payment_amount: Optional[float]
+    primary_parent_id: Optional[str] = None
+    parent_ids: List[str] = []
+    student_ids: List[str] = []
+    monthly_tuition_amount: float = 0
+    current_balance: float = 0
+    billing_status: BillingStatus = BillingStatus.Green
+    last_payment_date: Optional[date] = None
+    last_payment_amount: Optional[float] = None
 
 class Parent(BaseModel):
     parent_id: str
