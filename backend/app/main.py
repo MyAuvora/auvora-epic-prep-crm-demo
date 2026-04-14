@@ -362,7 +362,7 @@ class Family(BaseModel):
     student_ids: List[str] = []
     monthly_tuition_amount: float = 0
     current_balance: float = 0
-    billing_status: BillingStatus = BillingStatus.Green
+    billing_status: BillingStatus = BillingStatus.GREEN
     last_payment_date: Optional[date] = None
     last_payment_amount: Optional[float] = None
 
