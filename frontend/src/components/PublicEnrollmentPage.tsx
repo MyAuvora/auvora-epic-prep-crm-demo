@@ -163,7 +163,11 @@ export function PublicEnrollmentPage() {
 
   const removeParent = (id: string) => {
     if (parents.length > 1) {
-      setParents(parents.filter(p => p.id !== id));
+      const remaining = parents.filter(p => p.id !== id);
+      if (!remaining.some(p => p.isPrimary)) {
+        remaining[0].isPrimary = true;
+      }
+      setParents([...remaining]);
     }
   };
 
