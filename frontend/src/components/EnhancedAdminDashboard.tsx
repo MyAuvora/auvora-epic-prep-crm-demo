@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle, Settings } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle, Settings, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -133,6 +133,19 @@ function EnrollmentLinkButton() {
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
+  const settingsDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(event.target as Node)) {
+        setSettingsMenuOpen(false)
+      }
+    }
+    if (settingsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [settingsMenuOpen])
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -379,16 +392,34 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                         setSubView('users')
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
-                        view === 'settings'
+                      className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 border-t border-gray-200 ${
+                        view === 'settings' && subView === 'users'
                           ? 'text-white'
                           : 'text-gray-700 hover:bg-gray-50'
                       }`}
-                      style={view === 'settings' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                      style={view === 'settings' && subView === 'users' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                     >
                       <Settings className="h-4 w-4" />
                       Settings
                     </button>
+                    {currentRole === 'owner' && (
+                      <button
+                        onClick={() => {
+                          setView('settings')
+                          setSubView('import')
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
+                          view === 'settings' && subView === 'import'
+                            ? 'text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        style={view === 'settings' && subView === 'import' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                      >
+                        <Upload className="h-4 w-4" />
+                        ProCare Data Import
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -415,7 +446,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </button>
                 ))}
                 {/* Settings gear icon dropdown */}
-                <div className="relative ml-auto">
+                <div className="relative ml-auto" ref={settingsDropdownRef}>
                   <button
                     onClick={() => setSettingsMenuOpen(!settingsMenuOpen)}
                     className={`p-2 rounded-md ${
