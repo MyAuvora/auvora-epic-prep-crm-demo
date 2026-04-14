@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle, Settings } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -131,7 +131,8 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'student-support' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const [subView, setSubView] = useState<string>('main')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -310,12 +311,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   { id: 'families-finance', label: 'Families & Finance', subView: 'families', action: fetchFamilies },
                   { id: 'admissions', label: 'Admissions', subView: 'pipeline' },
                   { id: 'academics', label: 'Academics', subView: 'standards' },
-                  { id: 'student-support', label: 'Student Support', subView: 'iep' },
                   { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined },
                   { id: 'operations', label: 'Operations', subView: 'events' },
                   { id: 'documents', label: 'Documents & Forms', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
-                  { id: 'settings', label: 'Settings', subView: 'users' },
                 ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
@@ -358,7 +357,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                       <button
                         key={item.id}
                         onClick={() => handleNavClick(item)}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+                        className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center justify-between border-b border-gray-100 ${
                           view === item.id
                             ? 'text-white'
                             : 'text-gray-700 hover:bg-gray-50'
@@ -373,12 +372,28 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                             )}
                       </button>
                     ))}
+                    <button
+                      onClick={() => {
+                        setView('settings')
+                        setSubView('users')
+                        setMobileMenuOpen(false)
+                      }}
+                      className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
+                        view === 'settings'
+                          ? 'text-white'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      style={view === 'settings' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </button>
                   </div>
                 )}
               </div>
 
               {/* Desktop navigation */}
-              <nav className="hidden md:flex space-x-2 lg:space-x-4 xl:space-x-6 py-4 overflow-x-auto scrollbar-hide">
+              <nav className="hidden md:flex items-center space-x-2 lg:space-x-4 xl:space-x-6 py-4">
                 {navItems.map((item) => (
                   <button
                     key={item.id}
@@ -398,6 +413,47 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                     )}
                   </button>
                 ))}
+                {/* Settings gear icon dropdown */}
+                <div className="relative ml-auto">
+                  <button
+                    onClick={() => setSettingsMenuOpen(!settingsMenuOpen)}
+                    className={`p-2 rounded-md ${
+                      view === 'settings'
+                        ? 'text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    style={view === 'settings' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                    title="Settings"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                  {settingsMenuOpen && (
+                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <button
+                        onClick={() => {
+                          setView('settings')
+                          setSubView('users')
+                          setSettingsMenuOpen(false)
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                      >
+                        User Management
+                      </button>
+                      {currentRole === 'owner' && (
+                        <button
+                          onClick={() => {
+                            setView('settings')
+                            setSubView('import')
+                            setSettingsMenuOpen(false)
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+                        >
+                          ProCare Data Import
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </nav>
             </div>
           </div>
@@ -718,7 +774,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation()
-                                              setView('student-support')
+                                              setView('operations')
                                               setSubView('incidents')
                                             }}
                                             className="p-1.5 rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
@@ -961,9 +1017,11 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <h2 className="text-3xl font-bold text-gray-900">Academics</h2>
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="standards">Standards & Gradebook</TabsTrigger>
                 <TabsTrigger value="assessments">Assessments & Progress</TabsTrigger>
+                <TabsTrigger value="iep">IEP / 504 Plans</TabsTrigger>
+                <TabsTrigger value="interventions">Interventions</TabsTrigger>
               </TabsList>
               <TabsContent value="standards" className="mt-6">
                 <StandardsGradebook selectedCampusId={selectedCampusId} />
@@ -995,17 +1053,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </CardContent>
                 </Card>
               </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
-        {view === 'student-support' && (
-          <div className="space-y-6">
-            <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="iep">IEP / 504 Plans</TabsTrigger>
-                <TabsTrigger value="interventions">Interventions</TabsTrigger>
-              </TabsList>
               <TabsContent value="iep" className="mt-6">
                 <IEP504Management />
               </TabsContent>
@@ -1096,9 +1143,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
 
               {view === 'settings' && (
                 <div className="space-y-6">
-                  <UserManagement />
-                  {currentRole === 'owner' && (
+                  {subView === 'import' && currentRole === 'owner' ? (
                     <ProCareImport />
+                  ) : (
+                    <UserManagement />
                   )}
                 </div>
               )}
