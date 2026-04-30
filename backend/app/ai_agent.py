@@ -788,6 +788,105 @@ Users may ask the same question in many ways. Here are examples:
 
 Always interpret the user's intent and provide helpful guidance, whether they're asking for data, instructions, or training on how to use the CRM. When a user asks to be "trained" or asks "how do I use this", give them a comprehensive overview of all features available to their role with step-by-step instructions.
 
+---
+
+## PROCARE DATA IMPORT (Owner Only)
+
+**What it is:** A tool to migrate data from ProCare (childcare management software) into the EPIC CRM. This allows you to bulk-import students, families, parents/guardians, and staff from ProCare CSV or Excel exports.
+
+**Where to find it:** Click the **Settings gear icon** in the top-right navigation bar, then select **"ProCare Data Import"** from the dropdown menu. This option is ONLY visible to the Owner role.
+
+**Supported file formats:** CSV (.csv), TXT (.txt), and Excel (.xlsx) files exported from ProCare.
+
+**What you can import:**
+1. **Students** - names, grades, rooms, date of birth, enrollment dates, funding source
+2. **Families** - family/account names, tuition amounts, balances
+3. **Parents/Guardians** - names, emails, phone numbers, relationships, addresses
+4. **Staff** - names, roles, emails, phone numbers, assigned classrooms
+
+**How to import data from ProCare (step by step):**
+
+#### Step 1: Export data from ProCare
+1. Log into your ProCare account
+2. Navigate to **Reports** then **Custom Reports** or **Child Reports**
+3. Select the data you want to export (children, families, staff, etc.)
+4. Click **Export** and choose **CSV** or **Excel** format
+5. Save the downloaded file to your computer
+
+#### Step 2: Upload to EPIC CRM
+1. Click the **Settings gear icon** in the top navigation
+2. Select **"ProCare Data Import"**
+3. **Upload your file:** Drag and drop the CSV/Excel file into the upload area, or click to browse and select it
+4. Click **"Auto-Detect Data Type"** - the system will automatically determine whether your file contains students, families, parents, or staff data
+5. **Confirm or change the data type:** The auto-detected type will be highlighted. You can override it if needed by clicking a different type
+6. Click **"Preview Import"** to see how your data will be mapped
+
+#### Step 3: Review and confirm
+1. Review the **column mappings** - the system shows which ProCare columns map to which CRM fields
+2. Check the **sample data** (first 5 rows) to make sure it looks correct
+3. Note any **unmapped columns** (these will be skipped - that is OK for ProCare-specific fields not used in this CRM)
+4. Click **"Import [N] [Type]"** to proceed with the import
+
+#### Step 4: Check results
+1. The import results show:
+   - Total rows processed
+   - Successfully imported count
+   - Skipped rows (with reasons)
+   - Any errors encountered
+2. Click **"Import More Data"** to import another file, or navigate to Students/Families to verify the imported data
+
+**Common questions about ProCare Import:**
+- "How do I upload students from ProCare?" -> Settings gear, ProCare Data Import, Upload CSV/Excel file
+- "How do I import data from ProCare?" -> Settings gear, ProCare Data Import
+- "Where do I upload the ProCare file?" -> Settings gear, ProCare Data Import
+- "Where do I upload the Excel file from ProCare?" -> Settings gear, ProCare Data Import
+- "Can I import Excel files?" -> Yes! The ProCare Import supports both CSV and Excel (.xlsx) files
+- "What data can I import from ProCare?" -> Students, families, parents/guardians, and staff
+- "How do I migrate from ProCare?" -> Use the ProCare Data Import tool under Settings to upload your exported data
+- "Will it overwrite existing data?" -> No, imports add new records. Existing data is not modified.
+- "What if some columns don't match?" -> The system auto-detects common ProCare column names. Unmapped columns are safely skipped.
+- "Can I import staff from ProCare?" -> Yes, select "Staff" as the data type when importing
+- "I have a ProCare export, what do I do with it?" -> Go to Settings gear, ProCare Data Import, Upload your file
+
+**Tips:**
+- Always preview before importing to verify column mappings
+- Import in this order for best results: Families first, then Students, then Parents
+- The system handles various ProCare column name formats (e.g., "First Name", "firstname", "Child First Name" all work)
+- If you get errors, check that your file has a header row with column names
+
+---
+
+## PUBLIC ENROLLMENT FORM
+
+**What it is:** A shareable public link that allows prospective parents to submit enrollment applications for their children without needing a CRM login. The form collects parent information, student details, and campus preference.
+
+**Where to find the link:**
+- On the **Dashboard** there is an "Enrollment Link" button that copies the shareable URL
+- The URL format is: https://epic.myauvora.com/enroll
+
+**How it works:**
+1. Share the enrollment link with prospective parents (via email, website, social media, etc.)
+2. Parents fill out the form with their information and their children's details
+3. Submitted forms appear in **Operations, Enrollment Forms** for the Owner/Admin to review
+
+**Common questions:**
+- "How do I share an enrollment link?" -> Click "Enrollment Link" on the Dashboard to copy the URL
+- "Where do parents apply?" -> Share the public enrollment form link: /enroll
+- "Where do I see enrollment submissions?" -> Operations, Enrollment Forms
+- "How do parents enroll?" -> Share the enrollment link from the Dashboard. Parents fill it out and submissions appear in Operations, Enrollment Forms
+
+---
+
+## CAMPUSES / LOCATIONS
+
+EPIC Prep Academy has 4 campus locations:
+1. **Pace** - Main campus
+2. **Crestview North**
+3. **Navarre**
+4. **Crestview Main Street**
+
+Students and families are assigned to specific campuses. You can filter data by campus in various views.
+
 === END OF KNOWLEDGE BASE ===
 """
 
