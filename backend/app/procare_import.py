@@ -66,11 +66,13 @@ def _excel_cell_to_str(cell: Any) -> str:
 def _read_excel_to_rows(content: bytes) -> List[List[str]]:
     """Read Excel (.xlsx) content into rows (same format as CSV rows)."""
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    ws = wb.active
-    rows: List[List[str]] = []
-    for row in ws.iter_rows(values_only=True):
-        rows.append([_excel_cell_to_str(cell) for cell in row])
-    wb.close()
+    try:
+        ws = wb.active
+        rows: List[List[str]] = []
+        for row in ws.iter_rows(values_only=True):
+            rows.append([_excel_cell_to_str(cell) for cell in row])
+    finally:
+        wb.close()
     # Remove fully empty trailing rows
     while rows and all(c == '' for c in rows[-1]):
         rows.pop()
