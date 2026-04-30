@@ -84,11 +84,11 @@ export function ProCareImport() {
     e.preventDefault()
     setIsDragging(false)
     const droppedFile = e.dataTransfer.files[0]
-    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.txt'))) {
+    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.txt') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
       setFile(droppedFile)
       setError(null)
     } else {
-      setError('Please drop a CSV file (.csv or .txt)')
+      setError('Please drop a CSV or Excel file (.csv, .txt, or .xlsx)')
     }
   }, [])
 
@@ -194,7 +194,7 @@ export function ProCareImport() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900">ProCare Data Import</h2>
         <p className="text-gray-600 mt-1">
-          Import data from ProCare CSV exports into the EPIC CRM. Export your data from ProCare, then upload the CSV files here.
+          Import data from ProCare exports into the EPIC CRM. Export your data from ProCare, then upload the CSV or Excel files here.
         </p>
       </div>
 
@@ -219,7 +219,7 @@ export function ProCareImport() {
             <CardHeader>
               <CardTitle className="text-lg">Step 1: Upload CSV File</CardTitle>
               <CardDescription>
-                Export your data from ProCare as a CSV file, then upload it here. We'll auto-detect the data type.
+                Export your data from ProCare as a CSV or Excel file, then upload it here. We'll auto-detect the data type.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -250,13 +250,13 @@ export function ProCareImport() {
                   <label className="cursor-pointer block">
                     <input
                       type="file"
-                      accept=".csv,.txt"
+                      accept=".csv,.txt,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                       onChange={handleFileSelect}
                       className="hidden"
                     />
                     <Upload className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                    <p className="text-gray-700 font-medium">Drop a CSV file here or click to browse</p>
-                    <p className="text-sm text-gray-400 mt-1">Supports .csv and .txt files from ProCare exports</p>
+                    <p className="text-gray-700 font-medium">Drop a CSV or Excel file here or click to browse</p>
+                    <p className="text-sm text-gray-400 mt-1">Supports .csv, .txt, and .xlsx files from ProCare exports</p>
                   </label>
                 )}
               </div>
@@ -527,11 +527,11 @@ export function ProCareImport() {
             <li>Log into your ProCare account</li>
             <li>Navigate to <strong>Reports</strong> &rarr; <strong>Custom Reports</strong> or <strong>Child Reports</strong></li>
             <li>Select the data you want to export (children, families, staff, etc.)</li>
-            <li>Click <strong>Export</strong> and choose <strong>CSV</strong> format</li>
-            <li>Upload the downloaded CSV file here</li>
+            <li>Click <strong>Export</strong> and choose <strong>CSV</strong> or <strong>Excel</strong> format</li>
+            <li>Upload the downloaded file here (.csv, .txt, or .xlsx)</li>
           </ol>
           <p className="text-xs text-gray-400 mt-3">
-            Supported ProCare column formats are auto-detected. Column names like "First Name", "firstname", "Child First Name" etc. are all recognized.
+            Supports both CSV and Excel (.xlsx) files. Column names like "First Name", "firstname", "Child First Name" etc. are all auto-detected.
           </p>
         </CardContent>
       </Card>
