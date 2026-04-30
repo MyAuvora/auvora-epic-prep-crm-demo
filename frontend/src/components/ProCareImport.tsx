@@ -84,7 +84,7 @@ export function ProCareImport() {
     e.preventDefault()
     setIsDragging(false)
     const droppedFile = e.dataTransfer.files[0]
-    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.txt') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
+    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.txt') || droppedFile.name.endsWith('.xlsx'))) {
       setFile(droppedFile)
       setError(null)
     } else {
@@ -250,7 +250,7 @@ export function ProCareImport() {
                   <label className="cursor-pointer block">
                     <input
                       type="file"
-                      accept=".csv,.txt,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                      accept=".csv,.txt,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       onChange={handleFileSelect}
                       className="hidden"
                     />
