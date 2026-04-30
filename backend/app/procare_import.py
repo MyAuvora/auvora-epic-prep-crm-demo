@@ -19,12 +19,12 @@ from . import models
 
 router = APIRouter(prefix="/api/import", tags=["ProCare Import"])
 
-ALLOWED_EXTENSIONS = ('.csv', '.txt', '.xlsx', '.xls')
+ALLOWED_EXTENSIONS = ('.csv', '.txt', '.xlsx')
 
 
 def _is_excel(filename: str) -> bool:
     """Check if a file is an Excel file based on extension."""
-    return filename.lower().endswith(('.xlsx', '.xls'))
+    return filename.lower().endswith('.xlsx')
 
 
 def _read_file_to_rows(content: bytes, filename: str) -> List[List[str]]:
@@ -48,14 +48,28 @@ def _read_csv_to_rows(content: bytes) -> List[List[str]]:
     return list(reader)
 
 
+def _excel_cell_to_str(cell: Any) -> str:
+    """Convert an Excel cell value to a clean string."""
+    if cell is None:
+        return ''
+    # Handle datetime objects from Excel date-formatted cells
+    if isinstance(cell, datetime):
+        return cell.strftime('%m/%d/%Y')
+    if isinstance(cell, date):
+        return cell.strftime('%m/%d/%Y')
+    # Handle floats that are really integers (e.g. 1234.0 -> '1234')
+    if isinstance(cell, float) and cell == int(cell):
+        return str(int(cell))
+    return str(cell)
+
+
 def _read_excel_to_rows(content: bytes) -> List[List[str]]:
     """Read Excel (.xlsx) content into rows (same format as CSV rows)."""
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
     ws = wb.active
     rows: List[List[str]] = []
     for row in ws.iter_rows(values_only=True):
-        # Convert all cell values to strings, treating None as empty
-        rows.append([str(cell) if cell is not None else '' for cell in row])
+        rows.append([_excel_cell_to_str(cell) for cell in row])
     wb.close()
     # Remove fully empty trailing rows
     while rows and all(c == '' for c in rows[-1]):
