@@ -1,6 +1,6 @@
 """
-ProCare CSV Import Module
-Handles importing student, family, parent, and staff data from ProCare CSV exports.
+ProCare CSV/Excel Import Module
+Handles importing student, family, parent, and staff data from ProCare CSV or Excel exports.
 Auto-detects column mappings from common ProCare export formats.
 """
 import csv
@@ -9,6 +9,7 @@ import uuid
 from datetime import date, datetime
 from typing import List, Optional, Dict, Any
 
+import openpyxl
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
@@ -17,6 +18,49 @@ from .database import get_db
 from . import models
 
 router = APIRouter(prefix="/api/import", tags=["ProCare Import"])
+
+ALLOWED_EXTENSIONS = ('.csv', '.txt', '.xlsx', '.xls')
+
+
+def _is_excel(filename: str) -> bool:
+    """Check if a file is an Excel file based on extension."""
+    return filename.lower().endswith(('.xlsx', '.xls'))
+
+
+def _read_file_to_rows(content: bytes, filename: str) -> List[List[str]]:
+    """
+    Read file content into a list of rows (list of strings).
+    Supports both CSV/TXT and Excel (.xlsx) files.
+    """
+    if _is_excel(filename):
+        return _read_excel_to_rows(content)
+    else:
+        return _read_csv_to_rows(content)
+
+
+def _read_csv_to_rows(content: bytes) -> List[List[str]]:
+    """Read CSV content into rows."""
+    try:
+        text = content.decode('utf-8-sig')  # Handle BOM
+    except UnicodeDecodeError:
+        text = content.decode('latin-1')
+    reader = csv.reader(io.StringIO(text))
+    return list(reader)
+
+
+def _read_excel_to_rows(content: bytes) -> List[List[str]]:
+    """Read Excel (.xlsx) content into rows (same format as CSV rows)."""
+    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    ws = wb.active
+    rows: List[List[str]] = []
+    for row in ws.iter_rows(values_only=True):
+        # Convert all cell values to strings, treating None as empty
+        rows.append([str(cell) if cell is not None else '' for cell in row])
+    wb.close()
+    # Remove fully empty trailing rows
+    while rows and all(c == '' for c in rows[-1]):
+        rows.pop()
+    return rows
 
 
 def generate_id(prefix: str = "") -> str:
@@ -188,17 +232,11 @@ async def preview_csv(
     Preview a ProCare CSV file before importing.
     Returns detected column mappings and sample rows.
     """
-    if not file.filename or not file.filename.lower().endswith(('.csv', '.txt')):
-        raise HTTPException(status_code=400, detail="Please upload a CSV file (.csv or .txt)")
+    if not file.filename or not file.filename.lower().endswith(ALLOWED_EXTENSIONS):
+        raise HTTPException(status_code=400, detail="Please upload a CSV or Excel file (.csv, .txt, or .xlsx)")
 
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')  # Handle BOM
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename)
 
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="CSV file must have a header row and at least one data row")
@@ -249,15 +287,9 @@ async def import_students(
     campus_id: str = Query(None, description="Campus ID to assign students to (auto-creates if not provided)"),
     db: DBSession = Depends(get_db)
 ):
-    """Import students from a ProCare CSV export."""
+    """Import students from a ProCare CSV or Excel export."""
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="CSV must have header + data rows")
@@ -385,15 +417,9 @@ async def import_families(
     campus_id: str = Query(None, description="Campus ID"),
     db: DBSession = Depends(get_db)
 ):
-    """Import families from a ProCare CSV export."""
+    """Import families from a ProCare CSV or Excel export."""
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="CSV must have header + data rows")
@@ -462,15 +488,9 @@ async def import_parents(
     file: UploadFile = File(...),
     db: DBSession = Depends(get_db)
 ):
-    """Import parents/guardians from a ProCare CSV export."""
+    """Import parents/guardians from a ProCare CSV or Excel export."""
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="CSV must have header + data rows")
@@ -584,15 +604,9 @@ async def import_staff(
     campus_id: str = Query(None, description="Campus ID"),
     db: DBSession = Depends(get_db)
 ):
-    """Import staff from a ProCare CSV export."""
+    """Import staff from a ProCare CSV or Excel export."""
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="CSV must have header + data rows")
@@ -682,17 +696,11 @@ async def import_staff(
 @router.post("/auto-detect")
 async def auto_detect_csv(file: UploadFile = File(...)):
     """
-    Auto-detect the type of ProCare CSV export (students, families, parents, or staff).
+    Auto-detect the type of ProCare CSV/Excel export (students, families, parents, or staff).
     Returns the best-guess data type and column mappings.
     """
     content = await file.read()
-    try:
-        text = content.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
+    rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
     if len(rows) < 1:
         raise HTTPException(status_code=400, detail="CSV file is empty")
