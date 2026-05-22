@@ -6001,13 +6001,17 @@ def _get_paypal_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
     }
 
 
-async def _get_paypal_access_token(client_id: str, client_secret: str) -> str:
+def _paypal_api_base(mode: str) -> str:
+    return "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+
+
+async def _get_paypal_access_token(client_id: str, client_secret: str, api_base: str) -> str:
     """Exchange client credentials for a PayPal access token."""
     import base64
     auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{PAYPAL_API_BASE}/v1/oauth2/token",
+            f"{api_base}/v1/oauth2/token",
             headers={
                 "Authorization": f"Basic {auth}",
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -6130,9 +6134,10 @@ async def create_paypal_order(data: dict, org_id: str = DEFAULT_ORG_ID):
 
     client_id = conn.get("settings", {}).get("client_id") or conn.get("account_id", "")
     client_secret = conn.get("access_token", "")
+    api_base = _paypal_api_base(conn.get("mode", "sandbox"))
 
     try:
-        access_token = await _get_paypal_access_token(client_id, client_secret)
+        access_token = await _get_paypal_access_token(client_id, client_secret, api_base)
 
         order_payload = {
             "intent": "CAPTURE",
@@ -6171,7 +6176,7 @@ async def create_paypal_order(data: dict, org_id: str = DEFAULT_ORG_ID):
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"{PAYPAL_API_BASE}/v2/checkout/orders",
+                f"{api_base}/v2/checkout/orders",
                 headers={
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json",
@@ -6206,13 +6211,14 @@ async def capture_paypal_order(order_id: str, org_id: str = DEFAULT_ORG_ID):
 
     client_id = conn.get("settings", {}).get("client_id") or conn.get("account_id", "")
     client_secret = conn.get("access_token", "")
+    api_base = _paypal_api_base(conn.get("mode", "sandbox"))
 
     try:
-        access_token = await _get_paypal_access_token(client_id, client_secret)
+        access_token = await _get_paypal_access_token(client_id, client_secret, api_base)
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}/capture",
+                f"{api_base}/v2/checkout/orders/{order_id}/capture",
                 headers={
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json",
@@ -6576,7 +6582,7 @@ async def square_webhook(data: dict, org_id: str = DEFAULT_ORG_ID):
 
     if event_type == "payment.completed":
         reference_id = event_data.get("reference_id", "")
-        family_id = reference_id.split("_")[0] if reference_id else ""
+        family_id = "_".join(reference_id.split("_")[:-1]) if reference_id else ""
         amount = event_data.get("amount_money", {}).get("amount", 0) / 100
 
         family = next((f for f in families_db if f.family_id == family_id), None)
