@@ -479,6 +479,49 @@ class BillingRecord(BaseModel):
     category: Optional[BillingCategory] = None
     student_id: Optional[str] = None
 
+class ExpenseCategory(str, Enum):
+    RENT = "Rent"
+    UTILITIES = "Utilities"
+    PAYROLL = "Payroll"
+    SUPPLIES = "Supplies"
+    INSURANCE = "Insurance"
+    MAINTENANCE = "Maintenance"
+    MARKETING = "Marketing"
+    TECHNOLOGY = "Technology"
+    FOOD = "Food & Snacks"
+    TRANSPORTATION = "Transportation"
+    PROFESSIONAL_SERVICES = "Professional Services"
+    CURRICULUM = "Curriculum & Materials"
+    OTHER = "Other"
+
+class ExpenseStatus(str, Enum):
+    PENDING = "Pending"
+    PAID = "Paid"
+    OVERDUE = "Overdue"
+    CANCELLED = "Cancelled"
+
+class RecurrenceFrequency(str, Enum):
+    NONE = "none"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    ANNUALLY = "annually"
+
+class BusinessExpense(BaseModel):
+    expense_id: str
+    campus_id: str
+    category: ExpenseCategory
+    vendor: str
+    description: str
+    amount: float
+    date: date
+    due_date: Optional[date] = None
+    status: ExpenseStatus = ExpenseStatus.PAID
+    recurrence: RecurrenceFrequency = RecurrenceFrequency.NONE
+    payment_method: Optional[str] = None
+    receipt_note: Optional[str] = None
+    created_at: str = ""
+    updated_at: str = ""
+
 class Conference(BaseModel):
     conference_id: str
     student_id: str
@@ -1205,6 +1248,7 @@ sufs_scholarships_db: List[SUFSScholarship] = []
 sufs_claims_db: List[SUFSClaim] = []
 sufs_payments_db: List[SUFSPayment] = []
 sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
+business_expenses_db: List[BusinessExpense] = []
 
 def load_data_from_db():
     """Load all data from the SQLite database into in-memory lists for fast reads."""
@@ -1223,6 +1267,7 @@ def load_data_from_db():
     global at_risk_assessments_db, retention_predictions_db, enrollment_forecasts_db
     global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
+    global business_expenses_db
 
     data = db_utils.load_all_from_db()
 
@@ -1292,6 +1337,7 @@ def load_data_from_db():
     sufs_claims_db = [SUFSClaim(**d) for d in data.get("sufs_claims", [])]
     sufs_payments_db = [SUFSPayment(**d) for d in data.get("sufs_payments", [])]
     sufs_payment_allocations_db = [SUFSPaymentAllocation(**d) for d in data.get("sufs_payment_allocations", [])]
+    business_expenses_db = [BusinessExpense(**d) for d in data.get("business_expenses", [])]
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
 
@@ -5325,6 +5371,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
+    global business_expenses_db
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5384,6 +5431,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_payment_allocations_db = []
     time_off_requests_db = []
     payment_methods_db = []
+    business_expenses_db = []
 
     # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()
@@ -6636,4 +6684,155 @@ async def get_payment_providers(org_id: str = DEFAULT_ORG_ID):
             "cashapp_enabled": square_conn.get("settings", {}).get("cashapp_enabled", True),
             "configured": bool(SQUARE_ACCESS_TOKEN and SQUARE_APPLICATION_ID),
         },
+    }
+
+
+# ============== Business Expense Tracking (Owner Only) ==============
+
+@app.get("/api/expenses")
+async def get_expenses(
+    campus_id: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
+    """Get all business expenses with optional filters."""
+    result = list(business_expenses_db)
+    if campus_id:
+        result = [e for e in result if e.campus_id == campus_id]
+    if category:
+        result = [e for e in result if e.category.value == category]
+    if status:
+        result = [e for e in result if e.status.value == status]
+    if start_date:
+        sd = date.fromisoformat(start_date)
+        result = [e for e in result if e.date >= sd]
+    if end_date:
+        ed = date.fromisoformat(end_date)
+        result = [e for e in result if e.date <= ed]
+    return sorted(result, key=lambda e: e.date, reverse=True)
+
+
+@app.get("/api/expenses/{expense_id}")
+async def get_expense(expense_id: str):
+    """Get a single expense by ID."""
+    expense = next((e for e in business_expenses_db if e.expense_id == expense_id), None)
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return expense
+
+
+@app.post("/api/expenses")
+async def create_expense(data: dict):
+    """Create a new business expense."""
+    now = datetime.now().isoformat()
+    expense = BusinessExpense(
+        expense_id=f"exp_{uuid.uuid4().hex[:8]}",
+        campus_id=data.get("campus_id", "campus_pace"),
+        category=ExpenseCategory(data.get("category", "Other")),
+        vendor=data.get("vendor", ""),
+        description=data.get("description", ""),
+        amount=float(data.get("amount", 0)),
+        date=date.fromisoformat(data["date"]) if data.get("date") else date.today(),
+        due_date=date.fromisoformat(data["due_date"]) if data.get("due_date") else None,
+        status=ExpenseStatus(data.get("status", "Paid")),
+        recurrence=RecurrenceFrequency(data.get("recurrence", "none")),
+        payment_method=data.get("payment_method"),
+        receipt_note=data.get("receipt_note"),
+        created_at=now,
+        updated_at=now,
+    )
+    business_expenses_db.append(expense)
+    db_utils.save_business_expense(expense)
+    return expense
+
+
+@app.put("/api/expenses/{expense_id}")
+async def update_expense(expense_id: str, data: dict):
+    """Update an existing expense."""
+    expense = next((e for e in business_expenses_db if e.expense_id == expense_id), None)
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    idx = business_expenses_db.index(expense)
+    updated = expense.model_copy(update={
+        "campus_id": data.get("campus_id", expense.campus_id),
+        "category": ExpenseCategory(data["category"]) if data.get("category") else expense.category,
+        "vendor": data.get("vendor", expense.vendor),
+        "description": data.get("description", expense.description),
+        "amount": float(data["amount"]) if data.get("amount") is not None else expense.amount,
+        "date": date.fromisoformat(data["date"]) if data.get("date") else expense.date,
+        "due_date": date.fromisoformat(data["due_date"]) if data.get("due_date") else expense.due_date,
+        "status": ExpenseStatus(data["status"]) if data.get("status") else expense.status,
+        "recurrence": RecurrenceFrequency(data["recurrence"]) if data.get("recurrence") else expense.recurrence,
+        "payment_method": data.get("payment_method", expense.payment_method),
+        "receipt_note": data.get("receipt_note", expense.receipt_note),
+        "updated_at": datetime.now().isoformat(),
+    })
+    business_expenses_db[idx] = updated
+    db_utils.save_business_expense(updated)
+    return updated
+
+
+@app.delete("/api/expenses/{expense_id}")
+async def delete_expense(expense_id: str):
+    """Delete an expense."""
+    expense = next((e for e in business_expenses_db if e.expense_id == expense_id), None)
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    business_expenses_db.remove(expense)
+    db_utils.delete_business_expense(expense_id)
+    return {"success": True, "message": "Expense deleted"}
+
+
+@app.get("/api/expenses/summary/by-category")
+async def get_expense_summary_by_category(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    campus_id: Optional[str] = None,
+):
+    """Get expense totals grouped by category."""
+    result = list(business_expenses_db)
+    if campus_id:
+        result = [e for e in result if e.campus_id == campus_id]
+    if start_date:
+        sd = date.fromisoformat(start_date)
+        result = [e for e in result if e.date >= sd]
+    if end_date:
+        ed = date.fromisoformat(end_date)
+        result = [e for e in result if e.date <= ed]
+
+    totals: Dict[str, float] = {}
+    for e in result:
+        cat = e.category.value
+        totals[cat] = totals.get(cat, 0) + e.amount
+
+    return {
+        "categories": [{"category": k, "total": v} for k, v in sorted(totals.items(), key=lambda x: x[1], reverse=True)],
+        "grand_total": sum(totals.values()),
+        "count": len(result),
+    }
+
+
+@app.get("/api/expenses/summary/monthly")
+async def get_expense_summary_monthly(
+    year: Optional[int] = None,
+    campus_id: Optional[str] = None,
+):
+    """Get expense totals grouped by month."""
+    target_year = year or date.today().year
+    result = [e for e in business_expenses_db if e.date.year == target_year]
+    if campus_id:
+        result = [e for e in result if e.campus_id == campus_id]
+
+    monthly: Dict[str, float] = {}
+    for e in result:
+        month_key = e.date.strftime("%Y-%m")
+        monthly[month_key] = monthly.get(month_key, 0) + e.amount
+
+    return {
+        "year": target_year,
+        "months": [{"month": k, "total": v} for k, v in sorted(monthly.items())],
+        "annual_total": sum(monthly.values()),
     }
