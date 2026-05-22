@@ -3,6 +3,7 @@ import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileTe
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { VenmoCashAppPayment } from './VenmoCashAppPayment';
 
 interface PaymentSchedule {
   schedule_id: string;
@@ -977,6 +978,20 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   </CardContent>
                 </Card>
               )}
+
+              {/* Venmo / Cash App Payment */}
+              <VenmoCashAppPayment
+                familyId={family.family_id}
+                familyName={family.family_name}
+                currentBalance={family.current_balance || 0}
+                onPaymentComplete={() => {
+                  // Refresh family data after payment
+                  fetch(`${API_URL}/api/families/${family.family_id}`)
+                    .then(res => res.json())
+                    .then(data => setFamily(data))
+                    .catch(console.error);
+                }}
+              />
 
               {/* Billing Activity */}
               <Card>
