@@ -283,6 +283,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
       fetchStudents('ixl_status=Needs attention')
     } else if (type === 'overdue') {
       setView('families-finance')
+      setSubView('families')
+      setBillingFilter('Red')
       fetchFamilies('billing_status=Red')
     }
   }
