@@ -33,6 +33,7 @@ import { QuickBooksIntegration } from './QuickBooksIntegration'
 import { StripeIntegration } from './StripeIntegration'
 import UserManagement from './UserManagement'
 import { ProCareImport } from './ProCareImport'
+import { PaymentProvidersSettings } from './PaymentProvidersSettings'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -1031,9 +1032,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                             <TabsContent value="reports" className="mt-6">
                               {/* Consolidated Reports Section */}
                               <Tabs defaultValue="revenue" className="w-full">
-                                <TabsList className={`grid w-full mb-4 ${currentRole === 'owner' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                                <TabsList className={`grid w-full mb-4 ${currentRole === 'owner' ? 'grid-cols-4' : 'grid-cols-3'}`}>
                                   <TabsTrigger value="revenue">Revenue Reports</TabsTrigger>
                                   <TabsTrigger value="stripe">Stripe</TabsTrigger>
+                                  <TabsTrigger value="venmo-cashapp">Venmo / Cash App</TabsTrigger>
                                   {currentRole === 'owner' && (
                                     <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
                                   )}
@@ -1043,6 +1045,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                                 </TabsContent>
                                 <TabsContent value="stripe">
                                   <StripeIntegration />
+                                </TabsContent>
+                                <TabsContent value="venmo-cashapp">
+                                  <PaymentProvidersSettings />
                                 </TabsContent>
                                 {currentRole === 'owner' && (
                                   <TabsContent value="quickbooks">

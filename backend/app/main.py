@@ -5967,3 +5967,673 @@ async def get_stripe_summary(org_id: str = DEFAULT_ORG_ID):
         "recent_payments": recent_payments,
         "families_with_balance": len(set(t.get("family_id", "") for t in pending_invoices))
     }
+
+
+# ============== PayPal/Venmo Integration ==============
+
+PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.environ.get("PAYPAL_MODE", "sandbox")  # "sandbox" or "live"
+
+PAYPAL_API_BASE = (
+    "https://api-m.paypal.com" if PAYPAL_MODE == "live"
+    else "https://api-m.sandbox.paypal.com"
+)
+
+
+def _get_paypal_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
+    conn = db_utils.get_oauth_connection(org_id, "paypal")
+    if conn:
+        return conn
+    return {
+        "organization_id": org_id,
+        "provider": "paypal",
+        "connected": False,
+        "account_name": None,
+        "account_id": None,
+        "connected_at": None,
+        "mode": PAYPAL_MODE,
+        "settings": {
+            "venmo_enabled": True,
+            "auto_capture": True,
+        },
+        "sync_history": [],
+    }
+
+
+def _paypal_api_base(mode: str) -> str:
+    return "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+
+
+async def _get_paypal_access_token(client_id: str, client_secret: str, api_base: str) -> str:
+    """Exchange client credentials for a PayPal access token."""
+    import base64
+    auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{api_base}/v1/oauth2/token",
+            headers={
+                "Authorization": f"Basic {auth}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data="grant_type=client_credentials",
+        )
+        resp.raise_for_status()
+        return resp.json()["access_token"]
+
+
+@app.get("/api/paypal/status")
+async def get_paypal_status(org_id: str = DEFAULT_ORG_ID):
+    """Get PayPal/Venmo connection status"""
+    conn = _get_paypal_connection(org_id)
+    return {
+        "connected": conn.get("connected", False),
+        "account_name": conn.get("account_name"),
+        "mode": conn.get("mode", PAYPAL_MODE),
+        "venmo_enabled": conn.get("settings", {}).get("venmo_enabled", True),
+        "configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET),
+    }
+
+
+@app.post("/api/paypal/connect")
+async def connect_paypal(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Connect PayPal account using client credentials"""
+    client_id = data.get("client_id", "").strip()
+    client_secret = data.get("client_secret", "").strip()
+    mode = data.get("mode", "sandbox")
+
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=400, detail="Client ID and Secret are required")
+
+    api_base = (
+        "https://api-m.paypal.com" if mode == "live"
+        else "https://api-m.sandbox.paypal.com"
+    )
+
+    try:
+        import base64
+        auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{api_base}/v1/oauth2/token",
+                headers={
+                    "Authorization": f"Basic {auth}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data="grant_type=client_credentials",
+            )
+            resp.raise_for_status()
+            token_data = resp.json()
+
+            userinfo_resp = await client.get(
+                f"{api_base}/v1/identity/oauth2/userinfo?schema=paypalv1.1",
+                headers={"Authorization": f"Bearer {token_data['access_token']}"},
+            )
+            account_name = "PayPal Business Account"
+            if userinfo_resp.status_code == 200:
+                info = userinfo_resp.json()
+                account_name = info.get("name", account_name)
+
+        conn = _get_paypal_connection(org_id)
+        conn["connected"] = True
+        conn["account_name"] = account_name
+        conn["account_id"] = client_id
+        conn["connected_at"] = datetime.now().isoformat()
+        conn["access_token"] = client_secret
+        conn["mode"] = mode
+        conn["settings"] = {
+            "venmo_enabled": data.get("venmo_enabled", True),
+            "auto_capture": True,
+            "client_id": client_id,
+        }
+        db_utils.save_oauth_connection(org_id, "paypal", conn)
+
+        return {
+            "success": True,
+            "message": f"Connected to PayPal ({mode} mode)",
+            "account_name": account_name,
+        }
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to verify PayPal credentials: {e.response.text}",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Connection failed: {str(e)}")
+
+
+@app.post("/api/paypal/disconnect")
+async def disconnect_paypal(org_id: str = DEFAULT_ORG_ID):
+    """Disconnect PayPal account"""
+    conn = _get_paypal_connection(org_id)
+    conn["connected"] = False
+    conn["access_token"] = None
+    conn["account_name"] = None
+    conn["account_id"] = None
+    conn["connected_at"] = None
+    db_utils.save_oauth_connection(org_id, "paypal", conn)
+    return {"success": True, "message": "PayPal disconnected"}
+
+
+@app.post("/api/paypal/create-order")
+async def create_paypal_order(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Create a PayPal order for payment (supports Venmo as funding source)"""
+    conn = _get_paypal_connection(org_id)
+    if not conn.get("connected"):
+        raise HTTPException(status_code=400, detail="PayPal not connected")
+
+    family_id = data.get("family_id")
+    amount = data.get("amount", 0)
+    description = data.get("description", "Tuition Payment")
+    invoice_id = data.get("invoice_id")
+    funding_source = data.get("funding_source", "paypal")  # "paypal" or "venmo"
+
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+
+    client_id = conn.get("settings", {}).get("client_id") or conn.get("account_id", "")
+    client_secret = conn.get("access_token", "")
+    api_base = _paypal_api_base(conn.get("mode", "sandbox"))
+
+    try:
+        access_token = await _get_paypal_access_token(client_id, client_secret, api_base)
+
+        order_payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [{
+                "reference_id": f"{family_id}_{invoice_id or 'payment'}",
+                "description": f"{description} - {family.family_name}",
+                "amount": {
+                    "currency_code": "USD",
+                    "value": f"{amount:.2f}",
+                },
+                "custom_id": family_id,
+            }],
+            "payment_source": {},
+        }
+
+        if funding_source == "venmo":
+            order_payload["payment_source"]["venmo"] = {
+                "experience_context": {
+                    "payment_method_preference": "IMMEDIATE_PAYMENT_REQUIRED",
+                    "brand_name": "EPIC Prep Academy",
+                    "shipping_preference": "NO_SHIPPING",
+                    "user_action": "PAY_NOW",
+                }
+            }
+        else:
+            order_payload["payment_source"]["paypal"] = {
+                "experience_context": {
+                    "payment_method_preference": "IMMEDIATE_PAYMENT_REQUIRED",
+                    "brand_name": "EPIC Prep Academy",
+                    "shipping_preference": "NO_SHIPPING",
+                    "user_action": "PAY_NOW",
+                    "return_url": f"{FRONTEND_URL}?payment_success=true&family_id={family_id}",
+                    "cancel_url": f"{FRONTEND_URL}?payment_cancelled=true&family_id={family_id}",
+                }
+            }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{api_base}/v2/checkout/orders",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                    "PayPal-Request-Id": f"epic_{family_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                },
+                json=order_payload,
+            )
+            resp.raise_for_status()
+            order = resp.json()
+
+        return {
+            "order_id": order["id"],
+            "status": order["status"],
+            "funding_source": funding_source,
+            "approve_url": next(
+                (link["href"] for link in order.get("links", []) if link["rel"] == "approve"),
+                None,
+            ),
+        }
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"PayPal order creation failed: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Order creation failed: {str(e)}")
+
+
+@app.post("/api/paypal/capture-order/{order_id}")
+async def capture_paypal_order(order_id: str, org_id: str = DEFAULT_ORG_ID):
+    """Capture an approved PayPal/Venmo order"""
+    conn = _get_paypal_connection(org_id)
+    if not conn.get("connected"):
+        raise HTTPException(status_code=400, detail="PayPal not connected")
+
+    client_id = conn.get("settings", {}).get("client_id") or conn.get("account_id", "")
+    client_secret = conn.get("access_token", "")
+    api_base = _paypal_api_base(conn.get("mode", "sandbox"))
+
+    try:
+        access_token = await _get_paypal_access_token(client_id, client_secret, api_base)
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{api_base}/v2/checkout/orders/{order_id}/capture",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+            )
+            resp.raise_for_status()
+            capture = resp.json()
+
+        if capture.get("status") == "COMPLETED":
+            purchase_unit = capture.get("purchase_units", [{}])[0]
+            family_id = purchase_unit.get("payments", {}).get("captures", [{}])[0].get("custom_id", "")
+            amount_str = purchase_unit.get("payments", {}).get("captures", [{}])[0].get("amount", {}).get("value", "0")
+            amount = float(amount_str)
+
+            family = next((f for f in families_db if f.family_id == family_id), None)
+
+            payer = capture.get("payer", {})
+            funding = capture.get("payment_source", {})
+            method = "Venmo" if "venmo" in funding else "PayPal"
+
+            transaction = {
+                "transaction_id": f"pp_{order_id}",
+                "type": "payment",
+                "family_id": family_id,
+                "family_name": family.family_name if family else "Unknown",
+                "amount": amount,
+                "description": purchase_unit.get("description", "Payment"),
+                "status": "completed",
+                "payment_method": method,
+                "paypal_order_id": order_id,
+                "payer_email": payer.get("email_address", ""),
+                "created_at": datetime.now().isoformat(),
+                "paid_at": datetime.now().isoformat(),
+            }
+
+            sync_history = conn.get("sync_history", [])
+            sync_history.insert(0, transaction)
+            conn["sync_history"] = sync_history
+            db_utils.save_oauth_connection(org_id, "paypal", conn)
+
+            if family:
+                family.current_balance = max(0, family.current_balance - amount)
+                family.last_payment_date = date.today()
+                family.last_payment_amount = amount
+                if family.current_balance == 0:
+                    family.billing_status = BillingStatus.GREEN
+                elif family.current_balance < family.monthly_tuition_amount:
+                    family.billing_status = BillingStatus.YELLOW
+                db_utils.save_family(family)
+
+            billing_record = BillingRecord(
+                billing_record_id=f"br_{uuid.uuid4().hex[:8]}",
+                campus_id=family.campus_id if family else "campus_pace",
+                family_id=family_id,
+                date=date.today(),
+                type="Payment",
+                description=f"{method} payment - Order {order_id}",
+                amount=-amount,
+                source=PaymentSource.OUT_OF_POCKET,
+                category=BillingCategory.TUITION,
+            )
+            billing_records_db.append(billing_record)
+
+            return {
+                "success": True,
+                "message": f"{method} payment of ${amount:.2f} captured successfully",
+                "payment": transaction,
+            }
+
+        return {"success": False, "message": f"Order status: {capture.get('status')}", "details": capture}
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"Capture failed: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Capture failed: {str(e)}")
+
+
+@app.post("/api/paypal/webhook")
+async def paypal_webhook(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Handle PayPal/Venmo webhook events"""
+    event_type = data.get("event_type", "")
+    resource = data.get("resource", {})
+
+    if event_type == "PAYMENT.CAPTURE.COMPLETED":
+        family_id = resource.get("custom_id", "")
+        amount = float(resource.get("amount", {}).get("value", 0))
+        family = next((f for f in families_db if f.family_id == family_id), None)
+
+        if family:
+            family.current_balance = max(0, family.current_balance - amount)
+            family.last_payment_date = date.today()
+            family.last_payment_amount = amount
+            if family.current_balance == 0:
+                family.billing_status = BillingStatus.GREEN
+            elif family.current_balance < family.monthly_tuition_amount:
+                family.billing_status = BillingStatus.YELLOW
+            db_utils.save_family(family)
+
+    return {"status": "ok"}
+
+
+@app.get("/api/paypal/transactions")
+async def get_paypal_transactions(
+    family_id: Optional[str] = None,
+    org_id: str = DEFAULT_ORG_ID,
+):
+    """Get PayPal/Venmo transaction history"""
+    conn = _get_paypal_connection(org_id)
+    result = conn.get("sync_history", [])
+    if family_id:
+        result = [t for t in result if t.get("family_id") == family_id]
+    return result[:50]
+
+
+# ============== Square/Cash App Pay Integration ==============
+
+SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN", "")
+SQUARE_APPLICATION_ID = os.environ.get("SQUARE_APPLICATION_ID", "")
+SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID", "")
+SQUARE_MODE = os.environ.get("SQUARE_MODE", "sandbox")  # "sandbox" or "production"
+
+SQUARE_API_BASE = (
+    "https://connect.squareup.com" if SQUARE_MODE == "production"
+    else "https://connect.squareupsandbox.com"
+)
+
+
+def _get_square_connection(org_id: str = DEFAULT_ORG_ID) -> dict:
+    conn = db_utils.get_oauth_connection(org_id, "square")
+    if conn:
+        return conn
+    return {
+        "organization_id": org_id,
+        "provider": "square",
+        "connected": False,
+        "account_name": None,
+        "account_id": None,
+        "connected_at": None,
+        "mode": SQUARE_MODE,
+        "settings": {
+            "cashapp_enabled": True,
+            "location_id": SQUARE_LOCATION_ID,
+        },
+        "sync_history": [],
+    }
+
+
+@app.get("/api/square/status")
+async def get_square_status(org_id: str = DEFAULT_ORG_ID):
+    """Get Square/Cash App Pay connection status"""
+    conn = _get_square_connection(org_id)
+    return {
+        "connected": conn.get("connected", False),
+        "account_name": conn.get("account_name"),
+        "mode": conn.get("mode", SQUARE_MODE),
+        "cashapp_enabled": conn.get("settings", {}).get("cashapp_enabled", True),
+        "location_id": conn.get("settings", {}).get("location_id", ""),
+        "configured": bool(SQUARE_ACCESS_TOKEN and SQUARE_APPLICATION_ID),
+    }
+
+
+@app.post("/api/square/connect")
+async def connect_square(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Connect Square account using access token"""
+    access_token = data.get("access_token", "").strip()
+    application_id = data.get("application_id", "").strip()
+    location_id = data.get("location_id", "").strip()
+    mode = data.get("mode", "sandbox")
+
+    if not access_token or not application_id:
+        raise HTTPException(status_code=400, detail="Access Token and Application ID are required")
+
+    api_base = (
+        "https://connect.squareup.com" if mode == "production"
+        else "https://connect.squareupsandbox.com"
+    )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{api_base}/v2/merchants/me",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Square-Version": "2024-01-18",
+                },
+            )
+            resp.raise_for_status()
+            merchant = resp.json().get("merchant", [{}])
+            if isinstance(merchant, list):
+                merchant = merchant[0] if merchant else {}
+            business_name = merchant.get("business_name", "Square Account")
+
+            if not location_id:
+                loc_resp = await client.get(
+                    f"{api_base}/v2/locations",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Square-Version": "2024-01-18",
+                    },
+                )
+                if loc_resp.status_code == 200:
+                    locations = loc_resp.json().get("locations", [])
+                    if locations:
+                        location_id = locations[0].get("id", "")
+
+        conn = _get_square_connection(org_id)
+        conn["connected"] = True
+        conn["account_name"] = business_name
+        conn["account_id"] = application_id
+        conn["connected_at"] = datetime.now().isoformat()
+        conn["access_token"] = access_token
+        conn["mode"] = mode
+        conn["settings"] = {
+            "cashapp_enabled": data.get("cashapp_enabled", True),
+            "location_id": location_id,
+            "application_id": application_id,
+        }
+        db_utils.save_oauth_connection(org_id, "square", conn)
+
+        return {
+            "success": True,
+            "message": f"Connected to Square ({mode} mode) — {business_name}",
+            "account_name": business_name,
+            "location_id": location_id,
+        }
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"Failed to verify Square credentials: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Connection failed: {str(e)}")
+
+
+@app.post("/api/square/disconnect")
+async def disconnect_square(org_id: str = DEFAULT_ORG_ID):
+    """Disconnect Square account"""
+    conn = _get_square_connection(org_id)
+    conn["connected"] = False
+    conn["access_token"] = None
+    conn["account_name"] = None
+    conn["account_id"] = None
+    conn["connected_at"] = None
+    db_utils.save_oauth_connection(org_id, "square", conn)
+    return {"success": True, "message": "Square disconnected"}
+
+
+@app.post("/api/square/create-payment")
+async def create_square_payment(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Create a Square payment (Cash App Pay)"""
+    conn = _get_square_connection(org_id)
+    if not conn.get("connected"):
+        raise HTTPException(status_code=400, detail="Square not connected")
+
+    family_id = data.get("family_id")
+    amount = data.get("amount", 0)
+    source_id = data.get("source_id")  # nonce from Cash App Pay SDK
+    description = data.get("description", "Tuition Payment")
+    invoice_id = data.get("invoice_id")
+
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+
+    access_token = conn.get("access_token", "")
+    location_id = conn.get("settings", {}).get("location_id", "")
+    api_base = (
+        "https://connect.squareup.com" if conn.get("mode") == "production"
+        else "https://connect.squareupsandbox.com"
+    )
+
+    try:
+        idempotency_key = f"epic_{family_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        payment_payload = {
+            "idempotency_key": idempotency_key,
+            "source_id": source_id,
+            "amount_money": {
+                "amount": int(amount * 100),  # Square uses cents
+                "currency": "USD",
+            },
+            "location_id": location_id,
+            "reference_id": f"{family_id}_{invoice_id or 'payment'}",
+            "note": f"{description} - {family.family_name}",
+        }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{api_base}/v2/payments",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Square-Version": "2024-01-18",
+                    "Content-Type": "application/json",
+                },
+                json=payment_payload,
+            )
+            resp.raise_for_status()
+            payment = resp.json().get("payment", {})
+
+        if payment.get("status") == "COMPLETED":
+            paid_amount = payment.get("amount_money", {}).get("amount", 0) / 100
+
+            transaction = {
+                "transaction_id": f"sq_{payment.get('id', '')}",
+                "type": "payment",
+                "family_id": family_id,
+                "family_name": family.family_name,
+                "amount": paid_amount,
+                "description": description,
+                "status": "completed",
+                "payment_method": "Cash App Pay",
+                "square_payment_id": payment.get("id"),
+                "created_at": datetime.now().isoformat(),
+                "paid_at": datetime.now().isoformat(),
+            }
+
+            sync_history = conn.get("sync_history", [])
+            sync_history.insert(0, transaction)
+            conn["sync_history"] = sync_history
+            db_utils.save_oauth_connection(org_id, "square", conn)
+
+            family.current_balance = max(0, family.current_balance - paid_amount)
+            family.last_payment_date = date.today()
+            family.last_payment_amount = paid_amount
+            if family.current_balance == 0:
+                family.billing_status = BillingStatus.GREEN
+            elif family.current_balance < family.monthly_tuition_amount:
+                family.billing_status = BillingStatus.YELLOW
+            db_utils.save_family(family)
+
+            billing_record = BillingRecord(
+                billing_record_id=f"br_{uuid.uuid4().hex[:8]}",
+                campus_id=family.campus_id if family else "campus_pace",
+                family_id=family_id,
+                date=date.today(),
+                type="Payment",
+                description=f"Cash App Pay payment - {payment.get('id', '')}",
+                amount=-paid_amount,
+                source=PaymentSource.OUT_OF_POCKET,
+                category=BillingCategory.TUITION,
+            )
+            billing_records_db.append(billing_record)
+
+            return {
+                "success": True,
+                "message": f"Cash App payment of ${paid_amount:.2f} processed",
+                "payment": transaction,
+            }
+
+        return {
+            "success": False,
+            "message": f"Payment status: {payment.get('status')}",
+            "payment_id": payment.get("id"),
+        }
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"Square payment failed: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Payment failed: {str(e)}")
+
+
+@app.post("/api/square/webhook")
+async def square_webhook(data: dict, org_id: str = DEFAULT_ORG_ID):
+    """Handle Square webhook events (Cash App Pay completions)"""
+    event_type = data.get("type", "")
+    event_data = data.get("data", {}).get("object", {}).get("payment", {})
+
+    if event_type == "payment.completed":
+        reference_id = event_data.get("reference_id", "")
+        family_id = "_".join(reference_id.split("_")[:-1]) if reference_id else ""
+        amount = event_data.get("amount_money", {}).get("amount", 0) / 100
+
+        family = next((f for f in families_db if f.family_id == family_id), None)
+        if family:
+            family.current_balance = max(0, family.current_balance - amount)
+            family.last_payment_date = date.today()
+            family.last_payment_amount = amount
+            if family.current_balance == 0:
+                family.billing_status = BillingStatus.GREEN
+            elif family.current_balance < family.monthly_tuition_amount:
+                family.billing_status = BillingStatus.YELLOW
+            db_utils.save_family(family)
+
+    return {"status": "ok"}
+
+
+@app.get("/api/square/transactions")
+async def get_square_transactions(
+    family_id: Optional[str] = None,
+    org_id: str = DEFAULT_ORG_ID,
+):
+    """Get Square/Cash App Pay transaction history"""
+    conn = _get_square_connection(org_id)
+    result = conn.get("sync_history", [])
+    if family_id:
+        result = [t for t in result if t.get("family_id") == family_id]
+    return result[:50]
+
+
+# ============== Combined Payment Status ==============
+
+@app.get("/api/payments/providers")
+async def get_payment_providers(org_id: str = DEFAULT_ORG_ID):
+    """Get status of all payment providers"""
+    stripe_conn = _get_stripe_connection(org_id)
+    paypal_conn = _get_paypal_connection(org_id)
+    square_conn = _get_square_connection(org_id)
+
+    return {
+        "stripe": {
+            "connected": stripe_conn.get("connected", False),
+            "configured": bool(STRIPE_SECRET_KEY),
+        },
+        "paypal": {
+            "connected": paypal_conn.get("connected", False),
+            "venmo_enabled": paypal_conn.get("settings", {}).get("venmo_enabled", True),
+            "configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET),
+        },
+        "square": {
+            "connected": square_conn.get("connected", False),
+            "cashapp_enabled": square_conn.get("settings", {}).get("cashapp_enabled", True),
+            "configured": bool(SQUARE_ACCESS_TOKEN and SQUARE_APPLICATION_ID),
+        },
+    }

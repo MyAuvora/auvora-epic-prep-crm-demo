@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { User, DollarSign, Calendar, BookOpen, GraduationCap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { VenmoCashAppPayment } from './VenmoCashAppPayment'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -209,6 +210,13 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
               )}
             </CardContent>
           </Card>
+
+          <VenmoCashAppPayment
+            familyId={parentData.family.family_id}
+            familyName={parentData.family.family_name}
+            currentBalance={parentData.family.current_balance}
+            onPaymentComplete={() => window.location.reload()}
+          />
         </div>
 
         {selectedChild && (
