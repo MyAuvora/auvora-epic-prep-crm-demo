@@ -150,6 +150,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [families, setFamilies] = useState<Family[]>([])
+  const [billingFilter, setBillingFilter] = useState<string | null>(null)
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
     const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
     const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
@@ -174,7 +175,11 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     } else if (view === 'students') {
       fetchStudents()
     } else if (view === 'families-finance') {
-      fetchFamilies()
+      if (billingFilter) {
+        fetchFamilies(`billing_status=${billingFilter}`)
+      } else {
+        fetchFamilies()
+      }
     }
     fetchUnreadMessages()
   }, [view, selectedCampusId])
@@ -284,6 +289,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
 
   const handleOutstandingBalanceClick = () => {
     setView('families-finance')
+    setSubView('families')
+    setBillingFilter('Red')
     fetchFamilies('billing_status=Red')
   }
 
@@ -335,6 +342,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
           setSubView(item.subView)
           setDrillDownView(null)
           setAskAuvoraResults(null)
+          setBillingFilter(null)
           setSettingsMenuOpen(false)
           if (item.action) item.action()
           setMobileMenuOpen(false)
@@ -545,7 +553,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
 
               <Card 
                 className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-600"
-                onClick={() => { setView('families-finance'); setSubView('families'); fetchFamilies(); }}
+                onClick={() => { setView('families-finance'); setSubView('families'); setBillingFilter(null); fetchFamilies(); }}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Families</CardTitle>
@@ -852,10 +860,21 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                             <TabsTrigger value="reports">Reports</TabsTrigger>
                           </TabsList>
               <TabsContent value="families" className="mt-6">
+                {billingFilter && (
+                  <div className="mb-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <span className="text-sm text-red-700 font-medium">Showing families with outstanding balance (status: {billingFilter})</span>
+                    <button
+                      onClick={() => { setBillingFilter(null); fetchFamilies(); }}
+                      className="ml-auto text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Clear filter — show all families
+                    </button>
+                  </div>
+                )}
                 {families.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>All Families</CardTitle>
+                      <CardTitle>{billingFilter ? 'Families with Outstanding Balance' : 'All Families'}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
