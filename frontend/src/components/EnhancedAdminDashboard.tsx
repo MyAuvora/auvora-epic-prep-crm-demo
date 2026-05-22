@@ -34,6 +34,7 @@ import { StripeIntegration } from './StripeIntegration'
 import UserManagement from './UserManagement'
 import { ProCareImport } from './ProCareImport'
 import { PaymentProvidersSettings } from './PaymentProvidersSettings'
+import { BusinessExpenseTracker } from './BusinessExpenseTracker'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -132,7 +133,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -338,6 +339,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   { id: 'operations', label: 'Operations', subView: 'events' },
                   { id: 'documents', label: 'Documents & Forms', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
+                  ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Business Expenses', subView: 'overview' }] : []),
                 ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
@@ -1209,6 +1211,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 <div className="space-y-6">
                   <AdvancedAnalyticsDashboard />
                 </div>
+              )}
+
+              {view === 'expenses' && currentRole === 'owner' && (
+                <BusinessExpenseTracker selectedCampusId={selectedCampusId} />
               )}
 
               {view === 'settings' && (

@@ -367,6 +367,11 @@ def load_all_from_db() -> dict:
             _sufs_allocation_to_dict(r) for r in db.query(models.SUFSPaymentAllocation).all()
         ]
 
+        # Business expenses
+        data["business_expenses"] = [
+            _business_expense_to_dict(r) for r in db.query(models.BusinessExpense).all()
+        ]
+
         return data
 
     finally:
@@ -1352,6 +1357,46 @@ def save_time_off_request(pydantic_req):
         db.close()
 
 
+def save_business_expense(pydantic_exp):
+    """Persist a business expense to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            expense_id=pydantic_exp.expense_id,
+            campus_id=pydantic_exp.campus_id,
+            category=_enum_val(pydantic_exp.category),
+            vendor=pydantic_exp.vendor,
+            description=pydantic_exp.description,
+            amount=pydantic_exp.amount,
+            date=pydantic_exp.date,
+            due_date=pydantic_exp.due_date,
+            status=_enum_val(pydantic_exp.status),
+            recurrence=_enum_val(pydantic_exp.recurrence),
+            payment_method=pydantic_exp.payment_method,
+            receipt_note=pydantic_exp.receipt_note,
+            created_at=pydantic_exp.created_at,
+            updated_at=pydantic_exp.updated_at,
+        )
+        _upsert(db, models.BusinessExpense, "expense_id", pydantic_exp.expense_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_business_expense(expense_id: str):
+    """Delete a business expense from the database."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.BusinessExpense).filter(
+            models.BusinessExpense.expense_id == expense_id
+        ).first()
+        if row:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+
+
 def get_oauth_connection(organization_id: str, provider: str) -> Optional[Dict]:
     """Load an OAuth connection from the database for a given org and provider."""
     db = SessionLocal()
@@ -2167,6 +2212,25 @@ def _sufs_allocation_to_dict(r):
         "status": r.status or "", "discrepancy_amount": r.discrepancy_amount,
         "discrepancy_reason": r.discrepancy_reason,
         "created_date": r.created_date or date.today(),
+    }
+
+
+def _business_expense_to_dict(r):
+    return {
+        "expense_id": r.expense_id,
+        "campus_id": r.campus_id or "",
+        "category": r.category or "Other",
+        "vendor": r.vendor or "",
+        "description": r.description or "",
+        "amount": r.amount or 0.0,
+        "date": r.date or date.today(),
+        "due_date": r.due_date,
+        "status": r.status or "Paid",
+        "recurrence": r.recurrence or "none",
+        "payment_method": r.payment_method,
+        "receipt_note": r.receipt_note,
+        "created_at": r.created_at or "",
+        "updated_at": r.updated_at or "",
     }
 
 

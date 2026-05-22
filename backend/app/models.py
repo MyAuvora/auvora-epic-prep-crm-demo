@@ -1000,6 +1000,26 @@ class AuditLog(Base):
     ip_address = Column(String)
 
 
+class BusinessExpense(Base):
+    __tablename__ = "business_expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    expense_id = Column(String, unique=True, index=True)
+    campus_id = Column(String)
+    category = Column(String)
+    vendor = Column(String)
+    description = Column(String)
+    amount = Column(Float)
+    date = Column(Date, nullable=False)
+    due_date = Column(Date)
+    status = Column(String, default="Paid")
+    recurrence = Column(String, default="none")
+    payment_method = Column(String)
+    receipt_note = Column(String)
+    created_at = Column(String)
+    updated_at = Column(String)
+
+
 class AppMetadata(Base):
     __tablename__ = "app_metadata"
 
