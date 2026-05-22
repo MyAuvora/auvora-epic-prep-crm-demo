@@ -526,7 +526,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                         <DailyBibleVerse />
             
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="hover:shadow-lg transition-shadow">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-600"
+                onClick={() => { setView('students'); fetchStudents(); }}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Students</CardTitle>
                   <Users className="h-4 w-4 text-blue-600" />
@@ -536,10 +539,14 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <p className="text-xs text-gray-500">
                     {dashboardData.morning_count} Morning / {dashboardData.afternoon_count} Afternoon
                   </p>
+                  <p className="text-xs text-blue-600 mt-1 font-medium">Click to view all students →</p>
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-600"
+                onClick={() => { setView('families-finance'); setSubView('families'); fetchFamilies(); }}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Families</CardTitle>
                   <Users className="h-4 w-4 text-blue-600" />
@@ -547,6 +554,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboardData.total_families}</div>
                   <p className="text-xs text-gray-500">Active families</p>
+                  <p className="text-xs text-blue-600 mt-1 font-medium">Click to view all families →</p>
                 </CardContent>
               </Card>
 
@@ -567,7 +575,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-600"
+                onClick={() => { setView('students'); fetchStudents(); }}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
                   <Calendar className="h-4 w-4 text-blue-600" />
@@ -577,6 +588,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <p className="text-xs text-gray-500">
                     {dashboardData.attendance_today.absent} absent / {dashboardData.attendance_today.tardy} tardy
                   </p>
+                  <p className="text-xs text-blue-600 mt-1 font-medium">Click to view attendance →</p>
                 </CardContent>
               </Card>
             </div>
