@@ -162,7 +162,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                 className="h-10 sm:h-14 w-auto object-contain flex-shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-base sm:text-2xl font-bold text-white truncate">Prep Academy</h1>
+                <h1 className="text-base sm:text-2xl font-bold text-white truncate">EPIC Prep Academy</h1>
                 <p className="text-[10px] sm:text-xs italic text-gray-200 hidden sm:block">"Educating Lions not Sheep"</p>
               </div>
             </div>
