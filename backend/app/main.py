@@ -5371,6 +5371,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
+    global business_expenses_db
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5430,6 +5431,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     sufs_payment_allocations_db = []
     time_off_requests_db = []
     payment_methods_db = []
+    business_expenses_db = []
 
     # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()

@@ -1496,6 +1496,7 @@ def reset_all_data():
     try:
         # Delete in reverse dependency order
         db.query(models.OAuthConnection).delete()
+        db.query(models.BusinessExpense).delete()
         db.query(models.TimeOffRequest).delete()
         db.query(models.AuditLog).delete()
         db.query(models.SUFSPaymentAllocation).delete()
