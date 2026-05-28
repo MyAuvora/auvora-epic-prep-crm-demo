@@ -257,10 +257,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                 {showLocationDropdown && (
                   <>
                     <div 
-                      className="fixed inset-0 z-10" 
+                      className="fixed inset-0 z-40" 
                       onClick={() => setShowLocationDropdown(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20 py-2">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50 py-2">
                       <div className="px-4 py-2 border-b border-gray-200">
                         <p className="text-xs font-medium text-gray-500 uppercase">Select Location</p>
                       </div>
