@@ -550,7 +550,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
                   </div>
                 </div>
                 <div>
-                  <Label>Admin Notes (Optional)</Label>
+                  <Label>Notes (Optional)</Label>
                   <Textarea placeholder="Add any notes for the employee..." value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
                 </div>
               </div>
@@ -1282,7 +1282,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ campusId }) =>
               </div>
               {sendLoginInvite && (
                 <div className="mt-2 text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'owner' ? 'Owner (full access)' : getClerkRole(newStaff.role) === 'admin' ? 'Admin (location access)' : 'Coach (classroom access)'}
+                  <strong>Login role:</strong> {getClerkRole(newStaff.role) === 'owner' ? 'Owner (full access)' : getClerkRole(newStaff.role) === 'admin' ? 'Center Manager (location access)' : 'Coach (classroom access)'}
                 </div>
               )}
             </div>

@@ -212,6 +212,7 @@ class RiskFlag(str, Enum):
 class StaffRole(str, Enum):
     OWNER = "Owner"
     DIRECTOR = "Director"
+    CENTER_MANAGER = "Center Manager"
     COACH = "Coach"
 
 class BehaviorType(str, Enum):
@@ -298,7 +299,7 @@ class BillingCategory(str, Enum):
 
 class UserRole(str, Enum):
     OWNER = "Owner"
-    ADMIN = "Admin"
+    ADMIN = "Center Manager"
     COACH = "Coach"
     PARENT = "Parent"
 
@@ -1144,7 +1145,7 @@ class Announcement(BaseModel):
     published_date: Optional[date]
     expires_date: Optional[date]
     is_pinned: bool
-    target_roles: List[str]  # ["Parent", "Coach", "Admin", "Owner"]
+    target_roles: List[str]  # ["Parent", "Coach", "Center Manager", "Owner"]
 
 class AnnouncementRead(BaseModel):
     read_id: str
@@ -1365,7 +1366,8 @@ def load_data_from_db():
     # Migrate old role values to new ones
     role_migration = {
         "Super Admin": "Owner",
-        "Campus Admin": "Admin",
+        "Campus Admin": "Center Manager",
+        "Admin": "Center Manager",
         "Teacher": "Coach",
     }
     for user_dict in data.get("users", []):

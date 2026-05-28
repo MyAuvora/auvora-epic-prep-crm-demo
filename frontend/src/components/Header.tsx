@@ -376,7 +376,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                                                 {userEmail}
                                               </p>
                                               <p className="text-xs text-blue-600 mt-1 capitalize">
-                                                {currentRole === 'owner' ? 'Owner' : currentRole === 'admin' ? 'Admin' : currentRole === 'coach' ? 'Coach' : 'Parent'} Account
+                                                {currentRole === 'owner' ? 'Owner' : currentRole === 'admin' ? 'Center Manager' : currentRole === 'coach' ? 'Coach' : 'Parent'} Account
                                               </p>
                                             </div>
 
@@ -446,7 +446,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                           style={currentRole === 'admin' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
                         >
                           <User className="w-5 h-5" />
-                          <span>Admin View</span>
+                          <span>Center Manager View</span>
                         </button>
                         <button
                           onClick={() => {

@@ -538,7 +538,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
         {view === 'dashboard' && dashboardData && !isLoading && (
           <div className="space-y-6">
                         <div className="flex justify-between items-center">
-                          <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
+                          <h2 className="text-3xl font-bold text-gray-900">{currentRole === 'owner' ? 'Owner' : 'Center Manager'} Dashboard</h2>
                         </div>
 
                         <DailyBibleVerse />
