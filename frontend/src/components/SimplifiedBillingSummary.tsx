@@ -191,12 +191,7 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
             <p className="text-sm text-gray-500 mt-2">
               Due on the 1st of each month
             </p>
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600">
-                This is your portion after the Step Up scholarship is applied.
-                The scholarship pays {formatCurrency(summary.scholarship_amount / 12)}/month directly to the school.
-              </p>
-            </div>
+
           </CardContent>
         </Card>
       </div>
