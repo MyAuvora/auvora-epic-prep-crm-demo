@@ -69,7 +69,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
         category: newAnnouncement.category,
         status: (role === 'owner' || role === 'admin') ? 'Published' : 'Pending Approval',
         created_by: userId,
-        created_by_role: role === 'owner' ? 'Owner' : role === 'admin' ? 'Director' : 'Coach',
+        created_by_role: role === 'owner' ? 'Owner' : role === 'admin' ? 'Center Manager' : 'Coach',
         approved_by: (role === 'owner' || role === 'admin') ? userId : null,
         approved_date: (role === 'owner' || role === 'admin') ? new Date().toISOString().split('T')[0] : null,
         published_date: (role === 'owner' || role === 'admin') ? new Date().toISOString().split('T')[0] : null,
@@ -95,7 +95,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
       fetchAnnouncements()
       
       if (role === 'coach') {
-        alert('Announcement submitted for admin approval!')
+        alert('Announcement submitted for Center Manager approval!')
       } else {
         alert('Announcement published successfully!')
       }
@@ -222,7 +222,7 @@ export function AnnouncementManagement({ role, userId, campusId }: AnnouncementM
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-sm text-yellow-800">
                     <Bell className="inline h-4 w-4 mr-1" />
-                    This announcement will require admin approval before being published.
+                    This announcement will require Center Manager approval before being published.
                   </p>
                 </div>
               )}

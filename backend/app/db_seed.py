@@ -61,7 +61,7 @@ def seed_database():
         staff_data = [
             {"first_name": "Sarah", "last_name": "Mitchell", "role": "Owner", "rooms": [], "campus_idx": 0},
             {"first_name": "Jennifer", "last_name": "Kilgore", "role": "Assistant", "rooms": ["Room 1"], "campus_idx": 0},
-            {"first_name": "Brittany", "last_name": "Kilcrease", "role": "Admin", "rooms": [], "campus_idx": 1},
+            {"first_name": "Brittany", "last_name": "Kilcrease", "role": "Center Manager", "rooms": [], "campus_idx": 1},
             {"first_name": "Pam", "last_name": "Riffle", "role": "Coach", "rooms": ["Room 2"], "campus_idx": 0},
             {"first_name": "Sami", "last_name": "Flores", "role": "Coach", "rooms": ["Room 3"], "campus_idx": 1},
             {"first_name": "Jewel", "last_name": "Brooks", "role": "Coach", "rooms": ["Room 1"], "campus_idx": 2},
@@ -79,7 +79,7 @@ def seed_database():
                 email=f"{staff_info['first_name'].lower()}.{staff_info['last_name'].lower()}@epicprepacademy.com",
                 phone=f"850-555-{1000+i}",
                 assigned_rooms=json.dumps(staff_info["rooms"]),
-                permissions="Admin" if staff_info["role"] in ["Owner", "Admin"] else "Coach",
+                permissions="Admin" if staff_info["role"] in ["Owner", "Center Manager"] else "Coach",
                 active=True,
                 hire_date=date(2024, 1, 1)
             )

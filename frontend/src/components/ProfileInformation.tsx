@@ -31,14 +31,14 @@ export function ProfileInformation({ isOpen, onClose, currentRole }: ProfileInfo
         }
       case 'admin':
         return {
-          firstName: 'Admin',
-          lastName: 'User',
-          email: 'admin@epicprep.com',
+          firstName: 'Center',
+          lastName: 'Manager',
+          email: 'manager@epicprep.com',
           phone: '(850) 555-0101',
           address: '123 School St, Pace, FL 32571',
           campus: 'Pace Campus',
-          role: 'Administrator',
-          department: 'Administration',
+          role: 'Center Manager',
+          department: 'Management',
           emergencyContact: 'N/A',
           emergencyPhone: 'N/A'
         }

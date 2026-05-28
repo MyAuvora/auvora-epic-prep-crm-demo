@@ -530,7 +530,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
 
                 {selectedIncident.admin_notes && (
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <p className="text-sm font-medium mb-2">Admin Notes</p>
+                    <p className="text-sm font-medium mb-2">Review Notes</p>
                     <p className="text-gray-700">{selectedIncident.admin_notes}</p>
                   </div>
                 )}
@@ -607,7 +607,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
 
                 {/* Admin Notes */}
                 <div>
-                  <Label htmlFor="admin_notes" className="text-sm font-medium">Admin Notes (optional)</Label>
+                  <Label htmlFor="admin_notes" className="text-sm font-medium">Review Notes (optional)</Label>
                   <Textarea
                     id="admin_notes"
                     value={adminNotes}

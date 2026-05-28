@@ -668,8 +668,8 @@ async def import_staff(
                 role = "Owner"
             elif any(t in role_lower for t in ["director", "administrator"]):
                 role = "Director"
-            elif any(t in role_lower for t in ["admin", "office", "secretary", "coordinator"]):
-                role = "Admin"
+            elif any(t in role_lower for t in ["admin", "office", "secretary", "coordinator", "manager"]):
+                role = "Center Manager"
             elif any(t in role_lower for t in ["teacher", "coach", "instructor", "aide", "assistant"]):
                 role = "Coach"
 

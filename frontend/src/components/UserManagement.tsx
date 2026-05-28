@@ -133,6 +133,16 @@ export default function UserManagement() {
     })
   }
 
+  const getRoleDisplayName = (role: string | null) => {
+    switch (role) {
+      case 'owner': return 'Owner'
+      case 'admin': return 'Center Manager'
+      case 'coach': return 'Coach'
+      case 'parent': return 'Parent'
+      default: return role || 'Parent'
+    }
+  }
+
   const getRoleBadgeColor = (role: string | null) => {
     switch (role) {
       case 'owner':
@@ -249,7 +259,7 @@ export default function UserManagement() {
                           className="text-sm border border-gray-300 rounded px-2 py-1"
                         >
                           <option value="owner">Owner</option>
-                          <option value="admin">Admin</option>
+                          <option value="admin">Center Manager</option>
                           <option value="coach">Coach</option>
                           <option value="parent">Parent</option>
                         </select>
@@ -259,7 +269,7 @@ export default function UserManagement() {
                           onClick={() => setEditingRole(user.id)}
                           title="Click to change role"
                         >
-                          {user.role || 'parent'}
+                          {getRoleDisplayName(user.role)}
                         </span>
                       )}
                     </td>
@@ -343,7 +353,7 @@ export default function UserManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   >
                     <option value="owner">Owner</option>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Center Manager</option>
                     <option value="coach">Coach</option>
                     <option value="parent">Parent</option>
                   </select>

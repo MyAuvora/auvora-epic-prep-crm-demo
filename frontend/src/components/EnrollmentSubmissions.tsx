@@ -97,7 +97,7 @@ export const updateEnrollmentStatus = (
           status, 
           adminNotes, 
           reviewedAt: new Date().toISOString(),
-          reviewedBy: 'Admin'
+          reviewedBy: 'Center Manager'
         } 
       : sub
   );
@@ -190,7 +190,7 @@ export function ParentEnrollmentSubmissions({ parentEmail }: ParentEnrollmentSub
                   {submission.adminNotes && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-700">
-                        <strong>Admin Notes:</strong> {submission.adminNotes}
+                        <strong>Review Notes:</strong> {submission.adminNotes}
                       </p>
                     </div>
                   )}
@@ -617,11 +617,11 @@ export function AdminEnrollmentSubmissions() {
               {/* Admin Actions */}
               {selectedSubmission.status === 'pending' && (
                 <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold mb-3">Admin Actions</h3>
+                  <h3 className="text-lg font-semibold mb-3">Review Actions</h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Admin Notes (optional)
+                        Review Notes (optional)
                       </label>
                       <textarea
                         value={adminNotes}
@@ -655,7 +655,7 @@ export function AdminEnrollmentSubmissions() {
               {/* Show existing admin notes if already reviewed */}
               {selectedSubmission.status !== 'pending' && selectedSubmission.adminNotes && (
                 <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold mb-3">Admin Notes</h3>
+                  <h3 className="text-lg font-semibold mb-3">Review Notes</h3>
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p>{selectedSubmission.adminNotes}</p>
                     <p className="text-sm text-gray-500 mt-2">
