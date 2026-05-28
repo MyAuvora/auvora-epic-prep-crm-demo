@@ -441,28 +441,30 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               </div>
 
               {/* Desktop navigation */}
-              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 py-4 overflow-x-auto scrollbar-hide">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item)}
-                    className={`px-2 py-1.5 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative flex-shrink-0 ${
-                      view === item.id
-                        ? 'text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-                  >
-                    {item.label}
-                    {item.badge != null && item.badge > 0 && (
-                      <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
-                        {item.badge > 9 ? '9+' : item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-                {/* Settings gear icon dropdown */}
-                <div className="relative ml-auto" ref={settingsDropdownRef}>
+              <div className="hidden md:flex items-center py-4 gap-1">
+                <nav className="flex items-center space-x-1 lg:space-x-2 overflow-x-auto scrollbar-hide flex-1 min-w-0">
+                  {navItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item)}
+                      className={`px-2 py-1.5 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative flex-shrink-0 ${
+                        view === item.id
+                          ? 'text-white'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={view === item.id ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                    >
+                      {item.label}
+                      {item.badge != null && item.badge > 0 && (
+                        <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}>
+                          {item.badge > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </nav>
+                {/* Settings gear icon dropdown - outside nav overflow */}
+                <div className="relative flex-shrink-0" ref={settingsDropdownRef}>
                   <button
                     onClick={() => setSettingsMenuOpen(!settingsMenuOpen)}
                     className={`p-2 rounded-md ${
@@ -502,7 +504,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                     </div>
                   )}
                 </div>
-              </nav>
+              </div>
             </div>
           </div>
 
