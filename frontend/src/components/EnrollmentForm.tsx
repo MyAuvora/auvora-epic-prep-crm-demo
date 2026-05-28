@@ -192,9 +192,9 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.gradeLevel);
+        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.allergies && s.medication && s.addressLine && s.city && s.state && s.zipcode && s.academicInfo && s.stepUpApplied && s.gradeLevel && s.campusType && s.sessionPreference);
       case 2:
-        return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
+        return parents.every(p => p.firstName && p.lastName && p.email && p.phone && p.workPhone && p.employer);
       case 3:
         return true;
       case 4:
@@ -630,7 +630,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Work Phone
+                          Work Phone <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -642,7 +642,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Employer
+                          Employer <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -905,8 +905,11 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
             </div>
           )}
 
+          {/* Required Fields Note */}
+          <p className="text-center text-sm text-red-500 mt-6"><span className="text-red-500">*</span> Required</p>
+
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
+          <div className="flex justify-between mt-4 pt-6 border-t">
             <div>
               {currentStep > 1 && (
                 <Button

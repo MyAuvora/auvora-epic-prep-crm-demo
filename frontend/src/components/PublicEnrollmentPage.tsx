@@ -195,9 +195,9 @@ export function PublicEnrollmentPage() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.gradeLevel && s.campusType && s.sessionPreference);
+        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.allergies && s.medication && s.addressLine && s.city && s.state && s.zipcode && s.academicInfo && s.stepUpApplied && s.gradeLevel && s.campusType && s.sessionPreference);
       case 2:
-        return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
+        return parents.every(p => p.firstName && p.lastName && p.email && p.phone && p.workPhone && p.employer);
       case 3:
         return true;
       case 4:
@@ -356,7 +356,7 @@ export function PublicEnrollmentPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Allergies
+                          Allergies <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           value={student.allergies}
@@ -369,7 +369,7 @@ export function PublicEnrollmentPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Medication
+                          Medication <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           value={student.medication}
@@ -382,7 +382,7 @@ export function PublicEnrollmentPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Address Line
+                          Address Line <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -395,7 +395,7 @@ export function PublicEnrollmentPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             value={student.city}
@@ -405,7 +405,7 @@ export function PublicEnrollmentPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">State <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             value={student.state}
@@ -415,7 +415,7 @@ export function PublicEnrollmentPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Zipcode</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Zipcode <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             value={student.zipcode}
@@ -441,7 +441,7 @@ export function PublicEnrollmentPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Academic Information
+                          Academic Information <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           value={student.academicInfo}
@@ -454,7 +454,7 @@ export function PublicEnrollmentPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Step-Up for Students Applied and Approved?
+                          Step-Up for Students Applied and Approved? <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={student.stepUpApplied}
@@ -666,7 +666,7 @@ export function PublicEnrollmentPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Work Phone</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Work Phone <span className="text-red-500">*</span></label>
                           <input
                             type="tel"
                             value={parent.workPhone}
@@ -676,7 +676,7 @@ export function PublicEnrollmentPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             value={parent.employer}
@@ -936,8 +936,11 @@ export function PublicEnrollmentPage() {
               </div>
             )}
 
+            {/* Required Fields Note */}
+            <p className="text-center text-sm text-red-500 mt-6"><span className="text-red-500">*</span> Required</p>
+
             {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8 pt-6 border-t">
+            <div className="flex justify-between mt-4 pt-6 border-t">
               <div>
                 {currentStep > 0 && (
                   <Button
