@@ -31,6 +31,7 @@ interface StudentInfo {
   academicInfo: string;
   stepUpApplied: string;
   gradeLevel: string;
+  campusType: string;
   sessionPreference: string;
 }
 
@@ -87,6 +88,7 @@ const emptyStudent: StudentInfo = {
   academicInfo: '',
   stepUpApplied: '',
   gradeLevel: '',
+  campusType: '',
   sessionPreference: ''
 };
 
@@ -429,45 +431,59 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                       </select>
                     </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grade Level <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={student.gradeLevel}
+                        onChange={(e) => updateStudent(student.id, 'gradeLevel', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select grade level</option>
+                        <option value="K">Kindergarten</option>
+                        <option value="1">1st Grade</option>
+                        <option value="2">2nd Grade</option>
+                        <option value="3">3rd Grade</option>
+                        <option value="4">4th Grade</option>
+                        <option value="5">5th Grade</option>
+                        <option value="6">6th Grade</option>
+                        <option value="7">7th Grade</option>
+                        <option value="8">8th Grade</option>
+                        <option value="9">9th Grade</option>
+                        <option value="10">10th Grade</option>
+                        <option value="11">11th Grade</option>
+                        <option value="12">12th Grade</option>
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Grade Level <span className="text-red-500">*</span>
+                          Campus <span className="text-red-500">*</span>
                         </label>
                         <select
-                          value={student.gradeLevel}
-                          onChange={(e) => updateStudent(student.id, 'gradeLevel', e.target.value)}
+                          value={student.campusType}
+                          onChange={(e) => updateStudent(student.id, 'campusType', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="">Select grade level</option>
-                          <option value="K">Kindergarten</option>
-                          <option value="1">1st Grade</option>
-                          <option value="2">2nd Grade</option>
-                          <option value="3">3rd Grade</option>
-                          <option value="4">4th Grade</option>
-                          <option value="5">5th Grade</option>
-                          <option value="6">6th Grade</option>
-                          <option value="7">7th Grade</option>
-                          <option value="8">8th Grade</option>
-                          <option value="9">9th Grade</option>
-                          <option value="10">10th Grade</option>
-                          <option value="11">11th Grade</option>
-                          <option value="12">12th Grade</option>
+                          <option value="">Select campus</option>
+                          <option value="classroom">Classroom</option>
+                          <option value="online_only">Online Only</option>
                         </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Which Session Do You Prefer? <span className="text-red-500">*</span>
+                          Session <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={student.sessionPreference}
                           onChange={(e) => updateStudent(student.id, 'sessionPreference', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="">Select session preference</option>
-                          <option value="morning">Morning Session</option>
-                          <option value="afternoon">Afternoon Session</option>
-                          <option value="no_preference">No Preference</option>
+                          <option value="">Select session</option>
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
                         </select>
                       </div>
                     </div>
