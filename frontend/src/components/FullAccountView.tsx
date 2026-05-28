@@ -21,8 +21,15 @@ interface PaymentSchedule {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+interface Campus {
+  campus_id: string;
+  name: string;
+  location: string;
+}
+
 interface Student {
   student_id: string;
+  campus_id: string;
   first_name: string;
   last_name: string;
   grade: string;
@@ -152,6 +159,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [scholarships, setScholarships] = useState<SUFSScholarship[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
   const [editingScholarshipId, setEditingScholarshipId] = useState<string | null>(null);
   const [editAwardAmount, setEditAwardAmount] = useState<string>('');
   
@@ -187,6 +195,17 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Fetch campuses for name lookup
+        try {
+          const campusRes = await fetch(`${API_URL}/api/campuses`);
+          if (campusRes.ok) {
+            const campusData = await campusRes.json();
+            setCampuses(campusData);
+          }
+        } catch (e) {
+          console.log('Campuses not available');
+        }
+
         if (type === 'family') {
           // Fetch family data
           const familyRes = await fetch(`${API_URL}/api/families/${id}`);
@@ -309,6 +328,11 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
       case 'Red': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
     }
+  };
+
+  const getCampusName = (campusId: string) => {
+    const campus = campuses.find(c => c.campus_id === campusId);
+    return campus ? campus.name : campusId;
   };
 
   const getRiskFlagColor = (flag: string) => {
@@ -723,7 +747,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-semibold">{student.first_name} {student.last_name}</p>
-                              <p className="text-sm text-gray-500">Grade {student.grade} - {student.session}</p>
+                              <p className="text-sm text-gray-500">{getCampusName(student.campus_id)} • Grade {student.grade} • {student.session} • {student.room}</p>
                             </div>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskFlagColor(student.overall_risk_flag)}`}>
                               {student.overall_risk_flag}
@@ -856,7 +880,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                               </div>
                               <div>
                                 <h4 className="font-semibold text-gray-900 hover:text-blue-600">{student.first_name} {student.last_name}</h4>
-                                <p className="text-xs text-gray-500">Grade {student.grade} • {student.session || 'Full Day'}</p>
+                                <p className="text-xs text-gray-500">{getCampusName(student.campus_id)} • Grade {student.grade} • {student.session || 'Full Day'} • {student.room}</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -1661,7 +1685,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</h1>
-                  <p className="text-blue-200">Grade {selectedStudent.grade} - {selectedStudent.session} - Room {selectedStudent.room}</p>
+                  <p className="text-blue-200">{getCampusName(selectedStudent.campus_id)} • Grade {selectedStudent.grade} • {selectedStudent.session} • {selectedStudent.room}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
