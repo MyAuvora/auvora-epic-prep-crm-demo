@@ -751,7 +751,7 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                 )}
 
         {view === 'store' && (
-          <StoreComponent role="parent" userId={parentId} />
+          <StoreComponent role="parent" userId={parentId} familyId={parentData?.family?.family_id} parentId={parentData?.parent?.parent_id || parentId} />
         )}
 
         {view === 'photos' && (

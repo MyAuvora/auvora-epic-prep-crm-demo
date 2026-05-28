@@ -120,39 +120,40 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
   };
 
   const handleCheckout = async () => {
-    if (!familyId || !parentId) return;
+    if (familyId && parentId) {
+      try {
+        const orderItems = cart.map(item => ({
+          product_id: item.product.product_id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price
+        }));
 
-    try {
-      const orderItems = cart.map(item => ({
-        product_id: item.product.product_id,
-        product_name: item.product.name,
-        quantity: item.quantity,
-        price: item.product.price
-      }));
-
-      await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: `order_${Date.now()}`,
-          family_id: familyId,
-          parent_id: parentId,
-          items: orderItems,
-          total_amount: getCartTotal(),
-          status: 'Pending',
-          order_date: new Date().toISOString(),
-          payment_date: null
-        })
-      });
-
-      setCart([]);
-      setOrderPlaced(true);
-      setCardForm({ number: '', name: '', expiry: '', cvv: '' });
-      setPaymentMethod('card_on_file');
-      fetchOrders();
-    } catch (error) {
-      console.error('Error creating order:', error);
+        await fetch(`${API_URL}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: `order_${Date.now()}`,
+            family_id: familyId,
+            parent_id: parentId,
+            items: orderItems,
+            total_amount: getCartTotal(),
+            status: 'Pending',
+            order_date: new Date().toISOString(),
+            payment_date: null
+          })
+        });
+        fetchOrders();
+      } catch (error) {
+        console.error('Error creating order:', error);
+        return;
+      }
     }
+
+    setCart([]);
+    setOrderPlaced(true);
+    setCardForm({ number: '', name: '', expiry: '', cvv: '' });
+    setPaymentMethod('card_on_file');
   };
 
   const handlePayment = async (orderId: string) => {
