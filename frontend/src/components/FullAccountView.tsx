@@ -134,11 +134,13 @@ interface FullAccountViewProps {
   type: 'family' | 'student';
   id: string;
   onBack: () => void;
-  onStudentClick?: (studentId: string) => void;
+  onStudentClick?: (studentId: string, context?: { familyName?: string }) => void;
   onFamilyClick?: (familyId: string) => void;
+  backLabel?: string;
+  onHome?: () => void;
 }
 
-export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick }: FullAccountViewProps) {
+export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick, backLabel, onHome }: FullAccountViewProps) {
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState<Family | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -562,7 +564,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <nav className="flex items-center space-x-2 text-sm">
               <button
-                onClick={onBack}
+                onClick={onHome || onBack}
                 className="flex items-center text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <Home className="h-4 w-4 mr-1" />
@@ -715,7 +717,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                       <Card 
                         key={student.student_id} 
                         className="cursor-pointer hover:shadow-lg transition-shadow hover:border-blue-500"
-                        onClick={() => onStudentClick?.(student.student_id)}
+                        onClick={() => onStudentClick?.(student.student_id, { familyName: family?.family_name })}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
@@ -758,7 +760,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                           <tr 
                             key={student.student_id} 
                             className="hover:bg-blue-50 cursor-pointer transition-colors"
-                            onClick={() => onStudentClick?.(student.student_id)}
+                            onClick={() => onStudentClick?.(student.student_id, { familyName: family?.family_name })}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</div>
@@ -1614,7 +1616,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
               <nav className="flex items-center space-x-2 text-sm">
                 <button
-                  onClick={onBack}
+                  onClick={onHome || onBack}
                   className="flex items-center text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <Home className="h-4 w-4 mr-1" />
@@ -1625,7 +1627,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   onClick={onBack}
                   className="text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  Students
+                  {backLabel || 'Students'}
                 </button>
                 <ChevronRight className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-900 font-medium">{selectedStudent.first_name} {selectedStudent.last_name}</span>
@@ -1645,7 +1647,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   className="text-white hover:bg-red-700"
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
-                  Back
+                  {backLabel ? `Back to ${backLabel}` : 'Back'}
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</h1>
