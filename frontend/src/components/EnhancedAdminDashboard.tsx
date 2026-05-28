@@ -35,6 +35,7 @@ import UserManagement from './UserManagement'
 import { ProCareImport } from './ProCareImport'
 import { PaymentProvidersSettings } from './PaymentProvidersSettings'
 import { BusinessExpenseTracker } from './BusinessExpenseTracker'
+import { CurriculumBuilder } from './CurriculumBuilder'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -133,7 +134,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -339,6 +340,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   { id: 'operations', label: 'Operations', subView: 'events' },
                   { id: 'documents', label: 'Documents & Forms', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
+                  ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum Builder', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Business Expenses', subView: 'overview' }] : []),
                 ]
 
@@ -1211,6 +1213,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 <div className="space-y-6">
                   <AdvancedAnalyticsDashboard />
                 </div>
+              )}
+
+              {view === 'curriculum' && (currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach') && (
+                <CurriculumBuilder selectedCampusId={selectedCampusId} />
               )}
 
               {view === 'expenses' && currentRole === 'owner' && (
