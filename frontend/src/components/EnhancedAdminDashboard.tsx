@@ -334,7 +334,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
             }
           }}
           onStudentClick={(studentId, context) => {
-            const label = context?.familyName ? `${context.familyName} Family` : undefined
+            const label = context?.familyName || undefined
             setPreviousAccountView({ ...accountView, label })
             setAccountView({ type: 'student', id: studentId })
           }}
