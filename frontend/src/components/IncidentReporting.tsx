@@ -148,15 +148,17 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
     }
   };
 
-  const updateIncidentOnServer = async (incident: Incident) => {
+  const updateIncidentOnServer = async (incident: Incident): Promise<boolean> => {
     try {
-      await fetch(`${API_URL}/api/incidents/${incident.incident_id}`, {
+      const response = await fetch(`${API_URL}/api/incidents/${incident.incident_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(incident)
       });
+      return response.ok;
     } catch (error) {
       console.error('Error updating incident:', error);
+      return false;
     }
   };
 
@@ -175,7 +177,11 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       parent_notified: sendToParent
     };
     
-    await updateIncidentOnServer(updatedIncident);
+    const success = await updateIncidentOnServer(updatedIncident);
+    if (!success) {
+      alert('Failed to save review. Please try again.');
+      return;
+    }
     
     setIncidents(prev => prev.map(inc => 
       inc.incident_id === selectedIncident.incident_id ? updatedIncident : inc
@@ -202,7 +208,11 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       parent_notified: true
     };
     
-    await updateIncidentOnServer(updatedIncident);
+    const success = await updateIncidentOnServer(updatedIncident);
+    if (!success) {
+      alert('Failed to send to parent. Please try again.');
+      return;
+    }
     
     setIncidents(prev => prev.map(inc => 
       inc.incident_id === incident.incident_id ? updatedIncident : inc
@@ -396,7 +406,10 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = ({ role, stud
       )}
 
       {/* All Other Incidents */}
-      {otherIncidents.length > 0 && (
+      {(role === 'owner' || role === 'admin' 
+        ? reviewedIncidents.filter(i => i.severity !== 'High').length > 0
+        : otherIncidents.length > 0
+      ) && (
         <div>
           <h3 className="text-xl font-semibold mb-4">
             {role === 'parent' ? 'Incidents' : 'All Incidents'}
