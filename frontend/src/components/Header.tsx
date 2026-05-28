@@ -52,6 +52,14 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
   const userEmail = user?.primaryEmailAddress?.emailAddress || ''
 
   useEffect(() => {
+    if (currentRole !== 'owner') {
+      setSelectedLocation('All Locations')
+      setShowLocationDropdown(false)
+      if (onLocationChange) onLocationChange(null)
+    }
+  }, [currentRole])
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchResults(false)
