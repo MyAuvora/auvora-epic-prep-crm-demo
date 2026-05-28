@@ -250,8 +250,8 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                             </div>
                           )}
 
-              {/* Location Dropdown - Owner only; other roles see their assigned location */}
-              {currentRole === 'owner' ? (
+              {/* Location Dropdown - Owner only */}
+              {currentRole === 'owner' && (
               <div className="relative">
                 <button
                   onClick={() => setShowLocationDropdown(!showLocationDropdown)}
@@ -356,11 +356,6 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                     </div>
                   </>
                 )}
-              </div>
-              ) : (
-              <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="font-medium truncate max-w-[60px] sm:max-w-none">{selectedLocation}</span>
               </div>
               )}
               
