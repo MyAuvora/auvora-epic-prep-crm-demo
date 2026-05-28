@@ -847,12 +847,15 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                       return (
                         <div key={student.student_id} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => onStudentClick?.(student.student_id, { familyName: family?.family_name })}
+                            >
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
                                 {student.first_name[0]}{student.last_name[0]}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900">{student.first_name} {student.last_name}</h4>
+                                <h4 className="font-semibold text-gray-900 hover:text-blue-600">{student.first_name} {student.last_name}</h4>
                                 <p className="text-xs text-gray-500">Grade {student.grade} • {student.session || 'Full Day'}</p>
                               </div>
                             </div>
@@ -1396,7 +1399,14 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                             return (
                               <tr key={scholarship.scholarship_id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {student ? `${student.first_name} ${student.last_name}` : 'Unknown'}
+                                  {student ? (
+                                    <button
+                                      className="hover:text-blue-600 transition-colors"
+                                      onClick={() => onStudentClick?.(student.student_id, { familyName: family?.family_name })}
+                                    >
+                                      {student.first_name} {student.last_name}
+                                    </button>
+                                  ) : 'Unknown'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{scholarship.scholarship_type}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ANNUAL_TUITION.toLocaleString()}</td>
