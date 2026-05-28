@@ -338,10 +338,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   { id: 'academics', label: 'Academics', subView: 'standards' },
                   { id: 'communications', label: 'Communications', subView: 'messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined },
                   { id: 'operations', label: 'Operations', subView: 'events' },
-                  { id: 'documents', label: 'Documents & Forms', subView: 'library' },
+                  { id: 'documents', label: 'Documents', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
-                  ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum Builder', subView: 'all' }] : []),
-                  ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Business Expenses', subView: 'overview' }] : []),
+                  ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
+                  ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
                 ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
@@ -440,12 +440,12 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               </div>
 
               {/* Desktop navigation */}
-              <nav className="hidden md:flex items-center space-x-2 lg:space-x-4 xl:space-x-6 py-4">
+              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 py-4 overflow-x-auto scrollbar-hide">
                 {navItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item)}
-                    className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative ${
+                    className={`px-2 py-1.5 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative flex-shrink-0 ${
                       view === item.id
                         ? 'text-white'
                         : 'text-gray-700 hover:bg-gray-100'
