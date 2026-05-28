@@ -38,7 +38,9 @@ export interface EnrollmentSubmission {
     iepInfo: string;
     academicInfo: string;
     stepUpApplied: string;
+    stepUpAmount: string;
     gradeLevel: string;
+    campusType: string;
     sessionPreference: string;
   }[];
   parents: {
@@ -240,7 +242,9 @@ export function ParentEnrollmentSubmissions({ parentEmail }: ParentEnrollmentSub
                         <div><strong>Date of Birth:</strong> {student.dateOfBirth}</div>
                         <div><strong>Grade Level:</strong> {student.gradeLevel}</div>
                         <div><strong>Session:</strong> {student.sessionPreference}</div>
+                        <div><strong>Campus:</strong> {student.campusType === 'online_only' ? 'Online Only' : student.campusType === 'classroom' ? 'Classroom' : student.campusType || 'N/A'}</div>
                         <div><strong>Step-Up Status:</strong> {student.stepUpApplied}</div>
+                        {student.stepUpAmount && <div><strong>Amount Approved:</strong> ${student.stepUpAmount}</div>}
                         <div className="col-span-2"><strong>Address:</strong> {student.addressLine}, {student.city}, {student.state} {student.zipcode}</div>
                         <div><strong>Allergies:</strong> {student.allergies || 'None'}</div>
                         <div><strong>Medication:</strong> {student.medication || 'None'}</div>
@@ -532,7 +536,9 @@ export function AdminEnrollmentSubmissions() {
                         <div><strong>Date of Birth:</strong> {student.dateOfBirth}</div>
                         <div><strong>Grade Level:</strong> {student.gradeLevel}</div>
                         <div><strong>Session:</strong> {student.sessionPreference}</div>
+                        <div><strong>Campus:</strong> {student.campusType === 'online_only' ? 'Online Only' : student.campusType === 'classroom' ? 'Classroom' : student.campusType || 'N/A'}</div>
                         <div><strong>Step-Up Status:</strong> {student.stepUpApplied}</div>
+                        {student.stepUpAmount && <div><strong>Amount Approved:</strong> ${student.stepUpAmount}</div>}
                         <div className="col-span-2"><strong>Address:</strong> {student.addressLine}, {student.city}, {student.state} {student.zipcode}</div>
                         <div><strong>Allergies:</strong> {student.allergies || 'None'}</div>
                         <div><strong>Medication:</strong> {student.medication || 'None'}</div>
