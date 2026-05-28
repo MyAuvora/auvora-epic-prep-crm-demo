@@ -22,6 +22,7 @@ import { InterventionManagement } from './InterventionManagement'
 import { AdvancedAnalyticsDashboard } from './AdvancedAnalyticsDashboard'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { StaffManagement } from './StaffManagement'
+import { TimesheetPayroll } from './TimesheetPayroll'
 import { SUFSScholarshipManagement } from './SUFSScholarshipManagement'
 import { SUFSPaymentQueue } from './SUFSPaymentQueue'
 import { FullAccountView } from './FullAccountView'
@@ -1167,11 +1168,12 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <h2 className="text-3xl font-bold text-gray-900">Operations</h2>
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="events">Events Calendar</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="events">Events</TabsTrigger>
                 <TabsTrigger value="incidents">Incidents</TabsTrigger>
-                <TabsTrigger value="health">Health Records</TabsTrigger>
-                <TabsTrigger value="staff">Staff Management</TabsTrigger>
+                <TabsTrigger value="health">Health</TabsTrigger>
+                <TabsTrigger value="staff">Staff</TabsTrigger>
+                <TabsTrigger value="timesheets">Timesheets</TabsTrigger>
               </TabsList>
               <TabsContent value="events" className="mt-6">
                 <EventsCalendar role="admin" />
@@ -1184,6 +1186,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               </TabsContent>
               <TabsContent value="staff" className="mt-6">
                 <StaffManagement campusId={selectedCampusId || undefined} />
+              </TabsContent>
+              <TabsContent value="timesheets" className="mt-6">
+                <TimesheetPayroll />
               </TabsContent>
             </Tabs>
           </div>

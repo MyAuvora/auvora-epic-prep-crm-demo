@@ -26,7 +26,9 @@ export default function UserManagement() {
     email: '',
     first_name: '',
     last_name: '',
-    role: 'coach' as UserRole
+    role: 'coach' as UserRole,
+    pay_type: 'hourly' as 'hourly' | 'salary',
+    pay_rate: '',
   })
   const [inviting, setInviting] = useState(false)
   const [editingRole, setEditingRole] = useState<string | null>(null)
@@ -69,7 +71,7 @@ export default function UserManagement() {
         throw new Error(errorData.detail || 'Failed to invite user')
       }
       setShowInviteModal(false)
-      setInviteForm({ email: '', first_name: '', last_name: '', role: 'coach' })
+      setInviteForm({ email: '', first_name: '', last_name: '', role: 'coach', pay_type: 'hourly', pay_rate: '' })
       fetchUsers()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to invite user')
@@ -346,6 +348,37 @@ export default function UserManagement() {
                     <option value="parent">Parent</option>
                   </select>
                 </div>
+                {inviteForm.role === 'coach' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Pay Type
+                      </label>
+                      <select
+                        value={inviteForm.pay_type}
+                        onChange={(e) => setInviteForm({ ...inviteForm, pay_type: e.target.value as 'hourly' | 'salary' })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      >
+                        <option value="hourly">Hourly</option>
+                        <option value="salary">Salary</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {inviteForm.pay_type === 'hourly' ? 'Hourly Rate ($)' : 'Annual Salary ($)'}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={inviteForm.pay_rate}
+                        onChange={(e) => setInviteForm({ ...inviteForm, pay_rate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder={inviteForm.pay_type === 'hourly' ? '15.00' : '45000.00'}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
               <div className="mt-6 flex justify-end gap-3">
                 <button

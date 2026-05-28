@@ -135,7 +135,24 @@ class Staff(Base):
     permissions = Column(String)
     active = Column(Boolean, default=True)
     hire_date = Column(Date)
+    pay_type = Column(String, default="hourly")
+    pay_rate = Column(Float, default=0.0)
     campus = relationship("Campus", back_populates="staff")
+
+
+class TimeClock(Base):
+    __tablename__ = "time_clock"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entry_id = Column(String, unique=True, index=True)
+    staff_id = Column(String, index=True)
+    campus_id = Column(String)
+    clock_in = Column(String, nullable=False)
+    clock_out = Column(String, nullable=True)
+    hours_worked = Column(Float, default=0.0)
+    notes = Column(Text)
+    created_at = Column(String)
+    updated_at = Column(String)
 
 
 class AttendanceRecord(Base):
