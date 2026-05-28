@@ -17,6 +17,7 @@ import { TeacherGradebook } from './TeacherGradebook'
 import { AnnouncementManagement } from './AnnouncementManagement'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { FullAccountView } from './FullAccountView'
+import { CurriculumBuilder } from './CurriculumBuilder'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -79,7 +80,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   // Teachers use the student list in their rooms instead of global search navigation
   void _searchNavigation
   void _onClearSearch
-  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'timeoff'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'timeoff' | 'curriculum'>('rooms')
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
@@ -262,6 +263,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
     { id: 'incidents', label: 'Incidents' },
     { id: 'health', label: 'Health Records' },
     { id: 'timeoff', label: 'Time Off' },
+    { id: 'curriculum', label: 'Curriculum' },
   ]
 
   const handleTeacherNavClick = (itemId: string) => {
@@ -320,12 +322,12 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
           </div>
 
           {/* Desktop navigation */}
-          <nav className="hidden md:flex space-x-4 lg:space-x-8 py-4">
+          <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 py-4 overflow-x-auto scrollbar-hide">
             {teacherNavItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleTeacherNavClick(item.id)}
-                className={`px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap relative ${
+                className={`px-2 py-1.5 text-xs lg:text-sm font-medium rounded-md whitespace-nowrap relative flex-shrink-0 ${
                   view === item.id
                     ? 'text-white'
                     : 'text-gray-700 hover:bg-gray-100'
@@ -559,6 +561,10 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
 
         {view === 'health' && (
           <HealthRecords role="coach" userId={staffId} />
+        )}
+
+        {view === 'curriculum' && (
+          <CurriculumBuilder selectedCampusId={campusId || null} />
         )}
 
         {view === 'timeoff' && (
