@@ -120,8 +120,8 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
   };
 
   const handleCheckout = async () => {
-    try {
-      if (familyId && parentId) {
+    if (familyId && parentId) {
+      try {
         const orderItems = cart.map(item => ({
           product_id: item.product.product_id,
           product_name: item.product.name,
@@ -144,9 +144,10 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
           })
         });
         fetchOrders();
+      } catch (error) {
+        console.error('Error creating order:', error);
+        return;
       }
-    } catch (error) {
-      console.error('Error creating order:', error);
     }
 
     setCart([]);
