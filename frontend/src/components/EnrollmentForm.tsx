@@ -384,7 +384,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        IEP or 504 Plan Information
+                        IEP or 504 Plan Information <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="text-blue-600">
@@ -630,7 +630,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Work Phone
+                          Work Phone <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -642,7 +642,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Employer
+                          Employer <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -905,8 +905,11 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
             </div>
           )}
 
+          {/* Required Fields Note */}
+          <p className="text-center text-sm text-red-500 mt-6"><span className="text-red-500">*</span> Required</p>
+
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
+          <div className="flex justify-between mt-4 pt-6 border-t">
             <div>
               {currentStep > 1 && (
                 <Button
