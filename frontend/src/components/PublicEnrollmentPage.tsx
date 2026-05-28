@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,6 @@ import {
   Check,
   GraduationCap,
   CheckCircle,
-  MapPin,
 } from 'lucide-react';
 
 interface StudentInfo {
@@ -32,6 +31,7 @@ interface StudentInfo {
   academicInfo: string;
   stepUpApplied: string;
   gradeLevel: string;
+  campusType: string;
   sessionPreference: string;
 }
 
@@ -54,12 +54,6 @@ interface AuthorizedPickup {
   phone: string;
 }
 
-interface CampusOption {
-  campus_id: string;
-  name: string;
-  location: string;
-}
-
 const emptyStudent: StudentInfo = {
   id: '',
   firstName: '',
@@ -75,6 +69,7 @@ const emptyStudent: StudentInfo = {
   academicInfo: '',
   stepUpApplied: '',
   gradeLevel: '',
+  campusType: '',
   sessionPreference: ''
 };
 
@@ -98,9 +93,7 @@ const emptyPickup: AuthorizedPickup = {
 };
 
 export function PublicEnrollmentPage() {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = campus selection
-  const [campuses, setCampuses] = useState<CampusOption[]>([]);
-  const [selectedCampusId, setSelectedCampusId] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
   const [students, setStudents] = useState<StudentInfo[]>([{ ...emptyStudent, id: `student_${Date.now()}` }]);
   const [parents, setParents] = useState<ParentInfo[]>([{ ...emptyParent, id: `parent_${Date.now()}`, isPrimary: true }]);
   const [authorizedPickups, setAuthorizedPickups] = useState<AuthorizedPickup[]>([]);
@@ -118,25 +111,7 @@ export function PublicEnrollmentPage() {
 
   const API_URL = import.meta.env.VITE_API_URL || '';
 
-  // Load campuses on mount
-  useEffect(() => {
-    fetch(`${API_URL}/api/public/campuses`)
-      .then(r => r.json())
-      .then(data => {
-        setCampuses(data);
-        // Check URL for pre-selected campus
-        const hash = window.location.hash;
-        const campusMatch = hash.match(/campus=([^&]+)/);
-        if (campusMatch) {
-          setSelectedCampusId(campusMatch[1]);
-          setCurrentStep(1); // Skip campus selection
-        }
-      })
-      .catch(() => {});
-  }, [API_URL]);
-
   const steps = [
-    { number: 0, title: 'Campus', icon: MapPin },
     { number: 1, title: 'Student Info', icon: User },
     { number: 2, title: 'Parent Info', icon: Users },
     { number: 3, title: 'Authorized Pickup', icon: UserCheck },
@@ -194,7 +169,7 @@ export function PublicEnrollmentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          campus_id: selectedCampusId || 'campus_1',
+          campus_id: 'campus_1',
           students,
           parents,
           authorizedPickups,
@@ -217,10 +192,8 @@ export function PublicEnrollmentPage() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 0:
-        return !!selectedCampusId;
       case 1:
-        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.gradeLevel);
+        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.gradeLevel && s.campusType && s.sessionPreference);
       case 2:
         return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
       case 3:
@@ -317,45 +290,6 @@ export function PublicEnrollmentPage() {
                 </div>
               ))}
             </div>
-
-            {/* Step 0: Campus Selection */}
-            {currentStep === 0 && (
-              <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Campus</h2>
-                  <p className="text-gray-500">Select the EPIC Prep Academy location you would like to enroll at</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {campuses.map((campus) => (
-                    <Card
-                      key={campus.campus_id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedCampusId === campus.campus_id
-                          ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      }`}
-                      onClick={() => setSelectedCampusId(campus.campus_id)}
-                    >
-                      <CardContent className="p-6 text-center">
-                        <MapPin className={`w-8 h-8 mx-auto mb-3 ${
-                          selectedCampusId === campus.campus_id ? 'text-blue-600' : 'text-gray-400'
-                        }`} />
-                        <h3 className="font-semibold text-lg">{campus.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{campus.location}</p>
-                        {selectedCampusId === campus.campus_id && (
-                          <Badge className="mt-3 bg-blue-100 text-blue-800">Selected</Badge>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                {campuses.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Loading campuses...</p>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Step 1: Student Info */}
             {currentStep === 1 && (
@@ -534,45 +468,59 @@ export function PublicEnrollmentPage() {
                         </select>
                       </div>
 
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Grade Level <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={student.gradeLevel}
+                          onChange={(e) => updateStudent(student.id, 'gradeLevel', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select grade level</option>
+                          <option value="K">Kindergarten</option>
+                          <option value="1">1st Grade</option>
+                          <option value="2">2nd Grade</option>
+                          <option value="3">3rd Grade</option>
+                          <option value="4">4th Grade</option>
+                          <option value="5">5th Grade</option>
+                          <option value="6">6th Grade</option>
+                          <option value="7">7th Grade</option>
+                          <option value="8">8th Grade</option>
+                          <option value="9">9th Grade</option>
+                          <option value="10">10th Grade</option>
+                          <option value="11">11th Grade</option>
+                          <option value="12">12th Grade</option>
+                        </select>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Grade Level <span className="text-red-500">*</span>
+                            Campus <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={student.gradeLevel}
-                            onChange={(e) => updateStudent(student.id, 'gradeLevel', e.target.value)}
+                            value={student.campusType}
+                            onChange={(e) => updateStudent(student.id, 'campusType', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="">Select grade level</option>
-                            <option value="K">Kindergarten</option>
-                            <option value="1">1st Grade</option>
-                            <option value="2">2nd Grade</option>
-                            <option value="3">3rd Grade</option>
-                            <option value="4">4th Grade</option>
-                            <option value="5">5th Grade</option>
-                            <option value="6">6th Grade</option>
-                            <option value="7">7th Grade</option>
-                            <option value="8">8th Grade</option>
-                            <option value="9">9th Grade</option>
-                            <option value="10">10th Grade</option>
-                            <option value="11">11th Grade</option>
-                            <option value="12">12th Grade</option>
+                            <option value="">Select campus</option>
+                            <option value="classroom">Classroom</option>
+                            <option value="online_only">Online Only</option>
                           </select>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Which Session Do You Prefer?
+                            Session <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={student.sessionPreference}
                             onChange={(e) => updateStudent(student.id, 'sessionPreference', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="">Select session preference</option>
-                            <option value="morning">Morning Session</option>
-                            <option value="afternoon">Afternoon Session</option>
-                            <option value="no_preference">No Preference</option>
+                            <option value="">Select session</option>
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
                           </select>
                         </div>
                       </div>
