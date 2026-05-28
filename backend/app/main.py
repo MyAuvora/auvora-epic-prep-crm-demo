@@ -212,6 +212,7 @@ class RiskFlag(str, Enum):
 class StaffRole(str, Enum):
     OWNER = "Owner"
     DIRECTOR = "Director"
+    CENTER_MANAGER = "Center Manager"
     COACH = "Coach"
 
 class BehaviorType(str, Enum):
