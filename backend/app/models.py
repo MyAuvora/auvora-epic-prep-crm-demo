@@ -446,6 +446,9 @@ class Incident(Base):
     action_taken = Column(Text)
     parent_notified = Column(Boolean, default=False)
     followup_required = Column(Boolean, default=False)
+    status = Column(String, default="pending_review")
+    admin_notes = Column(Text, default="")
+    reviewed_by_staff_id = Column(String, default="")
     created_date = Column(DateTime, default=datetime.utcnow)
 
 

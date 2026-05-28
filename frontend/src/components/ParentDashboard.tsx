@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { VenmoCashAppPayment } from './VenmoCashAppPayment'
+import { IncidentReporting } from './IncidentReporting'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -375,6 +376,15 @@ export function ParentDashboard({ parentId }: ParentDashboardProps) {
                   </CardContent>
                 </Card>
               )}
+            </div>
+
+            {/* Incident Notifications */}
+            <div className="mt-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-orange-500" />
+                Incident Notifications
+              </h3>
+              <IncidentReporting role="parent" studentId={selectedChild.student_id} />
             </div>
           </div>
         )}
