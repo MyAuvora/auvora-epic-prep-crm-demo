@@ -192,9 +192,9 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.gradeLevel);
+        return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.allergies && s.medication && s.addressLine && s.city && s.state && s.zipcode && s.academicInfo && s.stepUpApplied && s.gradeLevel && s.campusType && s.sessionPreference);
       case 2:
-        return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
+        return parents.every(p => p.firstName && p.lastName && p.email && p.phone && p.workPhone && p.employer);
       case 3:
         return true;
       case 4:
@@ -384,7 +384,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        IEP or 504 Plan Information <span className="text-red-500">*</span>
+                        IEP or 504 Plan Information
                       </label>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="text-blue-600">
