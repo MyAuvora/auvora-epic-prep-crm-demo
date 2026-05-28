@@ -30,6 +30,7 @@ interface StudentInfo {
   iepInfo: string;
   academicInfo: string;
   stepUpApplied: string;
+  stepUpAmount: string;
   gradeLevel: string;
   campusType: string;
   sessionPreference: string;
@@ -87,6 +88,7 @@ const emptyStudent: StudentInfo = {
   iepInfo: '',
   academicInfo: '',
   stepUpApplied: '',
+  stepUpAmount: '',
   gradeLevel: '',
   campusType: '',
   sessionPreference: ''
@@ -430,6 +432,26 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                         <option value="no_not_interested">No - Not Interested</option>
                       </select>
                     </div>
+
+                    {student.stepUpApplied === 'yes_approved' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Amount Approved
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-gray-500">$</span>
+                          <input
+                            type="number"
+                            value={student.stepUpAmount}
+                            onChange={(e) => updateStudent(student.id, 'stepUpAmount', e.target.value)}
+                            className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter approved amount"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

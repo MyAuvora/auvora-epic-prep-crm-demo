@@ -5911,7 +5911,9 @@ class PublicEnrollmentStudent(BaseModel):
     iepInfo: str = ""
     academicInfo: str = ""
     stepUpApplied: str = ""
+    stepUpAmount: str = ""
     gradeLevel: str
+    campusType: str = ""
     sessionPreference: str = ""
 
 class PublicEnrollmentParent(BaseModel):
@@ -6013,7 +6015,7 @@ async def public_enroll(enrollment: PublicEnrollmentRequest):
         student_id = f"student_{int(time.time() * 1000)}_{i}"
 
         session_val = Session.MORNING
-        if s.sessionPreference and "afternoon" in s.sessionPreference.lower():
+        if s.sessionPreference and (s.sessionPreference.upper() == "PM" or "afternoon" in s.sessionPreference.lower()):
             session_val = Session.AFTERNOON
 
         funding = FundingSource.OUT_OF_POCKET
