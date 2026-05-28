@@ -786,19 +786,20 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             </TabsContent>
 
             <TabsContent value="billing" className="mt-6 space-y-6">
-              {/* Billing Summary */}
+              {/* Family Billing Summary */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm">Monthly Tuition</CardTitle>
+                    <CardTitle className="text-sm">Total Monthly Tuition</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-blue-600">${(family.monthly_tuition_amount || 0).toFixed(2)}</div>
+                    <p className="text-xs text-gray-500">{students.length} student{students.length !== 1 ? 's' : ''} enrolled</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm">Current Balance</CardTitle>
+                    <CardTitle className="text-sm">Family Balance</CardTitle>
                   </CardHeader>
                   <CardContent>
                                         <div className={`text-3xl font-bold ${(family.current_balance || 0) > 100 ? 'text-red-600' : 'text-green-600'}`}>
@@ -818,6 +819,128 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Per-Student Financial Breakdown */}
+              {students.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Finances by Student
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {students.map((student) => {
+                      const studentRecords = billingRecords.filter(b => b.student_id === student.student_id);
+                      const unassignedRecords = billingRecords.filter(b => !b.student_id);
+                      const allStudentRecords = student === students[0] 
+                        ? [...studentRecords, ...unassignedRecords]
+                        : studentRecords;
+                      const charges = allStudentRecords.filter(b => b.type === 'Charge').reduce((sum, b) => sum + (b.amount || 0), 0);
+                      const payments = allStudentRecords.filter(b => b.type === 'Payment').reduce((sum, b) => sum + Math.abs(b.amount || 0), 0);
+                      const balance = charges - payments;
+                      const studentScholarship = scholarships.find(s => s.student_id === student.student_id);
+                      const monthlyTuition = students.length > 0 ? (family.monthly_tuition_amount || 0) / students.length : 0;
+
+                      return (
+                        <div key={student.student_id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                                {student.first_name[0]}{student.last_name[0]}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{student.first_name} {student.last_name}</h4>
+                                <p className="text-xs text-gray-500">Grade {student.grade} • {student.session || 'Full Day'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-lg font-bold ${balance > 10 ? 'text-red-600' : 'text-green-600'}`}>
+                                ${balance.toFixed(2)}
+                              </div>
+                              <p className="text-xs text-gray-500">Balance</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div className="bg-blue-50 rounded-lg p-3">
+                              <p className="text-xs text-blue-600 font-medium">Monthly Tuition</p>
+                              <p className="text-lg font-bold text-blue-700">${monthlyTuition.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <p className="text-xs text-gray-600 font-medium">Total Charges</p>
+                              <p className="text-lg font-bold text-gray-700">${charges.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg p-3">
+                              <p className="text-xs text-green-600 font-medium">Total Paid</p>
+                              <p className="text-lg font-bold text-green-700">${payments.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-purple-50 rounded-lg p-3">
+                              <p className="text-xs text-purple-600 font-medium">Scholarship</p>
+                              <p className="text-lg font-bold text-purple-700">
+                                {studentScholarship ? `$${((studentScholarship.annual_award_amount || 0) / 12).toFixed(2)}/mo` : 'None'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {allStudentRecords.length > 0 && (
+                            <details className="group">
+                              <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                                View {allStudentRecords.length} transaction{allStudentRecords.length !== 1 ? 's' : ''}
+                              </summary>
+                              <div className="mt-3 overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-50 border-b">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {allStudentRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
+                                      <tr key={record.billing_record_id}>
+                                        <td className="px-3 py-2 text-gray-500">{new Date(record.date).toLocaleDateString()}</td>
+                                        <td className="px-3 py-2 text-gray-900">{record.description}</td>
+                                        <td className="px-3 py-2">
+                                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                            record.type === 'Payment' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {record.type}
+                                          </span>
+                                        </td>
+                                        <td className="px-3 py-2">
+                                          {record.source ? (
+                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                              record.source === 'Step-Up' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                                            }`}>
+                                              {record.source === 'Step-Up' ? 'SUFS' : 'Out of Pocket'}
+                                            </span>
+                                          ) : (
+                                            <span className="text-gray-400">-</span>
+                                          )}
+                                        </td>
+                                        <td className={`px-3 py-2 text-right font-medium ${
+                                          record.amount < 0 ? 'text-green-600' : 'text-gray-900'
+                                        }`}>
+                                          {record.amount < 0 ? '-' : ''}${Math.abs(record.amount || 0).toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Custom Invoice/Payment Schedule Section */}
               <Card>
