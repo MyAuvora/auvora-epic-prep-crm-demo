@@ -116,7 +116,7 @@ export function CurriculumBuilder({ selectedCampusId }: CurriculumBuilderProps) 
 
   useEffect(() => {
     fetchCurricula()
-  }, [])
+  }, [selectedCampusId])
 
   const fetchCurricula = async () => {
     try {
