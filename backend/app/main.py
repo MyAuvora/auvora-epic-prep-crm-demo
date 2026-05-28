@@ -522,6 +522,72 @@ class BusinessExpense(BaseModel):
     created_at: str = ""
     updated_at: str = ""
 
+class CurriculumStatus(str, Enum):
+    DRAFT = "Draft"
+    ACTIVE = "Active"
+    ARCHIVED = "Archived"
+
+class CurriculumSubject(str, Enum):
+    MATH = "Math"
+    ELA = "English Language Arts"
+    SCIENCE = "Science"
+    SOCIAL_STUDIES = "Social Studies"
+    BIBLE = "Bible"
+    READING = "Reading"
+    WRITING = "Writing"
+    PHONICS = "Phonics"
+    ART = "Art"
+    MUSIC = "Music"
+    PE = "Physical Education"
+    TECHNOLOGY = "Technology"
+    FOREIGN_LANGUAGE = "Foreign Language"
+    OTHER = "Other"
+
+class CurriculumGradeLevel(str, Enum):
+    PRE_K = "Pre-K"
+    KINDERGARTEN = "Kindergarten"
+    GRADE_1 = "1st Grade"
+    GRADE_2 = "2nd Grade"
+    GRADE_3 = "3rd Grade"
+    GRADE_4 = "4th Grade"
+    GRADE_5 = "5th Grade"
+    GRADE_6 = "6th Grade"
+    GRADE_7 = "7th Grade"
+    GRADE_8 = "8th Grade"
+    GRADE_9 = "9th Grade"
+    GRADE_10 = "10th Grade"
+    GRADE_11 = "11th Grade"
+    GRADE_12 = "12th Grade"
+    ALL = "All Grades"
+
+class CurriculumItem(BaseModel):
+    curriculum_id: str
+    campus_id: str
+    title: str
+    subject: CurriculumSubject
+    grade_level: CurriculumGradeLevel
+    description: str = ""
+    objectives: str = ""
+    materials: str = ""
+    pacing: str = ""
+    status: CurriculumStatus = CurriculumStatus.DRAFT
+    created_by: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+class CurriculumUnitItem(BaseModel):
+    unit_id: str
+    curriculum_id: str
+    title: str
+    description: str = ""
+    order_index: int = 0
+    duration_weeks: int = 1
+    objectives: str = ""
+    materials: str = ""
+    standards_alignment: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
 class Conference(BaseModel):
     conference_id: str
     student_id: str
@@ -1249,6 +1315,8 @@ sufs_claims_db: List[SUFSClaim] = []
 sufs_payments_db: List[SUFSPayment] = []
 sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
 business_expenses_db: List[BusinessExpense] = []
+curricula_db: List[CurriculumItem] = []
+curriculum_units_db: List[CurriculumUnitItem] = []
 
 def load_data_from_db():
     """Load all data from the SQLite database into in-memory lists for fast reads."""
@@ -1268,6 +1336,7 @@ def load_data_from_db():
     global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global business_expenses_db
+    global curricula_db, curriculum_units_db
 
     data = db_utils.load_all_from_db()
 
@@ -1338,6 +1407,8 @@ def load_data_from_db():
     sufs_payments_db = [SUFSPayment(**d) for d in data.get("sufs_payments", [])]
     sufs_payment_allocations_db = [SUFSPaymentAllocation(**d) for d in data.get("sufs_payment_allocations", [])]
     business_expenses_db = [BusinessExpense(**d) for d in data.get("business_expenses", [])]
+    curricula_db = [CurriculumItem(**d) for d in data.get("curricula", [])]
+    curriculum_units_db = [CurriculumUnitItem(**d) for d in data.get("curriculum_units", [])]
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
 
@@ -5372,6 +5443,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
     global business_expenses_db
+    global curricula_db, curriculum_units_db
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5432,6 +5504,8 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     time_off_requests_db = []
     payment_methods_db = []
     business_expenses_db = []
+    curricula_db = []
+    curriculum_units_db = []
 
     # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()
@@ -6835,4 +6909,180 @@ async def get_expense_summary_monthly(
         "year": target_year,
         "months": [{"month": k, "total": v} for k, v in sorted(monthly.items())],
         "annual_total": sum(monthly.values()),
+    }
+
+
+# ============== Curriculum Builder ==============
+
+@app.get("/api/curricula")
+async def get_curricula(
+    campus_id: Optional[str] = None,
+    subject: Optional[str] = None,
+    grade_level: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    result = list(curricula_db)
+    if campus_id:
+        result = [c for c in result if c.campus_id == campus_id]
+    if subject:
+        result = [c for c in result if c.subject.value == subject]
+    if grade_level:
+        result = [c for c in result if c.grade_level.value == grade_level]
+    if status:
+        result = [c for c in result if c.status.value == status]
+    return sorted(result, key=lambda c: c.updated_at or c.created_at, reverse=True)
+
+
+@app.get("/api/curricula/{curriculum_id}")
+async def get_curriculum(curriculum_id: str):
+    curriculum = next((c for c in curricula_db if c.curriculum_id == curriculum_id), None)
+    if not curriculum:
+        raise HTTPException(status_code=404, detail="Curriculum not found")
+    return curriculum
+
+
+@app.post("/api/curricula")
+async def create_curriculum(data: dict):
+    now = datetime.now().isoformat()
+    curriculum = CurriculumItem(
+        curriculum_id=f"cur_{uuid.uuid4().hex[:8]}",
+        campus_id=data.get("campus_id", "campus_pace"),
+        title=data.get("title", ""),
+        subject=CurriculumSubject(data.get("subject", "Other")),
+        grade_level=CurriculumGradeLevel(data.get("grade_level", "All Grades")),
+        description=data.get("description", ""),
+        objectives=data.get("objectives", ""),
+        materials=data.get("materials", ""),
+        pacing=data.get("pacing", ""),
+        status=CurriculumStatus(data.get("status", "Draft")),
+        created_by=data.get("created_by", ""),
+        created_at=now,
+        updated_at=now,
+    )
+    curricula_db.append(curriculum)
+    db_utils.save_curriculum(curriculum)
+    return curriculum
+
+
+@app.put("/api/curricula/{curriculum_id}")
+async def update_curriculum(curriculum_id: str, data: dict):
+    curriculum = next((c for c in curricula_db if c.curriculum_id == curriculum_id), None)
+    if not curriculum:
+        raise HTTPException(status_code=404, detail="Curriculum not found")
+
+    idx = curricula_db.index(curriculum)
+    updated = curriculum.model_copy(update={
+        "campus_id": data.get("campus_id", curriculum.campus_id),
+        "title": data.get("title", curriculum.title),
+        "subject": CurriculumSubject(data["subject"]) if data.get("subject") else curriculum.subject,
+        "grade_level": CurriculumGradeLevel(data["grade_level"]) if data.get("grade_level") else curriculum.grade_level,
+        "description": data.get("description", curriculum.description),
+        "objectives": data.get("objectives", curriculum.objectives),
+        "materials": data.get("materials", curriculum.materials),
+        "pacing": data.get("pacing", curriculum.pacing),
+        "status": CurriculumStatus(data["status"]) if data.get("status") else curriculum.status,
+        "updated_at": datetime.now().isoformat(),
+    })
+    curricula_db[idx] = updated
+    db_utils.save_curriculum(updated)
+    return updated
+
+
+@app.delete("/api/curricula/{curriculum_id}")
+async def delete_curriculum(curriculum_id: str):
+    curriculum = next((c for c in curricula_db if c.curriculum_id == curriculum_id), None)
+    if not curriculum:
+        raise HTTPException(status_code=404, detail="Curriculum not found")
+    curricula_db.remove(curriculum)
+    # Also remove associated units
+    global curriculum_units_db
+    units_to_remove = [u for u in curriculum_units_db if u.curriculum_id == curriculum_id]
+    for u in units_to_remove:
+        curriculum_units_db.remove(u)
+        db_utils.delete_curriculum_unit(u.unit_id)
+    db_utils.delete_curriculum(curriculum_id)
+    return {"success": True, "message": "Curriculum deleted"}
+
+
+@app.get("/api/curricula/{curriculum_id}/units")
+async def get_curriculum_units(curriculum_id: str):
+    units = [u for u in curriculum_units_db if u.curriculum_id == curriculum_id]
+    return sorted(units, key=lambda u: u.order_index)
+
+
+@app.post("/api/curricula/{curriculum_id}/units")
+async def create_curriculum_unit(curriculum_id: str, data: dict):
+    curriculum = next((c for c in curricula_db if c.curriculum_id == curriculum_id), None)
+    if not curriculum:
+        raise HTTPException(status_code=404, detail="Curriculum not found")
+    now = datetime.now().isoformat()
+    existing_units = [u for u in curriculum_units_db if u.curriculum_id == curriculum_id]
+    next_order = max((u.order_index for u in existing_units), default=-1) + 1
+    unit = CurriculumUnitItem(
+        unit_id=f"unit_{uuid.uuid4().hex[:8]}",
+        curriculum_id=curriculum_id,
+        title=data.get("title", ""),
+        description=data.get("description", ""),
+        order_index=data.get("order_index", next_order),
+        duration_weeks=data.get("duration_weeks", 1),
+        objectives=data.get("objectives", ""),
+        materials=data.get("materials", ""),
+        standards_alignment=data.get("standards_alignment", ""),
+        created_at=now,
+        updated_at=now,
+    )
+    curriculum_units_db.append(unit)
+    db_utils.save_curriculum_unit(unit)
+    return unit
+
+
+@app.put("/api/curricula/{curriculum_id}/units/{unit_id}")
+async def update_curriculum_unit(curriculum_id: str, unit_id: str, data: dict):
+    unit = next((u for u in curriculum_units_db if u.unit_id == unit_id and u.curriculum_id == curriculum_id), None)
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+
+    idx = curriculum_units_db.index(unit)
+    updated = unit.model_copy(update={
+        "title": data.get("title", unit.title),
+        "description": data.get("description", unit.description),
+        "order_index": data.get("order_index", unit.order_index),
+        "duration_weeks": data.get("duration_weeks", unit.duration_weeks),
+        "objectives": data.get("objectives", unit.objectives),
+        "materials": data.get("materials", unit.materials),
+        "standards_alignment": data.get("standards_alignment", unit.standards_alignment),
+        "updated_at": datetime.now().isoformat(),
+    })
+    curriculum_units_db[idx] = updated
+    db_utils.save_curriculum_unit(updated)
+    return updated
+
+
+@app.delete("/api/curricula/{curriculum_id}/units/{unit_id}")
+async def delete_curriculum_unit(curriculum_id: str, unit_id: str):
+    unit = next((u for u in curriculum_units_db if u.unit_id == unit_id and u.curriculum_id == curriculum_id), None)
+    if not unit:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    curriculum_units_db.remove(unit)
+    db_utils.delete_curriculum_unit(unit_id)
+    return {"success": True, "message": "Unit deleted"}
+
+
+@app.get("/api/curricula/summary/overview")
+async def get_curricula_summary(campus_id: Optional[str] = None):
+    result = list(curricula_db)
+    if campus_id:
+        result = [c for c in result if c.campus_id == campus_id]
+    by_status: Dict[str, int] = {}
+    by_subject: Dict[str, int] = {}
+    for c in result:
+        s = c.status.value
+        by_status[s] = by_status.get(s, 0) + 1
+        subj = c.subject.value
+        by_subject[subj] = by_subject.get(subj, 0) + 1
+    return {
+        "total": len(result),
+        "by_status": by_status,
+        "by_subject": by_subject,
+        "total_units": len([u for u in curriculum_units_db if any(c.curriculum_id == u.curriculum_id for c in result)]),
     }

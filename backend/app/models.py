@@ -1020,6 +1020,42 @@ class BusinessExpense(Base):
     updated_at = Column(String)
 
 
+class Curriculum(Base):
+    __tablename__ = "curricula"
+
+    id = Column(Integer, primary_key=True, index=True)
+    curriculum_id = Column(String, unique=True, index=True)
+    campus_id = Column(String)
+    title = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    grade_level = Column(String, nullable=False)
+    description = Column(String, default="")
+    objectives = Column(String, default="")
+    materials = Column(String, default="")
+    pacing = Column(String, default="")
+    status = Column(String, default="Draft")
+    created_by = Column(String, default="")
+    created_at = Column(String)
+    updated_at = Column(String)
+
+
+class CurriculumUnit(Base):
+    __tablename__ = "curriculum_units"
+
+    id = Column(Integer, primary_key=True, index=True)
+    unit_id = Column(String, unique=True, index=True)
+    curriculum_id = Column(String, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, default="")
+    order_index = Column(Integer, default=0)
+    duration_weeks = Column(Integer, default=1)
+    objectives = Column(String, default="")
+    materials = Column(String, default="")
+    standards_alignment = Column(String, default="")
+    created_at = Column(String)
+    updated_at = Column(String)
+
+
 class AppMetadata(Base):
     __tablename__ = "app_metadata"
 

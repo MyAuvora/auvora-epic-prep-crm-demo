@@ -372,6 +372,16 @@ def load_all_from_db() -> dict:
             _business_expense_to_dict(r) for r in db.query(models.BusinessExpense).all()
         ]
 
+        # Curricula
+        data["curricula"] = [
+            _curriculum_to_dict(r) for r in db.query(models.Curriculum).all()
+        ]
+
+        # Curriculum units
+        data["curriculum_units"] = [
+            _curriculum_unit_to_dict(r) for r in db.query(models.CurriculumUnit).all()
+        ]
+
         return data
 
     finally:
@@ -1397,6 +1407,82 @@ def delete_business_expense(expense_id: str):
         db.close()
 
 
+def save_curriculum(pydantic_cur):
+    """Persist a curriculum to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            curriculum_id=pydantic_cur.curriculum_id,
+            campus_id=pydantic_cur.campus_id,
+            title=pydantic_cur.title,
+            subject=_enum_val(pydantic_cur.subject),
+            grade_level=_enum_val(pydantic_cur.grade_level),
+            description=pydantic_cur.description,
+            objectives=pydantic_cur.objectives,
+            materials=pydantic_cur.materials,
+            pacing=pydantic_cur.pacing,
+            status=_enum_val(pydantic_cur.status),
+            created_by=pydantic_cur.created_by,
+            created_at=pydantic_cur.created_at,
+            updated_at=pydantic_cur.updated_at,
+        )
+        _upsert(db, models.Curriculum, "curriculum_id", pydantic_cur.curriculum_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_curriculum(curriculum_id: str):
+    """Delete a curriculum from the database."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.Curriculum).filter(
+            models.Curriculum.curriculum_id == curriculum_id
+        ).first()
+        if row:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+
+
+def save_curriculum_unit(pydantic_unit):
+    """Persist a curriculum unit to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            unit_id=pydantic_unit.unit_id,
+            curriculum_id=pydantic_unit.curriculum_id,
+            title=pydantic_unit.title,
+            description=pydantic_unit.description,
+            order_index=pydantic_unit.order_index,
+            duration_weeks=pydantic_unit.duration_weeks,
+            objectives=pydantic_unit.objectives,
+            materials=pydantic_unit.materials,
+            standards_alignment=pydantic_unit.standards_alignment,
+            created_at=pydantic_unit.created_at,
+            updated_at=pydantic_unit.updated_at,
+        )
+        _upsert(db, models.CurriculumUnit, "unit_id", pydantic_unit.unit_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_curriculum_unit(unit_id: str):
+    """Delete a curriculum unit from the database."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.CurriculumUnit).filter(
+            models.CurriculumUnit.unit_id == unit_id
+        ).first()
+        if row:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+
+
 def get_oauth_connection(organization_id: str, provider: str) -> Optional[Dict]:
     """Load an OAuth connection from the database for a given org and provider."""
     db = SessionLocal()
@@ -1496,6 +1582,8 @@ def reset_all_data():
     try:
         # Delete in reverse dependency order
         db.query(models.OAuthConnection).delete()
+        db.query(models.CurriculumUnit).delete()
+        db.query(models.Curriculum).delete()
         db.query(models.BusinessExpense).delete()
         db.query(models.TimeOffRequest).delete()
         db.query(models.AuditLog).delete()
@@ -2230,6 +2318,40 @@ def _business_expense_to_dict(r):
         "recurrence": r.recurrence or "none",
         "payment_method": r.payment_method,
         "receipt_note": r.receipt_note,
+        "created_at": r.created_at or "",
+        "updated_at": r.updated_at or "",
+    }
+
+
+def _curriculum_to_dict(r):
+    return {
+        "curriculum_id": r.curriculum_id,
+        "campus_id": r.campus_id or "",
+        "title": r.title or "",
+        "subject": r.subject or "Other",
+        "grade_level": r.grade_level or "All Grades",
+        "description": r.description or "",
+        "objectives": r.objectives or "",
+        "materials": r.materials or "",
+        "pacing": r.pacing or "",
+        "status": r.status or "Draft",
+        "created_by": r.created_by or "",
+        "created_at": r.created_at or "",
+        "updated_at": r.updated_at or "",
+    }
+
+
+def _curriculum_unit_to_dict(r):
+    return {
+        "unit_id": r.unit_id,
+        "curriculum_id": r.curriculum_id or "",
+        "title": r.title or "",
+        "description": r.description or "",
+        "order_index": r.order_index or 0,
+        "duration_weeks": r.duration_weeks or 1,
+        "objectives": r.objectives or "",
+        "materials": r.materials or "",
+        "standards_alignment": r.standards_alignment or "",
         "created_at": r.created_at or "",
         "updated_at": r.updated_at or "",
     }
