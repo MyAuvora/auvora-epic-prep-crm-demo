@@ -37,6 +37,25 @@ def get_db():
         db.close()
 
 
+def _run_migrations():
+    """Run lightweight ALTER TABLE migrations for new columns on existing tables."""
+    from sqlalchemy import text, inspect
+    conn = engine.connect()
+    inspector = inspect(engine)
+    try:
+        # Staff table: add pay_type and pay_rate if missing
+        if "staff" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("staff")]
+            if "pay_type" not in existing:
+                conn.execute(text("ALTER TABLE staff ADD COLUMN pay_type VARCHAR DEFAULT 'hourly'"))
+            if "pay_rate" not in existing:
+                conn.execute(text("ALTER TABLE staff ADD COLUMN pay_rate FLOAT DEFAULT 0.0"))
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
