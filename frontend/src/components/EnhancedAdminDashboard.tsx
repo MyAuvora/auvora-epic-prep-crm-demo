@@ -333,11 +333,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               setAccountView(null)
             }
           }}
-          onStudentClick={(studentId) => {
-            const familyName = accountView.type === 'family'
-              ? families.find(f => f.family_id === accountView.id)?.family_name
-              : undefined
-            setPreviousAccountView({ ...accountView, label: familyName ? `${familyName} Family` : undefined })
+          onStudentClick={(studentId, context) => {
+            const label = context?.familyName ? `${context.familyName} Family` : undefined
+            setPreviousAccountView({ ...accountView, label })
             setAccountView({ type: 'student', id: studentId })
           }}
           onFamilyClick={(familyId) => {
@@ -345,6 +343,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
             setAccountView({ type: 'family', id: familyId })
           }}
           backLabel={previousAccountView?.label}
+          onHome={() => {
+            setAccountView(null)
+            setPreviousAccountView(null)
+          }}
         />
       );
     }
