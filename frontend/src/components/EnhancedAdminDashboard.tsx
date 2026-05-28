@@ -158,6 +158,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
     const [drillDownView, setDrillDownView] = useState<'at-risk' | 'ixl-behind' | 'overdue' | null>(null)
     const [accountView, setAccountView] = useState<{ type: 'family' | 'student'; id: string } | null>(null)
+    const [previousAccountView, setPreviousAccountView] = useState<{ type: 'family' | 'student'; id: string; label?: string } | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
@@ -324,9 +325,26 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
         <FullAccountView
           type={accountView.type}
           id={accountView.id}
-          onBack={() => setAccountView(null)}
-          onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
-          onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
+          onBack={() => {
+            if (previousAccountView) {
+              setAccountView(previousAccountView)
+              setPreviousAccountView(null)
+            } else {
+              setAccountView(null)
+            }
+          }}
+          onStudentClick={(studentId) => {
+            const familyName = accountView.type === 'family'
+              ? families.find(f => f.family_id === accountView.id)?.family_name
+              : undefined
+            setPreviousAccountView({ ...accountView, label: familyName ? `${familyName} Family` : undefined })
+            setAccountView({ type: 'student', id: studentId })
+          }}
+          onFamilyClick={(familyId) => {
+            setPreviousAccountView(accountView)
+            setAccountView({ type: 'family', id: familyId })
+          }}
+          backLabel={previousAccountView?.label}
         />
       );
     }

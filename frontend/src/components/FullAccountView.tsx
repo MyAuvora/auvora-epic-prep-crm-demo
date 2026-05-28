@@ -136,9 +136,10 @@ interface FullAccountViewProps {
   onBack: () => void;
   onStudentClick?: (studentId: string) => void;
   onFamilyClick?: (familyId: string) => void;
+  backLabel?: string;
 }
 
-export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick }: FullAccountViewProps) {
+export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick, backLabel }: FullAccountViewProps) {
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState<Family | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -1625,7 +1626,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   onClick={onBack}
                   className="text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  Students
+                  {backLabel || 'Students'}
                 </button>
                 <ChevronRight className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-900 font-medium">{selectedStudent.first_name} {selectedStudent.last_name}</span>
@@ -1645,7 +1646,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                   className="text-white hover:bg-red-700"
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
-                  Back
+                  {backLabel ? `Back to ${backLabel}` : 'Back'}
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</h1>
