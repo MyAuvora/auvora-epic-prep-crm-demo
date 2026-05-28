@@ -1589,6 +1589,7 @@ def reset_all_data():
     try:
         # Delete in reverse dependency order
         db.query(models.OAuthConnection).delete()
+        db.query(models.TimeClock).delete()
         db.query(models.CurriculumUnit).delete()
         db.query(models.Curriculum).delete()
         db.query(models.BusinessExpense).delete()
