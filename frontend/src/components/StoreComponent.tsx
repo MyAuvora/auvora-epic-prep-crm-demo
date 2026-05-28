@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, DollarSign, Package, CheckCircle } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, CheckCircle, ArrowLeft, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -188,12 +188,159 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
     return <div className="text-center py-8">Loading store...</div>;
   }
 
+  // Full-page Cart View
+  if (showCart && role === 'parent') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => setShowCart(false)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Store
+          </Button>
+          <h2 className="text-2xl font-bold">Shopping Cart</h2>
+        </div>
+
+        {cart.length === 0 ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-xl text-gray-500 mb-2">Your cart is empty</p>
+              <p className="text-sm text-gray-400 mb-6">Add some items from the store to get started</p>
+              <Button onClick={() => setShowCart(false)}>Continue Shopping</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4">
+              {cart.map((item) => (
+                <Card key={item.product.product_id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <p className="font-semibold text-lg">{item.product.name}</p>
+                        <p className="text-sm text-gray-500">${item.product.price.toFixed(2)} each</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.product_id, item.quantity - 1)}>-</Button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.product_id, item.quantity + 1)}>+</Button>
+                        </div>
+                        <p className="font-bold w-24 text-right text-lg">${(item.product.price * item.quantity).toFixed(2)}</p>
+                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => removeFromCart(item.product.product_id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div>
+              <Card className="sticky top-4">
+                <CardHeader>
+                  <CardTitle>Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {cart.map((item) => (
+                    <div key={item.product.product_id} className="flex justify-between text-sm">
+                      <span>{item.product.name} x {item.quantity}</span>
+                      <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between text-xl font-bold">
+                      <span>Total</span>
+                      <span className="text-[#D4AF7A]">${getCartTotal().toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <Button className="w-full" size="lg" onClick={() => { setShowCart(false); setShowCheckout(true); }}>
+                    Proceed to Checkout
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => setShowCart(false)}>
+                    Continue Shopping
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Full-page Checkout View
+  if (showCheckout && role === 'parent') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => { setShowCheckout(false); setShowCart(true); }}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Cart
+          </Button>
+          <h2 className="text-2xl font-bold">Checkout</h2>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Details</CardTitle>
+                <CardDescription>Review your items before placing your order</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {cart.map((item) => (
+                  <div key={item.product.product_id} className="flex justify-between items-center border-b pb-4 last:border-0">
+                    <div>
+                      <p className="font-medium">{item.product.name}</p>
+                      <p className="text-sm text-gray-500">Qty: {item.quantity} × ${item.product.price.toFixed(2)}</p>
+                    </div>
+                    <p className="font-bold">${(item.product.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle>Payment Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal ({cart.reduce((t, i) => t + i.quantity, 0)} items)</span>
+                  <span>${getCartTotal().toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between text-xl font-bold">
+                    <span>Total</span>
+                    <span className="text-[#D4AF7A]">${getCartTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">Your order will be processed and you will receive a confirmation.</p>
+                <Button className="w-full" size="lg" onClick={handleCheckout}>
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Place Order — ${getCartTotal().toFixed(2)}
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => { setShowCheckout(false); setShowCart(true); }}>
+                  Back to Cart
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {role === 'parent' && (
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">School Store</h2>
-          <Button onClick={() => setShowCart(true)} variant="outline">
+          <Button onClick={() => setShowCart(true)} variant="outline" className="relative">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Cart ({cart.length})
           </Button>
@@ -314,88 +461,6 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
           </div>
         </div>
       )}
-
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-xl max-h-[80vh] overflow-y-auto p-4">
-          <DialogHeader>
-            <DialogTitle>Shopping Cart</DialogTitle>
-            <DialogDescription>Review your items before checkout</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {cart.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Your cart is empty</p>
-            ) : (
-              <>
-                {cart.map((item) => (
-                  <div key={item.product.product_id} className="flex justify-between items-center border-b pb-4">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-gray-500">${item.product.price.toFixed(2)} each</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.product_id, item.quantity - 1)}>-</Button>
-                        <span className="w-8 text-center">{item.quantity}</span>
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.product_id, item.quantity + 1)}>+</Button>
-                      </div>
-                      <p className="font-bold w-20 text-right">${(item.product.price * item.quantity).toFixed(2)}</p>
-                      <Button size="sm" variant="ghost" onClick={() => removeFromCart(item.product.product_id)}>Remove</Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-xl font-bold">
-                    <span>Total</span>
-                    <span className="text-[#D4AF7A]">${getCartTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCart(false)}>Continue Shopping</Button>
-            {cart.length > 0 && (
-              <Button onClick={() => { setShowCart(false); setShowCheckout(true); }}>
-                Proceed to Checkout
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Checkout</DialogTitle>
-            <DialogDescription>Complete your purchase</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="font-medium mb-2">Order Summary</p>
-              {cart.map((item) => (
-                <div key={item.product.product_id} className="flex justify-between text-sm mb-1">
-                  <span>{item.product.name} x {item.quantity}</span>
-                  <span>${(item.product.price * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
-              <div className="border-t mt-2 pt-2">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span className="text-[#D4AF7A]">${getCartTotal().toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600">Your order will be processed and you will receive a confirmation email.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCheckout(false)}>Cancel</Button>
-            <Button onClick={handleCheckout}>
-              <DollarSign className="w-4 h-4 mr-2" />
-              Place Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
         <DialogContent>
