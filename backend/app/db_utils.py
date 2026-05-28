@@ -571,6 +571,9 @@ def save_incident(pydantic_inc):
             action_taken=pydantic_inc.action_taken,
             parent_notified=pydantic_inc.parent_notified,
             followup_required=pydantic_inc.followup_required,
+            status=getattr(pydantic_inc, 'status', 'pending_review') or 'pending_review',
+            admin_notes=getattr(pydantic_inc, 'admin_notes', '') or '',
+            reviewed_by_staff_id=getattr(pydantic_inc, 'reviewed_by_staff_id', '') or '',
         )
         _upsert(db, models.Incident, "incident_id", pydantic_inc.incident_id, fields)
         db.commit()
@@ -1929,6 +1932,9 @@ def _incident_to_dict(r):
         "description": r.description or "", "action_taken": r.action_taken or "",
         "parent_notified": r.parent_notified or False,
         "followup_required": r.followup_required or False,
+        "status": getattr(r, 'status', None) or "pending_review",
+        "admin_notes": getattr(r, 'admin_notes', None) or "",
+        "reviewed_by_staff_id": getattr(r, 'reviewed_by_staff_id', None) or "",
     }
 
 

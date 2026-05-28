@@ -50,7 +50,16 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE staff ADD COLUMN pay_type VARCHAR DEFAULT 'hourly'"))
             if "pay_rate" not in existing:
                 conn.execute(text("ALTER TABLE staff ADD COLUMN pay_rate FLOAT DEFAULT 0.0"))
-            conn.commit()
+        # Incidents table: add status, admin_notes, reviewed_by_staff_id if missing
+        if "incidents" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("incidents")]
+            if "status" not in existing:
+                conn.execute(text("ALTER TABLE incidents ADD COLUMN status VARCHAR DEFAULT 'pending_review'"))
+            if "admin_notes" not in existing:
+                conn.execute(text("ALTER TABLE incidents ADD COLUMN admin_notes TEXT DEFAULT ''"))
+            if "reviewed_by_staff_id" not in existing:
+                conn.execute(text("ALTER TABLE incidents ADD COLUMN reviewed_by_staff_id VARCHAR DEFAULT ''"))
+        conn.commit()
     finally:
         conn.close()
 

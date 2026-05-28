@@ -701,7 +701,7 @@ class PhotoAlbum(BaseModel):
 
 class Incident(BaseModel):
     incident_id: str
-    campus_id: str
+    campus_id: str = ""
     student_id: str
     reported_by_staff_id: str
     incident_type: IncidentType
@@ -710,8 +710,11 @@ class Incident(BaseModel):
     time: str
     description: str
     action_taken: str
-    parent_notified: bool
-    followup_required: bool
+    parent_notified: bool = False
+    followup_required: bool = False
+    status: str = "pending_review"
+    admin_notes: str = ""
+    reviewed_by_staff_id: str = ""
 
 class HealthRecord(BaseModel):
     health_record_id: str
@@ -2351,6 +2354,15 @@ async def create_incident(incident: Incident):
     incidents_db.append(incident)
     db_utils.save_incident(incident)
     return incident
+
+@app.put("/api/incidents/{incident_id}")
+async def update_incident(incident_id: str, incident: Incident):
+    for i, inc in enumerate(incidents_db):
+        if inc.incident_id == incident_id:
+            incidents_db[i] = incident
+            db_utils.save_incident(incident)
+            return incident
+    raise HTTPException(status_code=404, detail="Incident not found")
 
 @app.get("/api/health-records")
 async def get_health_records(student_id: Optional[str] = None):
