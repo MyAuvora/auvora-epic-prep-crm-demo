@@ -63,11 +63,13 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
         fetch(`${API_URL}/api/staff/${selectedUserId}`)
           .then(res => res.ok ? res.json() : null)
           .then(staff => {
-            if (staff?.campus_id) {
+            if (staff?.campus_ids?.length > 0) {
               return fetch(`${API_URL}/api/campuses`).then(r => r.json()).then(campuses => {
-                const campus = campuses.find((c: { campus_id: string; name: string }) => c.campus_id === staff.campus_id)
+                const campus = campuses.find((c: { campus_id: string; name: string }) => c.campus_id === staff.campus_ids[0])
                 setAssignedCampusName(campus ? campus.name : '')
               })
+            } else {
+              setAssignedCampusName('')
             }
           })
           .catch(() => setAssignedCampusName(''))
