@@ -20,6 +20,7 @@ interface HeaderProps {
   onRoleChange: (role: 'owner' | 'admin' | 'coach' | 'parent') => void
   onSearchSelect?: (type: 'student' | 'family', id: string) => void
   onLocationChange?: (campusId: string | null) => void
+  selectedUserId?: string
 }
 
 // Map location names to campus IDs from the backend
@@ -31,7 +32,7 @@ const LOCATION_TO_CAMPUS_ID: Record<string, string | null> = {
   'Crestview Main Street': 'campus_2',
 }
 
-export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange }: HeaderProps) {
+export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange, selectedUserId }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -46,6 +47,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const [assignedCampusName, setAssignedCampusName] = useState<string>('')
 
   // Get user display name and email from Clerk
   const userName = user?.fullName || user?.firstName || 'User'
@@ -56,8 +58,26 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
       setSelectedLocation('All Locations')
       setShowLocationDropdown(false)
       if (onLocationChange) onLocationChange(null)
+      // Fetch assigned campus for non-owner roles
+      if (selectedUserId && currentRole !== 'parent') {
+        fetch(`${API_URL}/api/staff/${selectedUserId}`)
+          .then(res => res.ok ? res.json() : null)
+          .then(staff => {
+            if (staff?.campus_ids?.length > 0) {
+              return fetch(`${API_URL}/api/campuses`).then(r => r.json()).then(campuses => {
+                const campus = campuses.find((c: { campus_id: string; name: string }) => c.campus_id === staff.campus_ids[0])
+                setAssignedCampusName(campus ? campus.name : '')
+              })
+            } else {
+              setAssignedCampusName('')
+            }
+          })
+          .catch(() => setAssignedCampusName(''))
+      } else {
+        setAssignedCampusName('')
+      }
     }
-  }, [currentRole])
+  }, [currentRole, selectedUserId])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -356,6 +376,12 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                     </div>
                   </>
                 )}
+              </div>
+              )}
+              {currentRole !== 'owner' && assignedCampusName && (
+              <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="font-medium truncate max-w-[80px] sm:max-w-none">{assignedCampusName}</span>
               </div>
               )}
               
