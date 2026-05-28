@@ -393,6 +393,10 @@ class Parent(BaseModel):
     preferred_contact_method: str
     student_ids: List[str]
 
+class PayType(str, Enum):
+    HOURLY = "hourly"
+    SALARY = "salary"
+
 class Staff(BaseModel):
     staff_id: str
     campus_ids: List[str]
@@ -402,6 +406,19 @@ class Staff(BaseModel):
     email: str
     assigned_rooms: List[str]
     permissions: str
+    pay_type: PayType = PayType.HOURLY
+    pay_rate: float = 0.0
+
+class TimeClock(BaseModel):
+    entry_id: str
+    staff_id: str
+    campus_id: str = ""
+    clock_in: str
+    clock_out: Optional[str] = None
+    hours_worked: float = 0.0
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
 
 class GradeRecord(BaseModel):
     grade_record_id: str
@@ -1317,6 +1334,7 @@ sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
 business_expenses_db: List[BusinessExpense] = []
 curricula_db: List[CurriculumItem] = []
 curriculum_units_db: List[CurriculumUnitItem] = []
+time_clock_db: List[TimeClock] = []
 
 def load_data_from_db():
     """Load all data from the SQLite database into in-memory lists for fast reads."""
@@ -1337,6 +1355,7 @@ def load_data_from_db():
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global business_expenses_db
     global curricula_db, curriculum_units_db
+    global time_clock_db
 
     data = db_utils.load_all_from_db()
 
@@ -1409,6 +1428,7 @@ def load_data_from_db():
     business_expenses_db = [BusinessExpense(**d) for d in data.get("business_expenses", [])]
     curricula_db = [CurriculumItem(**d) for d in data.get("curricula", [])]
     curriculum_units_db = [CurriculumUnitItem(**d) for d in data.get("curriculum_units", [])]
+    time_clock_db = [TimeClock(**d) for d in data.get("time_clock", [])]
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
 
@@ -3693,7 +3713,9 @@ async def get_staff(campus_id: str = None):
             'role': s.role,
             'email': s.email,
             'assigned_rooms': s.assigned_rooms if hasattr(s, 'assigned_rooms') else [],
-            'campus_id': s.campus_id if hasattr(s, 'campus_id') else None
+            'campus_id': s.campus_id if hasattr(s, 'campus_id') else None,
+            'pay_type': s.pay_type if hasattr(s, 'pay_type') else 'hourly',
+            'pay_rate': s.pay_rate if hasattr(s, 'pay_rate') else 0.0,
         }
         if campus_id and staff_dict.get('campus_id') == campus_id:
             staff_list.append(staff_dict)
@@ -3712,11 +3734,25 @@ async def create_staff(staff_data: dict):
         email=staff_data['email'],
         assigned_rooms=staff_data.get('assigned_rooms', []),
         campus_ids=staff_data.get('campus_ids', ['pace']),
-        permissions=staff_data.get('permissions', 'standard')
+        permissions=staff_data.get('permissions', 'standard'),
+        pay_type=staff_data.get('pay_type', 'hourly'),
+        pay_rate=staff_data.get('pay_rate', 0.0),
     )
     staff_db.append(new_staff)
     db_utils.save_staff(new_staff)
     return {"status": "success", "staff_id": staff_data['staff_id']}
+
+@app.patch("/api/staff/{staff_id}")
+async def update_staff(staff_id: str, updates: dict):
+    """Update a staff member's details (pay_type, pay_rate, etc.)"""
+    staff = next((s for s in staff_db if s.staff_id == staff_id), None)
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    for field in ["pay_type", "pay_rate", "first_name", "last_name", "email", "role"]:
+        if field in updates:
+            setattr(staff, field, updates[field])
+    db_utils.save_staff(staff)
+    return {"status": "success", "staff_id": staff_id}
 
 # Grade Assignment endpoints
 @app.get("/api/grade-assignments")
@@ -5444,6 +5480,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global time_off_requests_db, payment_methods_db
     global business_expenses_db
     global curricula_db, curriculum_units_db
+    global time_clock_db
 
     # Clear all in-memory lists
     organizations_db = []
@@ -5506,6 +5543,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     business_expenses_db = []
     curricula_db = []
     curriculum_units_db = []
+    time_clock_db = []
 
     # Wipe the database (includes oauth_connections table)
     db_utils.reset_all_data()
@@ -7086,3 +7124,112 @@ async def get_curricula_summary(campus_id: Optional[str] = None):
         "by_subject": by_subject,
         "total_units": len([u for u in curriculum_units_db if any(c.curriculum_id == u.curriculum_id for c in result)]),
     }
+
+
+# ======================== Time Clock ========================
+
+@app.get("/api/timeclock")
+async def get_time_clock_entries(staff_id: Optional[str] = None):
+    """Get time clock entries, optionally filtered by staff_id."""
+    result = list(time_clock_db)
+    if staff_id:
+        result = [e for e in result if e.staff_id == staff_id]
+    return result
+
+@app.get("/api/timeclock/active/{staff_id}")
+async def get_active_clock(staff_id: str):
+    """Check if a staff member is currently clocked in."""
+    active = next((e for e in time_clock_db if e.staff_id == staff_id and e.clock_out is None), None)
+    if active:
+        return {"clocked_in": True, "entry": active}
+    return {"clocked_in": False, "entry": None}
+
+@app.post("/api/timeclock/clock-in")
+async def clock_in(data: dict):
+    """Clock in a staff member."""
+    staff_id = data.get("staff_id", "")
+    active = next((e for e in time_clock_db if e.staff_id == staff_id and e.clock_out is None), None)
+    if active:
+        raise HTTPException(status_code=400, detail="Already clocked in")
+
+    now = datetime.now().isoformat()
+    entry = TimeClock(
+        entry_id=data.get("entry_id", f"tc-{staff_id}-{int(datetime.now().timestamp())}"),
+        staff_id=staff_id,
+        campus_id=data.get("campus_id", ""),
+        clock_in=now,
+        clock_out=None,
+        hours_worked=0.0,
+        notes=data.get("notes", ""),
+        created_at=now,
+        updated_at=now,
+    )
+    time_clock_db.append(entry)
+    db_utils.save_time_clock(entry)
+    return {"success": True, "entry": entry}
+
+@app.post("/api/timeclock/clock-out")
+async def clock_out(data: dict):
+    """Clock out a staff member."""
+    staff_id = data.get("staff_id", "")
+    active = next((e for e in time_clock_db if e.staff_id == staff_id and e.clock_out is None), None)
+    if not active:
+        raise HTTPException(status_code=400, detail="Not currently clocked in")
+
+    now = datetime.now()
+    clock_in_time = datetime.fromisoformat(active.clock_in)
+    hours = (now - clock_in_time).total_seconds() / 3600.0
+    active.clock_out = now.isoformat()
+    active.hours_worked = round(hours, 2)
+    active.updated_at = now.isoformat()
+    active.notes = data.get("notes", active.notes)
+    db_utils.save_time_clock(active)
+    return {"success": True, "entry": active}
+
+@app.delete("/api/timeclock/{entry_id}")
+async def delete_time_clock_entry(entry_id: str):
+    """Delete a time clock entry."""
+    entry = next((e for e in time_clock_db if e.entry_id == entry_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time clock entry not found")
+    time_clock_db.remove(entry)
+    db_utils.delete_time_clock(entry_id)
+    return {"success": True, "message": "Entry deleted"}
+
+@app.get("/api/timeclock/summary")
+async def get_timesheet_summary(staff_id: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Get timesheet summary for payroll."""
+    entries = list(time_clock_db)
+    if staff_id:
+        entries = [e for e in entries if e.staff_id == staff_id]
+    if start_date:
+        entries = [e for e in entries if e.clock_in >= start_date]
+    if end_date:
+        entries = [e for e in entries if e.clock_in <= end_date + "T23:59:59"]
+
+    staff_summaries = {}
+    for e in entries:
+        sid = e.staff_id
+        if sid not in staff_summaries:
+            staff_member = next((s for s in staff_db if s.staff_id == sid), None)
+            staff_summaries[sid] = {
+                "staff_id": sid,
+                "name": f"{staff_member.first_name} {staff_member.last_name}" if staff_member else sid,
+                "pay_type": staff_member.pay_type if staff_member else "hourly",
+                "pay_rate": staff_member.pay_rate if staff_member else 0.0,
+                "total_hours": 0.0,
+                "total_entries": 0,
+                "total_pay": 0.0,
+            }
+        if e.clock_out:
+            staff_summaries[sid]["total_hours"] += e.hours_worked
+            staff_summaries[sid]["total_entries"] += 1
+
+    for sid, summary in staff_summaries.items():
+        summary["total_hours"] = round(summary["total_hours"], 2)
+        if summary["pay_type"] == "hourly":
+            summary["total_pay"] = round(summary["total_hours"] * summary["pay_rate"], 2)
+        else:
+            summary["total_pay"] = round(summary["pay_rate"] / 26, 2)  # bi-weekly salary
+
+    return list(staff_summaries.values())

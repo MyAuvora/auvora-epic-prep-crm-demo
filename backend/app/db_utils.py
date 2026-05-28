@@ -382,6 +382,11 @@ def load_all_from_db() -> dict:
             _curriculum_unit_to_dict(r) for r in db.query(models.CurriculumUnit).all()
         ]
 
+        # Time clock entries
+        data["time_clock"] = [
+            _time_clock_to_dict(r) for r in db.query(models.TimeClock).all()
+        ]
+
         return data
 
     finally:
@@ -914,6 +919,8 @@ def save_staff(pydantic_staff):
             assigned_rooms=_json_dumps(pydantic_staff.assigned_rooms),
             permissions=pydantic_staff.permissions,
             active=True,
+            pay_type=_enum_val(pydantic_staff.pay_type) if hasattr(pydantic_staff, 'pay_type') else 'hourly',
+            pay_rate=pydantic_staff.pay_rate if hasattr(pydantic_staff, 'pay_rate') else 0.0,
         )
         _upsert(db, models.Staff, "staff_id", pydantic_staff.staff_id, fields)
         db.commit()
@@ -1689,6 +1696,8 @@ def _staff_to_dict(r):
         "role": r.role or "Coach", "email": r.email or "",
         "assigned_rooms": _json_loads(r.assigned_rooms),
         "permissions": r.permissions or "Coach",
+        "pay_type": r.pay_type or "hourly",
+        "pay_rate": r.pay_rate or 0.0,
     }
 
 
@@ -2355,6 +2364,51 @@ def _curriculum_unit_to_dict(r):
         "created_at": r.created_at or "",
         "updated_at": r.updated_at or "",
     }
+
+
+def _time_clock_to_dict(r):
+    return {
+        "entry_id": r.entry_id,
+        "staff_id": r.staff_id or "",
+        "campus_id": r.campus_id or "",
+        "clock_in": r.clock_in or "",
+        "clock_out": r.clock_out,
+        "hours_worked": r.hours_worked or 0.0,
+        "notes": r.notes or "",
+        "created_at": r.created_at or "",
+        "updated_at": r.updated_at or "",
+    }
+
+
+def save_time_clock(pydantic_tc):
+    """Persist a time clock entry to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            entry_id=pydantic_tc.entry_id,
+            staff_id=pydantic_tc.staff_id,
+            campus_id=pydantic_tc.campus_id,
+            clock_in=pydantic_tc.clock_in,
+            clock_out=pydantic_tc.clock_out,
+            hours_worked=pydantic_tc.hours_worked,
+            notes=pydantic_tc.notes,
+            created_at=pydantic_tc.created_at,
+            updated_at=pydantic_tc.updated_at,
+        )
+        _upsert(db, models.TimeClock, "entry_id", pydantic_tc.entry_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_time_clock(entry_id: str):
+    """Delete a time clock entry from the database."""
+    db = SessionLocal()
+    try:
+        db.query(models.TimeClock).filter(models.TimeClock.entry_id == entry_id).delete()
+        db.commit()
+    finally:
+        db.close()
 
 
 # ============================================================================

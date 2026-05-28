@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Calendar, BookOpen, ClipboardCheck, Eye, CheckCircle, XCircle, AlertCircle, Menu } from 'lucide-react'
+import { Users, Calendar, BookOpen, ClipboardCheck, Eye, CheckCircle, XCircle, AlertCircle, Menu, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -80,7 +80,11 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   // Teachers use the student list in their rooms instead of global search navigation
   void _searchNavigation
   void _onClearSearch
-  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'timeoff' | 'curriculum'>('rooms')
+  const [view, setView] = useState<'rooms' | 'gradebook' | 'announcements' | 'events' | 'documents' | 'photos' | 'messages' | 'incidents' | 'health' | 'timeoff' | 'curriculum' | 'timesheet'>('rooms')
+  const [isClockedIn, setIsClockedIn] = useState(false)
+  const [activeClockEntry, setActiveClockEntry] = useState<{ entry_id: string; clock_in: string } | null>(null)
+  const [clockElapsed, setClockElapsed] = useState('')
+  const [timesheetEntries, setTimesheetEntries] = useState<Array<{ entry_id: string; staff_id: string; clock_in: string; clock_out: string | null; hours_worked: number; notes: string }>>([])
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
@@ -107,7 +111,23 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
   useEffect(() => {
     fetchTeacherData()
     fetchUnreadMessages()
+    fetchClockStatus()
+    fetchTimesheetEntries()
   }, [staffId])
+
+  useEffect(() => {
+    if (!isClockedIn || !activeClockEntry) return
+    const interval = setInterval(() => {
+      const start = new Date(activeClockEntry.clock_in).getTime()
+      const now = Date.now()
+      const diff = now - start
+      const hours = Math.floor(diff / 3600000)
+      const minutes = Math.floor((diff % 3600000) / 60000)
+      const seconds = Math.floor((diff % 60000) / 1000)
+      setClockElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isClockedIn, activeClockEntry])
 
   const fetchTeacherData = async () => {
     try {
@@ -149,6 +169,69 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       setUnreadMessageCount(unread)
     } catch (error) {
       console.error('Error fetching unread messages:', error)
+    }
+  }
+
+  const fetchClockStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/timeclock/active/${staffId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setIsClockedIn(data.clocked_in)
+        if (data.clocked_in && data.entry) {
+          setActiveClockEntry({ entry_id: data.entry.entry_id, clock_in: data.entry.clock_in })
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching clock status:', error)
+    }
+  }
+
+  const fetchTimesheetEntries = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/timeclock?staff_id=${staffId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setTimesheetEntries(data)
+      }
+    } catch (error) {
+      console.error('Error fetching timesheet:', error)
+    }
+  }
+
+  const handleClockIn = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/timeclock/clock-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staff_id: staffId, campus_id: campusId }),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setIsClockedIn(true)
+        setActiveClockEntry({ entry_id: data.entry.entry_id, clock_in: data.entry.clock_in })
+        fetchTimesheetEntries()
+      }
+    } catch (error) {
+      console.error('Error clocking in:', error)
+    }
+  }
+
+  const handleClockOut = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/timeclock/clock-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staff_id: staffId }),
+      })
+      if (response.ok) {
+        setIsClockedIn(false)
+        setActiveClockEntry(null)
+        setClockElapsed('')
+        fetchTimesheetEntries()
+      }
+    } catch (error) {
+      console.error('Error clocking out:', error)
     }
   }
 
@@ -263,6 +346,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
     { id: 'incidents', label: 'Incidents' },
     { id: 'health', label: 'Health Records' },
     { id: 'timeoff', label: 'Time Off' },
+    { id: 'timesheet', label: 'My Timesheet' },
     { id: 'curriculum', label: 'Curriculum' },
   ]
 
@@ -343,6 +427,39 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
               </button>
             ))}
           </nav>
+        </div>
+      </div>
+
+      {/* Clock In/Out Banner */}
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4">
+        <div className={`flex items-center justify-between rounded-lg px-4 py-3 ${isClockedIn ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+          <div className="flex items-center gap-3">
+            <Clock className={`h-5 w-5 ${isClockedIn ? 'text-green-600' : 'text-gray-400'}`} />
+            <div>
+              <p className={`text-sm font-medium ${isClockedIn ? 'text-green-800' : 'text-gray-600'}`}>
+                {isClockedIn ? 'Currently Clocked In' : 'Not Clocked In'}
+              </p>
+              {isClockedIn && clockElapsed && (
+                <p className="text-xs text-green-600 font-mono">{clockElapsed}</p>
+              )}
+            </div>
+          </div>
+          {isClockedIn ? (
+            <button
+              onClick={handleClockOut}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Clock Out
+            </button>
+          ) : (
+            <button
+              onClick={handleClockIn}
+              className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
+              style={{ background: 'linear-gradient(to right, #1e3a5f, #dc3545)' }}
+            >
+              Clock In
+            </button>
+          )}
         </div>
       </div>
 
@@ -565,6 +682,116 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
 
         {view === 'curriculum' && (
           <CurriculumBuilder selectedCampusId={campusId || null} />
+        )}
+
+        {view === 'timesheet' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">My Timesheet</h2>
+              <p className="text-gray-600">View your clock-in/out history</p>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Entries</p>
+                      <p className="text-2xl font-bold text-gray-900">{timesheetEntries.filter(e => e.clock_out).length}</p>
+                    </div>
+                    <ClipboardCheck className="h-8 w-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Hours</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {timesheetEntries.reduce((sum, e) => sum + (e.hours_worked || 0), 0).toFixed(1)}h
+                      </p>
+                    </div>
+                    <Clock className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">This Week</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {timesheetEntries
+                          .filter(e => {
+                            if (!e.clock_out) return false
+                            const d = new Date(e.clock_in)
+                            const now = new Date()
+                            const weekStart = new Date(now)
+                            weekStart.setDate(now.getDate() - now.getDay())
+                            weekStart.setHours(0, 0, 0, 0)
+                            return d >= weekStart
+                          })
+                          .reduce((sum, e) => sum + (e.hours_worked || 0), 0)
+                          .toFixed(1)}h
+                      </p>
+                    </div>
+                    <Calendar className="h-8 w-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Timesheet Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clock In</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clock Out</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {[...timesheetEntries].sort((a, b) => new Date(b.clock_in).getTime() - new Date(a.clock_in).getTime()).map((entry) => (
+                    <tr key={entry.entry_id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {new Date(entry.clock_in).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(entry.clock_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {entry.clock_out
+                          ? new Date(entry.clock_out).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                          : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {entry.clock_out ? `${entry.hours_worked.toFixed(2)}h` : '—'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          entry.clock_out ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {entry.clock_out ? 'Completed' : 'Active'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {timesheetEntries.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        No timesheet entries yet. Use the Clock In button above to start.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {view === 'timeoff' && (
