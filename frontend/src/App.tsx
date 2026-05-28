@@ -81,6 +81,7 @@ function AuthenticatedApp() {
           onRoleChange={handleRoleChange}
           onSearchSelect={handleSearchSelect}
           onLocationChange={setSelectedCampusId}
+          selectedUserId={selectedUserId}
         />
         
         <main className="flex-1">
