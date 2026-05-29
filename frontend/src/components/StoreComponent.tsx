@@ -119,6 +119,8 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
     return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
   };
 
+  const [receiptEmail, setReceiptEmail] = useState<string | null>(null);
+
   const handleCheckout = async () => {
     if (familyId && parentId) {
       try {
@@ -129,7 +131,7 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
           price: item.product.price
         }));
 
-        await fetch(`${API_URL}/api/orders`, {
+        const response = await fetch(`${API_URL}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -140,9 +142,14 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
             total_amount: getCartTotal(),
             status: 'Pending',
             order_date: new Date().toISOString(),
-            payment_date: null
+            payment_date: null,
+            payment_method: paymentMethod
           })
         });
+        const orderData = await response.json();
+        if (orderData.receipt_email) {
+          setReceiptEmail(orderData.receipt_email);
+        }
         fetchOrders();
       } catch (error) {
         console.error('Error creating order:', error);
@@ -286,7 +293,16 @@ export const StoreComponent: React.FC<StoreComponentProps> = ({ role, familyId, 
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Order Placed!</h2>
           <p className="text-gray-500">Your order has been submitted successfully. You can view it in your order history.</p>
-          <Button size="lg" onClick={() => { setShowCheckout(false); setOrderPlaced(false); }}>
+          {receiptEmail && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+              <p className="text-sm font-medium text-blue-800">📧 Receipt sent to:</p>
+              <p className="text-sm text-blue-700">{receiptEmail}</p>
+            </div>
+          )}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
+            <p className="text-sm font-medium text-gray-700">Your campus Center Manager has been notified and will begin preparing your order.</p>
+          </div>
+          <Button size="lg" onClick={() => { setShowCheckout(false); setOrderPlaced(false); setReceiptEmail(null); }}>
             Back to Store
           </Button>
         </div>

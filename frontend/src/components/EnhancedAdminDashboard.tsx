@@ -37,6 +37,7 @@ import { ProCareImport } from './ProCareImport'
 import { PaymentProvidersSettings } from './PaymentProvidersSettings'
 import { BusinessExpenseTracker } from './BusinessExpenseTracker'
 import { CurriculumBuilder } from './CurriculumBuilder'
+import { StoreManagement } from './StoreManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -1190,12 +1191,13 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <h2 className="text-3xl font-bold text-gray-900">Operations</h2>
             </div>
             <Tabs value={subView} onValueChange={setSubView} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="events">Events</TabsTrigger>
                 <TabsTrigger value="incidents">Incidents</TabsTrigger>
                 <TabsTrigger value="health">Health</TabsTrigger>
                 <TabsTrigger value="staff">Staff</TabsTrigger>
                 <TabsTrigger value="timesheets">Timesheets</TabsTrigger>
+                <TabsTrigger value="store">Store</TabsTrigger>
               </TabsList>
               <TabsContent value="events" className="mt-6">
                 <EventsCalendar role="admin" />
@@ -1211,6 +1213,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               </TabsContent>
               <TabsContent value="timesheets" className="mt-6">
                 <TimesheetPayroll />
+              </TabsContent>
+              <TabsContent value="store" className="mt-6">
+                <StoreManagement campusId={selectedCampusId || undefined} />
               </TabsContent>
             </Tabs>
           </div>

@@ -496,6 +496,7 @@ def save_product(pydantic_prod):
             price=pydantic_prod.price,
             image_url=getattr(pydantic_prod, 'image_url', None),
             available=pydantic_prod.available,
+            stock_quantity=getattr(pydantic_prod, 'stock_quantity', 100),
         )
         _upsert(db, models.Product, "product_id", pydantic_prod.product_id, fields)
         db.commit()
@@ -526,6 +527,9 @@ def save_order(pydantic_order):
             status=_enum_val(pydantic_order.status),
             order_date=pydantic_order.order_date,
             payment_date=getattr(pydantic_order, 'payment_date', None),
+            payment_method=getattr(pydantic_order, 'payment_method', 'card_on_file'),
+            receipt_sent=getattr(pydantic_order, 'receipt_sent', False),
+            receipt_email=getattr(pydantic_order, 'receipt_email', None),
         )
         _upsert(db, models.Order, "order_id", pydantic_order.order_id, fields)
         db.commit()
