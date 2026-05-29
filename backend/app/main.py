@@ -179,6 +179,7 @@ class StudentStatus(str, Enum):
     ACTIVE = "Active"
     WAITLISTED = "Waitlisted"
     WITHDRAWN = "Withdrawn"
+    ARCHIVED = "Archived"
 
 class BillingStatus(str, Enum):
     GREEN = "Green"
@@ -382,6 +383,7 @@ class Family(BaseModel):
     billing_status: BillingStatus = BillingStatus.GREEN
     last_payment_date: Optional[date] = None
     last_payment_amount: Optional[float] = None
+    archived: bool = False
 
 class Parent(BaseModel):
     parent_id: str
@@ -1522,9 +1524,13 @@ async def get_students(
     room: Optional[Room] = None,
     billing_status: Optional[BillingStatus] = None,
     risk_flag: Optional[RiskFlag] = None,
-    ixl_status: Optional[IXLStatus] = None
+    ixl_status: Optional[IXLStatus] = None,
+    include_archived: Optional[bool] = False
 ):
     filtered_students = students_db
+    
+    if not include_archived:
+        filtered_students = [s for s in filtered_students if s.status != StudentStatus.ARCHIVED]
     
     if campus_id:
         filtered_students = [s for s in filtered_students if s.campus_id == campus_id]
@@ -1632,10 +1638,13 @@ async def export_students_csv(campus_id: Optional[str] = None):
     )
 
 @app.get("/api/families", response_model=List[Family])
-async def get_families(billing_status: Optional[BillingStatus] = None):
+async def get_families(billing_status: Optional[BillingStatus] = None, include_archived: Optional[bool] = False):
+    filtered_families = families_db
+    if not include_archived:
+        filtered_families = [f for f in filtered_families if not f.archived]
     if billing_status:
-        return [f for f in families_db if f.billing_status == billing_status]
-    return families_db
+        filtered_families = [f for f in filtered_families if f.billing_status == billing_status]
+    return filtered_families
 
 @app.get("/api/families/{family_id}", response_model=Family)
 async def get_family(family_id: str):
@@ -1672,6 +1681,54 @@ async def delete_family(family_id: str):
     families_db = [f for f in families_db if f.family_id != family_id]
     db_utils.delete_family(family_id)
     return {"message": "Family deleted successfully"}
+
+@app.put("/api/students/{student_id}/archive")
+async def archive_student(student_id: str):
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    student.status = StudentStatus.ARCHIVED
+    db_utils.save_student(student)
+    return student
+
+@app.put("/api/students/{student_id}/restore")
+async def restore_student(student_id: str):
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    student.status = StudentStatus.ACTIVE
+    db_utils.save_student(student)
+    return student
+
+@app.put("/api/families/{family_id}/archive")
+async def archive_family(family_id: str):
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    family.archived = True
+    # Also archive all students in this family
+    for sid in family.student_ids:
+        student = next((s for s in students_db if s.student_id == sid), None)
+        if student:
+            student.status = StudentStatus.ARCHIVED
+            db_utils.save_student(student)
+    db_utils.save_family(family)
+    return family
+
+@app.put("/api/families/{family_id}/restore")
+async def restore_family(family_id: str):
+    family = next((f for f in families_db if f.family_id == family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    family.archived = False
+    # Also restore all students in this family
+    for sid in family.student_ids:
+        student = next((s for s in students_db if s.student_id == sid), None)
+        if student and student.status == StudentStatus.ARCHIVED:
+            student.status = StudentStatus.ACTIVE
+            db_utils.save_student(student)
+    db_utils.save_family(family)
+    return family
 
 @app.get("/api/parents", response_model=List[Parent])
 async def get_parents():

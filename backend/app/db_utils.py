@@ -1006,6 +1006,7 @@ def save_family(pydantic_fam):
             billing_status=_enum_val(pydantic_fam.billing_status),
             last_payment_date=pydantic_fam.last_payment_date,
             last_payment_amount=pydantic_fam.last_payment_amount,
+            archived=getattr(pydantic_fam, 'archived', False),
         )
         _upsert(db, models.Family, "family_id", pydantic_fam.family_id, fields)
         db.commit()
@@ -1719,6 +1720,7 @@ def _family_to_dict(r, parent_ids, student_ids):
         "billing_status": r.billing_status or "Green",
         "last_payment_date": r.last_payment_date,
         "last_payment_amount": r.last_payment_amount,
+        "archived": bool(getattr(r, 'archived', False)),
     }
 
 

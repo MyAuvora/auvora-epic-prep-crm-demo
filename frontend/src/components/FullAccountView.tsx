@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2, ChevronRight, Home } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2, ChevronRight, Home, Archive, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,6 +60,7 @@ interface Family {
   address?: string;
   payment_method?: string;
   autopay_enabled?: boolean;
+  archived?: boolean;
 }
 
 interface Grade {
@@ -145,9 +146,10 @@ interface FullAccountViewProps {
   onFamilyClick?: (familyId: string) => void;
   backLabel?: string;
   onHome?: () => void;
+  role?: 'owner' | 'admin' | 'coach' | 'parent';
 }
 
-export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick, backLabel, onHome }: FullAccountViewProps) {
+export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick, backLabel, onHome, role = 'owner' }: FullAccountViewProps) {
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState<Family | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -630,6 +632,36 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getBillingStatusColor(family.billing_status)}`}>
                   {family.billing_status} Status
                 </span>
+                {(role === 'owner' || role === 'admin') && !family.archived && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (confirm(`Archive the ${family.family_name} family? This will hide them from active lists.`)) {
+                        await fetch(`${API_URL}/api/families/${family.family_id}/archive`, { method: 'PUT' });
+                        onBack();
+                      }
+                    }}
+                    className="text-white hover:bg-red-700 border border-white/30"
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archive
+                  </Button>
+                )}
+                {(role === 'owner' || role === 'admin') && family.archived && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      await fetch(`${API_URL}/api/families/${family.family_id}/restore`, { method: 'PUT' });
+                      onBack();
+                    }}
+                    className="text-white hover:bg-green-700 border border-white/30"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Restore
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -1692,6 +1724,22 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskFlagColor(selectedStudent.overall_risk_flag)}`}>
                   {selectedStudent.overall_risk_flag}
                 </span>
+                {(role === 'owner' || role === 'admin') && selectedStudent.overall_risk_flag !== 'Archived' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (confirm(`Archive ${selectedStudent.first_name} ${selectedStudent.last_name}? This will hide them from active lists.`)) {
+                        await fetch(`${API_URL}/api/students/${selectedStudent.student_id}/archive`, { method: 'PUT' });
+                        onBack();
+                      }
+                    }}
+                    className="text-white hover:bg-red-700 border border-white/30"
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archive
+                  </Button>
+                )}
               </div>
             </div>
           </div>
