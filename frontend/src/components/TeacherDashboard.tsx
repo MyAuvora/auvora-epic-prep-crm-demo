@@ -328,6 +328,7 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
       <FullAccountView
         type={accountView.type}
         id={accountView.id}
+        role="coach"
         onBack={() => setAccountView(null)}
         onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
         onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}

@@ -73,6 +73,11 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE orders ADD COLUMN receipt_sent BOOLEAN DEFAULT 0"))
             if "receipt_email" not in existing:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN receipt_email VARCHAR DEFAULT NULL"))
+        # Families table: add archived if missing
+        if "families" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("families")]
+            if "archived" not in existing:
+                conn.execute(text("ALTER TABLE families ADD COLUMN archived BOOLEAN DEFAULT 0"))
         conn.commit()
     finally:
         conn.close()

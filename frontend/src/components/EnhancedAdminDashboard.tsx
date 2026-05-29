@@ -38,6 +38,7 @@ import { PaymentProvidersSettings } from './PaymentProvidersSettings'
 import { BusinessExpenseTracker } from './BusinessExpenseTracker'
 import { CurriculumBuilder } from './CurriculumBuilder'
 import { StoreManagement } from './StoreManagement'
+import { ArchiveList } from './ArchiveList'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -136,7 +137,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'archive'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -326,6 +327,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
         <FullAccountView
           type={accountView.type}
           id={accountView.id}
+          role={currentRole}
           onBack={() => {
             if (previousAccountView) {
               setAccountView(previousAccountView)
@@ -365,6 +367,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   ...(currentRole === 'admin' ? [{ id: 'events', label: 'Events', subView: 'upcoming' }] : []),
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
+                  ...(currentRole === 'owner' || currentRole === 'admin' ? [{ id: 'archive', label: 'Archive', subView: 'all' }] : []),
                 ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
@@ -1263,6 +1266,13 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </div>
                   <EventsCalendar role="admin" />
                 </div>
+              )}
+
+              {view === 'archive' && (
+                <ArchiveList
+                  onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
+                  onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
+                />
               )}
 
               {view === 'settings' && (

@@ -96,6 +96,7 @@ class Family(Base):
     billing_status = Column(String, default="Green")
     last_payment_date = Column(Date)
     last_payment_amount = Column(Float)
+    archived = Column(Boolean, default=False)
     campus = relationship("Campus", back_populates="families")
     students = relationship("Student", back_populates="family")
     parents = relationship("Parent", back_populates="family")
