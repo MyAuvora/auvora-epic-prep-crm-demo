@@ -39,6 +39,10 @@ import { BusinessExpenseTracker } from './BusinessExpenseTracker'
 import { CurriculumBuilder } from './CurriculumBuilder'
 import { StoreManagement } from './StoreManagement'
 import { ArchiveList } from './ArchiveList'
+import { QuickActions } from './QuickActions'
+import { RecentActivityFeed } from './RecentActivityFeed'
+import { AuditLog } from './AuditLog'
+import { DashboardWidgets } from './DashboardWidgets'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -137,7 +141,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'archive'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'archive' | 'audit-log'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -163,6 +167,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     const [previousAccountView, setPreviousAccountView] = useState<{ type: 'family' | 'student'; id: string; label?: string } | null>(null)
   const [askAuvoraResults, setAskAuvoraResults] = useState<any>(null)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set())
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [unreadMessageCount, setUnreadMessageCount] = useState(0)
@@ -368,6 +373,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
                   ...(currentRole === 'owner' || currentRole === 'admin' ? [{ id: 'archive', label: 'Archive', subView: 'all' }] : []),
+                  ...(currentRole === 'owner' ? [{ id: 'audit-log', label: 'Audit Log', subView: 'all' }] : []),
                 ]
 
         const handleNavClick = (item: typeof navItems[0]) => {
@@ -561,14 +567,16 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
         )}
         
         {view === 'dashboard' && dashboardData && !isLoading && (
+          <DashboardWidgets>
+            {({ visibleWidgets }) => (
           <div className="space-y-6">
                         <div className="flex justify-between items-center">
                           <h2 className="text-3xl font-bold text-gray-900">{currentRole === 'owner' ? 'Owner' : 'Center Manager'} Dashboard</h2>
                         </div>
 
-                        <DailyBibleVerse />
+                        {visibleWidgets.includes('bible-verse') && <DailyBibleVerse />}
             
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {visibleWidgets.includes('stats-cards') && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card 
                 className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-600"
                 onClick={() => { setView('students'); fetchStudents(); }}
@@ -634,9 +642,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <p className="text-xs text-blue-600 mt-1 font-medium">Click to view attendance →</p>
                 </CardContent>
               </Card>
-            </div>
+            </div>}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {visibleWidgets.includes('alert-cards') && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card 
                 className="border-l-4 border-red-500 hover:shadow-lg transition-shadow cursor-pointer hover:border-red-600"
                 onClick={() => handleCardClick('at-risk')}
@@ -687,9 +695,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <p className="text-xs text-orange-600 mt-1 font-medium">Click to view families →</p>
                 </CardContent>
               </Card>
-            </div>
+            </div>}
 
-            <Card>
+            {visibleWidgets.includes('billing-overview') && <Card>
               <CardHeader>
                 <CardTitle>Billing Status Overview</CardTitle>
               </CardHeader>
@@ -709,8 +717,12 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
+
+            {visibleWidgets.includes('activity-feed') && <RecentActivityFeed />}
           </div>
+            )}
+          </DashboardWidgets>
         )}
 
         {view === 'students' && (
@@ -762,12 +774,76 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               </div>
             </div>
             
+                        {selectedStudents.size > 0 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+                            <span className="text-sm font-medium text-blue-800">
+                              {selectedStudents.size} student{selectedStudents.size > 1 ? 's' : ''} selected
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setView('communications')
+                                  setSubView('messages')
+                                }}
+                                className="text-xs"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                                Message All
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const selectedData = students.filter(s => selectedStudents.has(s.student_id))
+                                  const csv = ['Name,Grade,Session,Room,Risk Flag']
+                                  selectedData.forEach(s => csv.push(`${s.first_name} ${s.last_name},${s.grade},${s.session},${s.room},${s.overall_risk_flag}`))
+                                  const blob = new Blob([csv.join('\n')], { type: 'text/csv' })
+                                  const url = URL.createObjectURL(blob)
+                                  const a = document.createElement('a')
+                                  a.href = url
+                                  a.download = 'selected-students.csv'
+                                  a.click()
+                                  URL.revokeObjectURL(url)
+                                }}
+                                className="text-xs"
+                              >
+                                <Download className="w-3.5 h-3.5 mr-1" />
+                                Export Selected
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedStudents(new Set())}
+                                className="text-xs text-gray-600"
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
                         <Card>
                           <CardContent className="p-0">
                             <div className="overflow-x-auto max-h-[600px]">
                               <table className="w-full">
                                 <thead className="bg-gray-50 border-b sticky top-0 z-10">
                                   <tr>
+                                    <th className="px-3 py-3 text-center bg-gray-50">
+                                      <input
+                                        type="checkbox"
+                                        checked={students.length > 0 && selectedStudents.size === students.length}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedStudents(new Set(students.map(s => s.student_id)))
+                                          } else {
+                                            setSelectedStudents(new Set())
+                                          }
+                                        }}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                    </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Name</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Grade</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Session</th>
@@ -782,7 +858,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                                 <tbody className="bg-white divide-y divide-gray-200">
                                   {students.length === 0 ? (
                                     <tr>
-                                      <td colSpan={9} className="px-6 py-12 text-center">
+                                      <td colSpan={10} className="px-6 py-12 text-center">
                                         <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                         <p className="text-gray-500 text-lg font-medium">No students found</p>
                                         <p className="text-gray-400 text-sm mt-1">Try adjusting your filters or add a new student</p>
@@ -791,8 +867,24 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                                   ) : students.map((student) => (
                                     <tr 
                                       key={student.student_id} 
-                                      className="hover:bg-blue-50 transition-colors group"
+                                      className={`hover:bg-blue-50 transition-colors group ${selectedStudents.has(student.student_id) ? 'bg-blue-50/50' : ''}`}
                                     >
+                                      <td className="px-3 py-4 text-center">
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedStudents.has(student.student_id)}
+                                          onChange={(e) => {
+                                            const next = new Set(selectedStudents)
+                                            if (e.target.checked) {
+                                              next.add(student.student_id)
+                                            } else {
+                                              next.delete(student.student_id)
+                                            }
+                                            setSelectedStudents(next)
+                                          }}
+                                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                      </td>
                                       <td className="px-6 py-4 whitespace-nowrap">
                                         <button
                                           onClick={() => setAccountView({ type: 'student', id: student.student_id })}
@@ -1275,6 +1367,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 />
               )}
 
+              {view === 'audit-log' && currentRole === 'owner' && (
+                <AuditLog />
+              )}
+
               {view === 'settings' && (
                 <div className="space-y-6">
                   {subView === 'import' && currentRole === 'owner' ? (
@@ -1285,6 +1381,38 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 </div>
               )}
             </div>
+
+            {/* Quick Actions FAB */}
+            <QuickActions
+              currentRole={currentRole || 'owner'}
+              onAction={(action) => {
+                switch (action) {
+                  case 'add-student':
+                    setShowAddStudentModal(true)
+                    break
+                  case 'record-payment':
+                    setView('families-finance')
+                    setSubView('billing')
+                    break
+                  case 'log-attendance':
+                    setView('operations')
+                    setSubView('events')
+                    break
+                  case 'send-message':
+                    setView('communications')
+                    setSubView('messages')
+                    break
+                  case 'create-event':
+                    setView('operations')
+                    setSubView('events')
+                    break
+                  case 'add-family':
+                    setView('families-finance')
+                    setSubView('families')
+                    break
+                }
+              }}
+            />
 
             {/* Student Details Modal */}
       {selectedStudentId && (

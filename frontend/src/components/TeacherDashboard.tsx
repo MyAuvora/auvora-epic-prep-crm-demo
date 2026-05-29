@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
+import { QuickActions } from './QuickActions'
 import { EventsCalendar } from './EventsCalendar'
 import { DocumentManagement } from './DocumentManagement'
 import { PhotoGallery } from './PhotoGallery'
@@ -959,6 +960,15 @@ export function TeacherDashboard({ staffId, searchNavigation: _searchNavigation,
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Actions FAB */}
+      <QuickActions
+        currentRole="coach"
+        onAction={(action) => {
+          if (action === 'log-attendance') setView('rooms')
+          else if (action === 'send-message') setView('messages')
+        }}
+      />
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget userRole="coach" />
