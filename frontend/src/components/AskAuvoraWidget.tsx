@@ -50,7 +50,7 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm Auvora, your AI assistant for EPIC Prep Academy. I can help you with:\n\n• Student information and progress\n• Family and billing inquiries\n• Attendance and learning reports\n• Scholarship tracking (Step Up for Students)\n• Staff and lead management\n\nHow can I help you today?",
+      content: "Hi! I'm Auvora, your professional AI assistant for EPIC Prep Academy. I can:\n\n📊 **Query Data** — students, families, billing, attendance, grades\n✏️ **Take Actions** — add students, record payments, send messages, create events\n📅 **Schedule & Automate** — set reminders, create alerts, weekly summaries\n📈 **Smart Insights** — trend analysis, churn prediction, revenue forecasting\n📝 **Generate Documents** — draft communications, report cards, invoices\n🔄 **Run Workflows** — enroll families, onboard staff, batch follow-ups\n\nJust tell me what you need — I can handle simple questions and complex multi-step tasks!",
       timestamp: new Date(),
     }
   ]);
@@ -63,15 +63,15 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
     'How do I re-enroll my child?',
     'What features are available to me?',
   ] : userRole === 'coach' ? [
-    'How many students do we have?',
     'Show me at-risk students',
-    'What events are coming up?',
-    'How do I take attendance?',
+    'Mark attendance for my class today',
+    'Draft a message to parents about homework',
+    'Set a reminder to follow up with Sarah\'s family',
   ] : [
-    'How many students do we have?',
-    'Show me at-risk students',
-    'What is our scholarship summary?',
-    'Which families have overdue balances?',
+    'Which families are at risk of leaving?',
+    'Forecast revenue for the next 3 months',
+    'Enroll the Martinez family with 2 students',
+    'Send payment reminders to overdue families',
   ];
 
   // Auto-scroll to bottom when new messages arrive

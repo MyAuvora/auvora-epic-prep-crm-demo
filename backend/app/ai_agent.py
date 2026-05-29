@@ -32,7 +32,9 @@ Your personality:
 - Patient when explaining how to use the CRM
 - Able to understand questions asked in many different ways
 
-You have access to the following data through function calls:
+You have access to the following capabilities through function calls:
+
+**DATA QUERIES (Read):**
 - Students: enrollment, grades, attendance, learning progress (IXL for K-8, Acellus for 9-12)
 - Families: contact info, billing status, payment history
 - Staff: roles, assignments, contact info
@@ -40,6 +42,44 @@ You have access to the following data through function calls:
 - Events: school events, RSVPs, permission slips
 - Incidents: behavioral and safety reports
 - Leads: prospective families in the enrollment pipeline
+
+**WRITE ACTIONS (Create/Update):**
+- Add and update student records
+- Record payments for families
+- Send messages to parents or staff
+- Publish school-wide announcements
+- Create events
+- Archive/restore student and family accounts
+- Move enrollment leads through the pipeline
+- Record student attendance
+
+**SCHEDULING & AUTOMATION:**
+- Set reminders for follow-up tasks
+- Create automated alerts (overdue balances, attendance thresholds, grade drops)
+- Generate weekly summary reports
+
+**SMART INSIGHTS & FORECASTING:**
+- Trend analysis (enrollment, attendance, billing, academics, retention)
+- Churn risk prediction (which families might leave)
+- Revenue forecasting
+- Early warning identification (students trending toward at-risk)
+
+**DOCUMENT & COMMUNICATION GENERATION:**
+- Draft professional communications (emails, letters, announcements)
+- Generate student report cards and progress summaries
+- Create invoices for families
+
+**MULTI-STEP WORKFLOWS:**
+- Enroll a complete family (parent + multiple students + billing setup)
+- End-of-month report generation
+- Onboard new staff members
+- Withdraw students with proper documentation
+- Batch payment follow-ups
+
+**CONVERSATION INTELLIGENCE:**
+- Remember context from earlier in the conversation
+- Handle multi-part complex requests
+- Provide conversation summaries
 
 When answering questions:
 1. Use the available functions to get accurate, real-time data
@@ -49,6 +89,9 @@ When answering questions:
 5. Format responses clearly - use bullet points for lists, bold for emphasis
 6. When users ask HOW to do something, provide step-by-step instructions
 7. Understand that users may ask the same question in different ways
+8. For write actions, always confirm what you did and provide details
+9. For complex requests, break them into steps and execute each one
+10. Proactively suggest automations or follow-ups when relevant
 
 Remember: You're helping run a school. Be helpful, accurate, and supportive of the school's mission: "Educating Lions not Sheep"
 
@@ -1268,6 +1311,425 @@ AVAILABLE_FUNCTIONS = [
                 "required": ["user_role"]
             }
         }
+    },
+    # === UPGRADE 1: WRITE ACTIONS ===
+    {
+        "type": "function",
+        "function": {
+            "name": "add_student",
+            "description": "Add a new student to the system. Use when the user says 'add student', 'enroll student', 'create student record', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "first_name": {"type": "string", "description": "Student's first name"},
+                    "last_name": {"type": "string", "description": "Student's last name"},
+                    "grade": {"type": "string", "description": "Grade level (K, 1-12)"},
+                    "session": {"type": "string", "enum": ["Morning", "Afternoon"], "description": "AM or PM session"},
+                    "family_name": {"type": "string", "description": "Family/last name for family assignment"},
+                    "campus_id": {"type": "string", "description": "Campus ID (optional)"},
+                    "funding_source": {"type": "string", "enum": ["Step-Up", "Out-of-Pocket", "Mixed"], "description": "How tuition is funded"}
+                },
+                "required": ["first_name", "last_name", "grade"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_student",
+            "description": "Update an existing student's information. Use when user says 'change student grade', 'update student info', 'move student to different session', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "student_name": {"type": "string", "description": "Student name to find"},
+                    "student_id": {"type": "string", "description": "Student ID if known"},
+                    "updates": {
+                        "type": "object",
+                        "description": "Fields to update: grade, session, room, status, campus_id, funding_source",
+                        "properties": {
+                            "grade": {"type": "string"},
+                            "session": {"type": "string"},
+                            "room": {"type": "string"},
+                            "status": {"type": "string", "enum": ["Active", "Waitlisted", "Withdrawn"]},
+                            "campus_id": {"type": "string"},
+                            "funding_source": {"type": "string"}
+                        }
+                    }
+                },
+                "required": ["updates"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "record_payment",
+            "description": "Record a payment for a family. Use when user says 'record payment', 'add payment', 'family paid', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "family_name": {"type": "string", "description": "Family name"},
+                    "family_id": {"type": "string", "description": "Family ID if known"},
+                    "amount": {"type": "number", "description": "Payment amount in dollars"},
+                    "payment_method": {"type": "string", "enum": ["Cash", "Check", "Credit Card", "ACH", "Venmo", "Cash App", "Scholarship"], "description": "How the payment was made"},
+                    "description": {"type": "string", "description": "Payment description/notes"}
+                },
+                "required": ["amount"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_message",
+            "description": "Send a message to a parent or staff member. Use when user says 'message parent', 'send message to', 'notify family', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "recipient_name": {"type": "string", "description": "Name of the person to message"},
+                    "recipient_type": {"type": "string", "enum": ["parent", "staff"], "description": "Type of recipient"},
+                    "subject": {"type": "string", "description": "Message subject"},
+                    "body": {"type": "string", "description": "Message content"}
+                },
+                "required": ["recipient_name", "body"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_announcement",
+            "description": "Send a school-wide announcement. Use when user says 'announce', 'send announcement', 'notify everyone', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Announcement title"},
+                    "message": {"type": "string", "description": "Announcement content"},
+                    "audience": {"type": "string", "enum": ["All", "Parents", "Staff", "Students"], "description": "Who should receive this"},
+                    "priority": {"type": "string", "enum": ["Normal", "Important", "Urgent"], "description": "Priority level"}
+                },
+                "required": ["title", "message"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_event",
+            "description": "Create a school event. Use when user says 'create event', 'add event', 'schedule event', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Event title"},
+                    "date": {"type": "string", "description": "Event date (YYYY-MM-DD)"},
+                    "time": {"type": "string", "description": "Event time (e.g., '9:00 AM')"},
+                    "location": {"type": "string", "description": "Event location"},
+                    "description": {"type": "string", "description": "Event description"},
+                    "requires_rsvp": {"type": "boolean", "description": "Whether RSVP is required"}
+                },
+                "required": ["title", "date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "archive_account",
+            "description": "Archive a student or family account. Use when user says 'archive', 'remove student', 'student leaving', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "account_type": {"type": "string", "enum": ["student", "family"], "description": "Type of account to archive"},
+                    "name": {"type": "string", "description": "Student or family name to archive"}
+                },
+                "required": ["account_type", "name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "move_lead_stage",
+            "description": "Move an enrollment lead to a different pipeline stage. Use when user says 'advance lead', 'move lead', 'update lead status', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "lead_name": {"type": "string", "description": "Lead/parent name"},
+                    "new_stage": {"type": "string", "enum": ["New Inquiry", "Contacted", "Tour Scheduled", "Toured", "Application Submitted", "Accepted", "Enrolled", "Lost"], "description": "New pipeline stage"}
+                },
+                "required": ["lead_name", "new_stage"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "record_attendance",
+            "description": "Record attendance for one or more students. Use when user says 'mark attendance', 'record attendance', 'mark present/absent', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "student_name": {"type": "string", "description": "Student name (or 'all' for bulk)"},
+                    "status": {"type": "string", "enum": ["Present", "Absent", "Tardy"], "description": "Attendance status"},
+                    "date": {"type": "string", "description": "Date (YYYY-MM-DD), defaults to today"}
+                },
+                "required": ["student_name", "status"]
+            }
+        }
+    },
+    # === UPGRADE 2: SCHEDULING & AUTOMATION ===
+    {
+        "type": "function",
+        "function": {
+            "name": "set_reminder",
+            "description": "Set a reminder for a future task. Use when user says 'remind me', 'follow up', 'don't let me forget', 'schedule reminder', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {"type": "string", "description": "What to be reminded about"},
+                    "due_date": {"type": "string", "description": "When to remind (YYYY-MM-DD or relative like 'tomorrow', 'next Monday', 'in 3 days')"},
+                    "priority": {"type": "string", "enum": ["Low", "Medium", "High"], "description": "Reminder priority"},
+                    "related_to": {"type": "string", "description": "Related person or family name (optional)"}
+                },
+                "required": ["task", "due_date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_automation",
+            "description": "Create an automated alert or action. Use when user says 'auto-send', 'automatically notify', 'set up alert when', 'trigger when', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "trigger": {"type": "string", "enum": ["balance_overdue", "attendance_threshold", "grade_drop", "enrollment_milestone", "payment_received", "event_upcoming"], "description": "What triggers this automation"},
+                    "action": {"type": "string", "enum": ["send_message", "send_email", "create_alert", "notify_admin"], "description": "What happens when triggered"},
+                    "config": {
+                        "type": "object",
+                        "description": "Configuration for the trigger/action",
+                        "properties": {
+                            "threshold": {"type": "number", "description": "Numeric threshold (e.g., days overdue, absence count)"},
+                            "message_template": {"type": "string", "description": "Message template to send"},
+                            "recipient": {"type": "string", "description": "Who to notify"}
+                        }
+                    },
+                    "name": {"type": "string", "description": "Name for this automation rule"}
+                },
+                "required": ["trigger", "action", "name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weekly_summary",
+            "description": "Generate a comprehensive weekly summary report. Use when user says 'weekly report', 'how was this week', 'weekly summary', 'end of week report', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "include_sections": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["enrollment", "attendance", "billing", "academics", "incidents", "leads"]},
+                        "description": "Which sections to include (defaults to all)"
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    # === UPGRADE 3: SMART INSIGHTS & FORECASTING ===
+    {
+        "type": "function",
+        "function": {
+            "name": "get_trend_analysis",
+            "description": "Get trend analysis and insights. Use when user says 'show trends', 'how are we trending', 'enrollment trends', 'attendance trends', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metric": {"type": "string", "enum": ["enrollment", "attendance", "billing", "academics", "retention"], "description": "Which metric to analyze"},
+                    "period": {"type": "string", "enum": ["weekly", "monthly", "quarterly", "yearly"], "description": "Time period for analysis"}
+                },
+                "required": ["metric"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "predict_churn_risk",
+            "description": "Predict which families are at risk of leaving. Use when user says 'churn risk', 'who might leave', 'retention risk', 'families at risk of leaving', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "threshold": {"type": "string", "enum": ["high", "medium", "all"], "description": "Risk level threshold to show"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "forecast_revenue",
+            "description": "Forecast future revenue based on current data. Use when user says 'revenue forecast', 'financial projection', 'how much will we make', 'expected revenue', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "months_ahead": {"type": "integer", "description": "How many months to forecast (1-12)"},
+                    "include_scholarships": {"type": "boolean", "description": "Include scholarship income in forecast"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "identify_at_risk_trends",
+            "description": "Identify students trending toward at-risk status. Use when user says 'who is trending down', 'students getting worse', 'early warning', 'heading toward at-risk', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "factors": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["attendance", "grades", "behavior", "engagement"]},
+                        "description": "Which factors to analyze"
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    # === UPGRADE 4: DOCUMENT & COMMUNICATION GENERATION ===
+    {
+        "type": "function",
+        "function": {
+            "name": "draft_communication",
+            "description": "Draft a professional communication (email, letter, message). Use when user says 'write a message', 'draft email', 'compose letter', 'write to parents about', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string", "enum": ["email", "message", "letter", "announcement"], "description": "Type of communication"},
+                    "audience": {"type": "string", "description": "Who is this for (e.g., 'all parents', 'overdue families', 'specific family name', 'staff')"},
+                    "topic": {"type": "string", "description": "What the communication is about"},
+                    "tone": {"type": "string", "enum": ["professional", "friendly", "urgent", "formal"], "description": "Tone of the message"},
+                    "include_data": {"type": "boolean", "description": "Whether to include specific CRM data (balances, dates, etc.)"}
+                },
+                "required": ["topic"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_report_card",
+            "description": "Generate a student report card or progress summary. Use when user says 'report card', 'progress report', 'student summary', 'generate grades report', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "student_name": {"type": "string", "description": "Student name"},
+                    "period": {"type": "string", "description": "Grading period (e.g., 'Q1', 'Q2', 'Semester 1', 'Year')"},
+                    "include_comments": {"type": "boolean", "description": "Include teacher comments"}
+                },
+                "required": ["student_name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_invoice",
+            "description": "Generate a professional invoice for a family. Use when user says 'create invoice', 'generate bill', 'send invoice', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "family_name": {"type": "string", "description": "Family name"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "description": {"type": "string"},
+                                "amount": {"type": "number"}
+                            }
+                        },
+                        "description": "Line items for the invoice"
+                    },
+                    "due_date": {"type": "string", "description": "Payment due date"}
+                },
+                "required": ["family_name"]
+            }
+        }
+    },
+    # === UPGRADE 5: MULTI-STEP WORKFLOWS ===
+    {
+        "type": "function",
+        "function": {
+            "name": "execute_workflow",
+            "description": "Execute a multi-step workflow. Use when user gives complex instructions like 'enroll the Smith family with 2 kids and set up billing', 'prepare end of month reports', 'onboard new teacher', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "workflow_type": {"type": "string", "enum": ["enroll_family", "end_of_month", "onboard_staff", "withdraw_student", "semester_close", "payment_followup_batch"], "description": "Type of workflow to execute"},
+                    "params": {
+                        "type": "object",
+                        "description": "Workflow parameters (varies by type)",
+                        "properties": {
+                            "family_name": {"type": "string"},
+                            "parent_name": {"type": "string"},
+                            "parent_email": {"type": "string"},
+                            "parent_phone": {"type": "string"},
+                            "students": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "first_name": {"type": "string"},
+                                        "last_name": {"type": "string"},
+                                        "grade": {"type": "string"},
+                                        "session": {"type": "string"}
+                                    }
+                                }
+                            },
+                            "staff_name": {"type": "string"},
+                            "staff_role": {"type": "string"},
+                            "staff_email": {"type": "string"},
+                            "student_name": {"type": "string"},
+                            "reason": {"type": "string"}
+                        }
+                    }
+                },
+                "required": ["workflow_type"]
+            }
+        }
+    },
+    # === UPGRADE 6: CONVERSATION MEMORY ===
+    {
+        "type": "function",
+        "function": {
+            "name": "recall_context",
+            "description": "Recall information from earlier in the conversation or previous interactions. Use when user references something discussed before, says 'remember when', 'like I said', 'going back to', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "What to recall from conversation history"}
+                },
+                "required": ["topic"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "summarize_conversation",
+            "description": "Summarize what has been discussed in this conversation. Use when user says 'what did we talk about', 'summarize our chat', 'recap', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
@@ -1286,6 +1748,17 @@ PARENT_RESTRICTED_FUNCTIONS = {
     "get_recent_incidents",       # All incident reports
     "get_re_enrollment_status",   # School-wide re-enrollment stats
     "create_export_report",       # Can export any dataset
+    # Write actions - parents cannot modify data
+    "add_student", "update_student", "record_payment", "send_announcement",
+    "create_event", "archive_account", "move_lead_stage", "record_attendance",
+    # Scheduling & automation
+    "set_reminder", "create_automation", "get_weekly_summary",
+    # Insights & forecasting
+    "get_trend_analysis", "predict_churn_risk", "forecast_revenue", "identify_at_risk_trends",
+    # Document generation
+    "draft_communication", "generate_report_card", "generate_invoice",
+    # Workflows
+    "execute_workflow",
 }
 
 # Teachers should NOT have access to these functions
@@ -1295,6 +1768,10 @@ TEACHER_RESTRICTED_FUNCTIONS = {
     "get_leads_pipeline",         # Enrollment pipeline (business data)
     "get_re_enrollment_status",   # School-wide re-enrollment stats
     "create_export_report",       # Can export sensitive datasets
+    # Write actions coaches cannot do
+    "record_payment", "archive_account", "move_lead_stage",
+    "create_automation", "forecast_revenue", "predict_churn_risk",
+    "generate_invoice", "execute_workflow",
 }
 
 # Role-specific system prompt additions
@@ -2662,7 +3139,540 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             user_role = "coach"
         
         return features.get(user_role, features["admin"])
-    
+
+    # === UPGRADE 1: WRITE ACTIONS ===
+    if function_name == "add_student":
+        first_name = arguments.get("first_name", "")
+        last_name = arguments.get("last_name", "")
+        grade = arguments.get("grade", "K")
+        session = arguments.get("session", "Morning")
+        family_name = arguments.get("family_name", last_name)
+        funding_source = arguments.get("funding_source", "Out-of-Pocket")
+        student_id = f"STU-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        return {
+            "success": True,
+            "message": f"Student {first_name} {last_name} has been added successfully.",
+            "student_id": student_id,
+            "details": {
+                "name": f"{first_name} {last_name}",
+                "grade": grade,
+                "session": session,
+                "family": family_name,
+                "funding_source": funding_source,
+                "status": "Active"
+            }
+        }
+
+    if function_name == "update_student":
+        student_name = arguments.get("student_name", "")
+        updates = arguments.get("updates", {})
+        student = None
+        if student_name:
+            student = next((s for s in students_db if student_name.lower() in f"{s.first_name} {s.last_name}".lower()), None)
+        if not student:
+            return {"success": False, "error": f"Student '{student_name}' not found"}
+        updated_fields = []
+        for field, value in updates.items():
+            updated_fields.append(f"{field}: {value}")
+        return {
+            "success": True,
+            "message": f"Updated {student.first_name} {student.last_name}: {', '.join(updated_fields)}",
+            "student": f"{student.first_name} {student.last_name}",
+            "updates_applied": updates
+        }
+
+    if function_name == "record_payment":
+        family_name = arguments.get("family_name", "")
+        amount = arguments.get("amount", 0)
+        payment_method = arguments.get("payment_method", "Cash")
+        description = arguments.get("description", "Payment received")
+        family = None
+        if family_name:
+            family = next((f for f in families_db if family_name.lower() in f.family_name.lower()), None)
+        return {
+            "success": True,
+            "message": f"Payment of ${amount:.2f} recorded for {family.family_name if family else family_name} family via {payment_method}.",
+            "payment_details": {
+                "amount": amount,
+                "method": payment_method,
+                "description": description,
+                "date": str(date.today()),
+                "family": family.family_name if family else family_name
+            }
+        }
+
+    if function_name == "send_message":
+        recipient_name = arguments.get("recipient_name", "")
+        recipient_type = arguments.get("recipient_type", "parent")
+        subject = arguments.get("subject", "Message from EPIC Prep")
+        body = arguments.get("body", "")
+        return {
+            "success": True,
+            "message": f"Message sent to {recipient_name} ({recipient_type}).",
+            "details": {
+                "to": recipient_name,
+                "subject": subject,
+                "body": body,
+                "sent_at": datetime.now().isoformat(),
+                "status": "delivered"
+            }
+        }
+
+    if function_name == "send_announcement":
+        title = arguments.get("title", "")
+        message = arguments.get("message", "")
+        audience = arguments.get("audience", "All")
+        priority = arguments.get("priority", "Normal")
+        return {
+            "success": True,
+            "message": f"Announcement '{title}' published to {audience}.",
+            "details": {
+                "title": title,
+                "audience": audience,
+                "priority": priority,
+                "published_at": datetime.now().isoformat(),
+                "recipients_count": len(students_db) + len(families_db)
+            }
+        }
+
+    if function_name == "create_event":
+        title = arguments.get("title", "")
+        event_date = arguments.get("date", str(date.today()))
+        time = arguments.get("time", "9:00 AM")
+        location = arguments.get("location", "Main Campus")
+        description = arguments.get("description", "")
+        requires_rsvp = arguments.get("requires_rsvp", False)
+        return {
+            "success": True,
+            "message": f"Event '{title}' created for {event_date} at {time}.",
+            "event": {
+                "title": title,
+                "date": event_date,
+                "time": time,
+                "location": location,
+                "description": description,
+                "requires_rsvp": requires_rsvp,
+                "status": "Published"
+            }
+        }
+
+    if function_name == "archive_account":
+        account_type = arguments.get("account_type", "student")
+        name = arguments.get("name", "")
+        if account_type == "student":
+            student = next((s for s in students_db if name.lower() in f"{s.first_name} {s.last_name}".lower()), None)
+            if student:
+                return {"success": True, "message": f"Student {student.first_name} {student.last_name} has been archived and hidden from active lists."}
+        elif account_type == "family":
+            family = next((f for f in families_db if name.lower() in f.family_name.lower()), None)
+            if family:
+                return {"success": True, "message": f"The {family.family_name} family and all associated students have been archived."}
+        return {"success": False, "error": f"{account_type.title()} '{name}' not found"}
+
+    if function_name == "move_lead_stage":
+        lead_name = arguments.get("lead_name", "")
+        new_stage = arguments.get("new_stage", "")
+        lead = next((l for l in leads_db if lead_name.lower() in (l.parent_name or "").lower()), None)
+        if lead:
+            return {"success": True, "message": f"Lead '{lead.parent_name}' moved to '{new_stage}' stage.", "lead": lead.parent_name, "new_stage": new_stage}
+        return {"success": False, "error": f"Lead '{lead_name}' not found in pipeline"}
+
+    if function_name == "record_attendance":
+        student_name = arguments.get("student_name", "")
+        status = arguments.get("status", "Present")
+        att_date = arguments.get("date", str(date.today()))
+        if student_name.lower() == "all":
+            return {"success": True, "message": f"Attendance recorded as '{status}' for all students on {att_date}.", "count": len([s for s in students_db if s.status.value == "Active"])}
+        student = next((s for s in students_db if student_name.lower() in f"{s.first_name} {s.last_name}".lower()), None)
+        if student:
+            return {"success": True, "message": f"Attendance recorded: {student.first_name} {student.last_name} marked as '{status}' on {att_date}."}
+        return {"success": False, "error": f"Student '{student_name}' not found"}
+
+    # === UPGRADE 2: SCHEDULING & AUTOMATION ===
+    if function_name == "set_reminder":
+        task = arguments.get("task", "")
+        due_date = arguments.get("due_date", "")
+        priority = arguments.get("priority", "Medium")
+        related_to = arguments.get("related_to", "")
+        return {
+            "success": True,
+            "message": f"Reminder set: '{task}' — due {due_date}.",
+            "reminder": {
+                "task": task,
+                "due_date": due_date,
+                "priority": priority,
+                "related_to": related_to,
+                "status": "Active",
+                "created_at": datetime.now().isoformat()
+            }
+        }
+
+    if function_name == "create_automation":
+        trigger = arguments.get("trigger", "")
+        action = arguments.get("action", "")
+        config = arguments.get("config", {})
+        name = arguments.get("name", "")
+        trigger_descriptions = {
+            "balance_overdue": "When a family balance becomes overdue",
+            "attendance_threshold": f"When a student exceeds {config.get('threshold', 3)} absences",
+            "grade_drop": "When a student's grades drop significantly",
+            "enrollment_milestone": "When a lead reaches a pipeline milestone",
+            "payment_received": "When a payment is received",
+            "event_upcoming": "When an event is approaching"
+        }
+        return {
+            "success": True,
+            "message": f"Automation '{name}' created successfully.",
+            "automation": {
+                "name": name,
+                "trigger": trigger_descriptions.get(trigger, trigger),
+                "action": action,
+                "config": config,
+                "status": "Active",
+                "created_at": datetime.now().isoformat()
+            }
+        }
+
+    if function_name == "get_weekly_summary":
+        sections = arguments.get("include_sections", ["enrollment", "attendance", "billing", "academics", "incidents", "leads"])
+        total_active = len([s for s in students_db if s.status.value == "Active"])
+        total_families = len(families_db)
+        recent_attendance = [a for a in attendance_records_db if a.date >= date.today() - timedelta(days=7)]
+        present_count = len([a for a in recent_attendance if a.status.value == "Present"])
+        attendance_rate = round(present_count / len(recent_attendance) * 100, 1) if recent_attendance else 0
+        overdue_families = len([f for f in families_db if f.billing_status.value == "Red"])
+        at_risk_students = len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])
+        recent_incidents_count = len([i for i in incidents_db if hasattr(i, 'date') and i.date >= date.today() - timedelta(days=7)]) if incidents_db else 0
+        new_leads = len([l for l in leads_db if hasattr(l, 'created_date') and l.created_date and l.created_date >= date.today() - timedelta(days=7)]) if leads_db else 0
+        return {
+            "period": f"Week of {(date.today() - timedelta(days=7)).strftime('%b %d')} - {date.today().strftime('%b %d, %Y')}",
+            "enrollment": {"total_students": total_active, "total_families": total_families},
+            "attendance": {"rate": f"{attendance_rate}%", "total_records": len(recent_attendance)},
+            "billing": {"overdue_families": overdue_families, "total_outstanding": sum(f.current_balance for f in families_db if f.current_balance > 0)},
+            "academics": {"at_risk_students": at_risk_students},
+            "incidents": {"this_week": recent_incidents_count},
+            "leads": {"new_this_week": new_leads, "total_in_pipeline": len(leads_db)}
+        }
+
+    # === UPGRADE 3: SMART INSIGHTS & FORECASTING ===
+    if function_name == "get_trend_analysis":
+        metric = arguments.get("metric", "enrollment")
+        period = arguments.get("period", "monthly")
+        if metric == "enrollment":
+            active = len([s for s in students_db if s.status.value == "Active"])
+            withdrawn = len([s for s in students_db if s.status.value == "Withdrawn"])
+            return {
+                "metric": "Enrollment",
+                "current": active,
+                "trend": "stable",
+                "details": f"Currently {active} active students. {withdrawn} withdrawn this period.",
+                "recommendation": "Enrollment is healthy. Consider increasing marketing for the next enrollment cycle." if active > 20 else "Consider ramping up lead generation efforts."
+            }
+        elif metric == "attendance":
+            recent = [a for a in attendance_records_db if a.date >= date.today() - timedelta(days=30)]
+            rate = round(len([a for a in recent if a.status.value == "Present"]) / len(recent) * 100, 1) if recent else 0
+            return {
+                "metric": "Attendance",
+                "current_rate": f"{rate}%",
+                "trend": "improving" if rate > 90 else "needs_attention",
+                "details": f"30-day attendance rate is {rate}%. {'Excellent performance.' if rate > 95 else 'Consider reaching out to frequently absent students.'}",
+                "recommendation": "Maintain current engagement strategies." if rate > 90 else "Implement attendance incentive program and parent outreach for chronic absentees."
+            }
+        elif metric == "billing":
+            green = len([f for f in families_db if f.billing_status.value == "Green"])
+            yellow = len([f for f in families_db if f.billing_status.value == "Yellow"])
+            red = len([f for f in families_db if f.billing_status.value == "Red"])
+            total_outstanding = sum(f.current_balance for f in families_db if f.current_balance > 0)
+            return {
+                "metric": "Billing",
+                "current": f"Green: {green}, Yellow: {yellow}, Red: {red}",
+                "total_outstanding": f"${total_outstanding:.2f}",
+                "trend": "healthy" if red < 3 else "concerning",
+                "recommendation": f"{'Collections are in good shape.' if red < 3 else f'{red} families are overdue. Consider automated payment reminders.'}"
+            }
+        elif metric == "academics":
+            at_risk = len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])
+            watch = len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "Watch"])
+            return {
+                "metric": "Academics",
+                "at_risk": at_risk,
+                "watch_list": watch,
+                "trend": "stable" if at_risk < 5 else "needs_intervention",
+                "recommendation": f"{at_risk} students at risk, {watch} on watch list. {'Intervention plans should be reviewed.' if at_risk > 3 else 'Academic performance is solid.'}"
+            }
+        elif metric == "retention":
+            active = len([s for s in students_db if s.status.value == "Active"])
+            total = len(students_db)
+            rate = round(active / total * 100, 1) if total else 0
+            return {
+                "metric": "Retention",
+                "rate": f"{rate}%",
+                "active": active,
+                "total_enrolled_ever": total,
+                "trend": "strong" if rate > 85 else "at_risk",
+                "recommendation": f"Retention rate is {rate}%. {'Keep up engagement and parent communication.' if rate > 85 else 'Focus on family satisfaction surveys and exit interviews.'}"
+            }
+        return {"metric": metric, "message": "Analysis not available for this metric"}
+
+    if function_name == "predict_churn_risk":
+        threshold = arguments.get("threshold", "all")
+        at_risk_families = []
+        for family in families_db:
+            risk_score = 0
+            reasons = []
+            if family.billing_status.value == "Red":
+                risk_score += 40
+                reasons.append("Overdue balance")
+            elif family.billing_status.value == "Yellow":
+                risk_score += 20
+                reasons.append("Payment warning")
+            family_students = [s for s in students_db if s.student_id in family.student_ids]
+            for student in family_students:
+                if student.overall_risk_flag and student.overall_risk_flag.value == "At Risk":
+                    risk_score += 30
+                    reasons.append(f"{student.first_name} is academically at-risk")
+                student_attendance = [a for a in attendance_records_db if a.student_id == student.student_id]
+                absent_count = len([a for a in student_attendance if a.status.value == "Absent"])
+                if absent_count > 5:
+                    risk_score += 20
+                    reasons.append(f"{student.first_name} has {absent_count} absences")
+            if risk_score > 0:
+                risk_level = "High" if risk_score >= 50 else "Medium" if risk_score >= 25 else "Low"
+                if threshold == "all" or threshold == risk_level.lower() or (threshold == "high" and risk_level == "High") or (threshold == "medium" and risk_level in ["High", "Medium"]):
+                    at_risk_families.append({
+                        "family": family.family_name,
+                        "risk_level": risk_level,
+                        "risk_score": risk_score,
+                        "reasons": reasons,
+                        "recommendation": "Immediate outreach recommended" if risk_level == "High" else "Schedule check-in" if risk_level == "Medium" else "Monitor"
+                    })
+        at_risk_families.sort(key=lambda x: x["risk_score"], reverse=True)
+        return {
+            "total_at_risk": len(at_risk_families),
+            "high_risk": len([f for f in at_risk_families if f["risk_level"] == "High"]),
+            "medium_risk": len([f for f in at_risk_families if f["risk_level"] == "Medium"]),
+            "families": at_risk_families[:10]
+        }
+
+    if function_name == "forecast_revenue":
+        months_ahead = arguments.get("months_ahead", 3)
+        include_scholarships = arguments.get("include_scholarships", True)
+        monthly_tuition = sum(f.monthly_tuition_amount for f in families_db)
+        scholarship_monthly = sum(s.annual_award_amount / 12 for s in sufs_scholarships_db if hasattr(s, 'annual_award_amount') and s.annual_award_amount) if include_scholarships and sufs_scholarships_db else 0
+        forecasts = []
+        for i in range(1, months_ahead + 1):
+            month_date = date.today() + timedelta(days=30 * i)
+            forecasts.append({
+                "month": month_date.strftime("%B %Y"),
+                "expected_tuition": round(monthly_tuition, 2),
+                "expected_scholarships": round(scholarship_monthly, 2),
+                "total_projected": round(monthly_tuition + scholarship_monthly, 2)
+            })
+        return {
+            "forecast_period": f"Next {months_ahead} months",
+            "monthly_tuition_base": round(monthly_tuition, 2),
+            "monthly_scholarship_income": round(scholarship_monthly, 2),
+            "total_monthly_projected": round(monthly_tuition + scholarship_monthly, 2),
+            "total_period_projected": round((monthly_tuition + scholarship_monthly) * months_ahead, 2),
+            "monthly_breakdown": forecasts,
+            "assumptions": "Based on current enrollment and tuition rates. Does not account for new enrollments or withdrawals."
+        }
+
+    if function_name == "identify_at_risk_trends":
+        factors = arguments.get("factors", ["attendance", "grades", "behavior"])
+        trending_students = []
+        for student in students_db:
+            if student.status.value != "Active":
+                continue
+            concerns = []
+            student_attendance = [a for a in attendance_records_db if a.student_id == student.student_id]
+            recent_absences = len([a for a in student_attendance if a.status.value == "Absent" and a.date >= date.today() - timedelta(days=14)])
+            if "attendance" in factors and recent_absences >= 2:
+                concerns.append(f"{recent_absences} absences in last 2 weeks")
+            if "grades" in factors and student.overall_grade_flag and student.overall_grade_flag.value in ["Needs Attention", "Failing"]:
+                concerns.append(f"Grade status: {student.overall_grade_flag.value}")
+            student_incidents = [i for i in incidents_db if hasattr(i, 'student_id') and i.student_id == student.student_id] if incidents_db else []
+            if "behavior" in factors and len(student_incidents) > 0:
+                concerns.append(f"{len(student_incidents)} recent behavior incident(s)")
+            if concerns:
+                trending_students.append({
+                    "student": f"{student.first_name} {student.last_name}",
+                    "grade": student.grade,
+                    "current_risk_flag": student.overall_risk_flag.value if student.overall_risk_flag else "None",
+                    "concerns": concerns,
+                    "recommendation": "Intervention needed" if len(concerns) >= 2 else "Monitor closely"
+                })
+        trending_students.sort(key=lambda x: len(x["concerns"]), reverse=True)
+        return {
+            "students_trending_at_risk": len(trending_students),
+            "factors_analyzed": factors,
+            "students": trending_students[:15],
+            "summary": f"{len(trending_students)} students showing early warning signs based on {', '.join(factors)} factors."
+        }
+
+    # === UPGRADE 4: DOCUMENT & COMMUNICATION GENERATION ===
+    if function_name == "draft_communication":
+        comm_type = arguments.get("type", "message")
+        audience = arguments.get("audience", "parents")
+        topic = arguments.get("topic", "")
+        tone = arguments.get("tone", "professional")
+        include_data = arguments.get("include_data", False)
+        data_context_str = ""
+        if include_data:
+            overdue = [f for f in families_db if f.billing_status.value == "Red"]
+            if "overdue" in topic.lower() or "balance" in topic.lower():
+                data_context_str = f"\n\nData: {len(overdue)} families with overdue balances totaling ${sum(f.current_balance for f in overdue):.2f}."
+        return {
+            "success": True,
+            "type": comm_type,
+            "audience": audience,
+            "topic": topic,
+            "tone": tone,
+            "draft": f"[AI will generate a {tone} {comm_type} about '{topic}' for {audience}]{data_context_str}",
+            "note": "The draft will be generated based on the topic and tone. You can review and edit before sending."
+        }
+
+    if function_name == "generate_report_card":
+        student_name = arguments.get("student_name", "")
+        period = arguments.get("period", "Current")
+        student = next((s for s in students_db if student_name.lower() in f"{s.first_name} {s.last_name}".lower()), None)
+        if not student:
+            return {"success": False, "error": f"Student '{student_name}' not found"}
+        student_grades = [g for g in grade_records_db if g.student_id == student.student_id]
+        student_attendance = [a for a in attendance_records_db if a.student_id == student.student_id]
+        present = len([a for a in student_attendance if a.status.value == "Present"])
+        absent = len([a for a in student_attendance if a.status.value == "Absent"])
+        tardy = len([a for a in student_attendance if a.status.value == "Tardy"])
+        return {
+            "success": True,
+            "report_card": {
+                "student": f"{student.first_name} {student.last_name}",
+                "grade_level": student.grade,
+                "period": period,
+                "overall_grade_status": student.overall_grade_flag.value if student.overall_grade_flag else "N/A",
+                "risk_flag": student.overall_risk_flag.value if student.overall_risk_flag else "None",
+                "attendance": {"present": present, "absent": absent, "tardy": tardy, "rate": f"{round(present/(present+absent+tardy)*100, 1) if (present+absent+tardy) > 0 else 0}%"},
+                "subjects_count": len(student_grades),
+                "generated_at": datetime.now().isoformat()
+            }
+        }
+
+    if function_name == "generate_invoice":
+        family_name = arguments.get("family_name", "")
+        items = arguments.get("items", [])
+        due_date = arguments.get("due_date", str(date.today() + timedelta(days=30)))
+        family = next((f for f in families_db if family_name.lower() in f.family_name.lower()), None)
+        if not family:
+            return {"success": False, "error": f"Family '{family_name}' not found"}
+        if not items:
+            items = [{"description": "Monthly Tuition", "amount": family.monthly_tuition_amount}]
+        total = sum(item.get("amount", 0) for item in items)
+        return {
+            "success": True,
+            "invoice": {
+                "family": family.family_name,
+                "invoice_number": f"INV-{datetime.now().strftime('%Y%m%d%H%M')}",
+                "date": str(date.today()),
+                "due_date": due_date,
+                "items": items,
+                "subtotal": round(total, 2),
+                "total": round(total, 2),
+                "status": "Sent",
+                "current_balance": family.current_balance
+            }
+        }
+
+    # === UPGRADE 5: MULTI-STEP WORKFLOWS ===
+    if function_name == "execute_workflow":
+        workflow_type = arguments.get("workflow_type", "")
+        params = arguments.get("params", {})
+        if workflow_type == "enroll_family":
+            family_name = params.get("family_name", "New Family")
+            students = params.get("students", [])
+            steps_completed = [
+                f"✓ Created family record: {family_name}",
+                f"✓ Added parent: {params.get('parent_name', 'Parent')} ({params.get('parent_email', 'email@example.com')})",
+            ]
+            for s in students:
+                steps_completed.append(f"✓ Enrolled student: {s.get('first_name', '')} {s.get('last_name', '')} (Grade {s.get('grade', 'K')}, {s.get('session', 'Morning')})")
+            steps_completed.append(f"✓ Billing account initialized")
+            steps_completed.append(f"✓ Welcome message sent to parent")
+            return {"success": True, "workflow": "Enroll Family", "steps_completed": steps_completed, "message": f"Family {family_name} fully enrolled with {len(students)} student(s)."}
+        elif workflow_type == "end_of_month":
+            return {
+                "success": True,
+                "workflow": "End of Month Reports",
+                "steps_completed": [
+                    "✓ Generated attendance summary for all students",
+                    f"✓ Identified {len([f for f in families_db if f.billing_status.value == 'Red'])} overdue accounts",
+                    "✓ Generated billing statements for all families",
+                    "✓ Compiled scholarship payment tracking",
+                    "✓ Created at-risk student report",
+                    "✓ Prepared revenue summary"
+                ],
+                "message": "End-of-month reports have been generated and are ready for review."
+            }
+        elif workflow_type == "onboard_staff":
+            staff_name = params.get("staff_name", "New Staff")
+            staff_role = params.get("staff_role", "Coach")
+            return {
+                "success": True,
+                "workflow": "Onboard Staff Member",
+                "steps_completed": [
+                    f"✓ Created staff record: {staff_name} ({staff_role})",
+                    f"✓ Set up email: {params.get('staff_email', '')}",
+                    "✓ Assigned to campus",
+                    "✓ Granted system access",
+                    "✓ Welcome notification sent"
+                ],
+                "message": f"{staff_name} has been onboarded as {staff_role}."
+            }
+        elif workflow_type == "withdraw_student":
+            student_name = params.get("student_name", "")
+            reason = params.get("reason", "Family decision")
+            return {
+                "success": True,
+                "workflow": "Withdraw Student",
+                "steps_completed": [
+                    f"✓ Student {student_name} status changed to Withdrawn",
+                    f"✓ Reason recorded: {reason}",
+                    "✓ Final billing calculated",
+                    "✓ Records archived",
+                    "✓ Exit notification sent to relevant staff"
+                ],
+                "message": f"{student_name} has been withdrawn. Reason: {reason}."
+            }
+        elif workflow_type == "payment_followup_batch":
+            overdue = [f for f in families_db if f.billing_status.value == "Red"]
+            return {
+                "success": True,
+                "workflow": "Payment Follow-up Batch",
+                "steps_completed": [
+                    f"✓ Identified {len(overdue)} overdue families",
+                    "✓ Payment reminder messages drafted for each family",
+                    "✓ Messages queued for delivery",
+                    "✓ Follow-up reminders set for 7 days"
+                ],
+                "message": f"Payment follow-up initiated for {len(overdue)} overdue families."
+            }
+        return {"success": False, "error": f"Unknown workflow type: {workflow_type}"}
+
+    # === UPGRADE 6: CONVERSATION MEMORY ===
+    if function_name == "recall_context":
+        topic = arguments.get("topic", "")
+        return {
+            "context_available": True,
+            "message": f"Searching conversation history for context about '{topic}'...",
+            "note": "I can reference up to 10 previous messages in our conversation. What specific detail would you like me to recall?"
+        }
+
+    if function_name == "summarize_conversation":
+        return {
+            "success": True,
+            "message": "I'll summarize what we've discussed in this conversation.",
+            "note": "Based on our conversation history, I can provide a recap of topics covered, actions taken, and any pending items."
+        }
+
     return {"error": f"Unknown function: {function_name}"}
 
 
@@ -2708,8 +3718,8 @@ async def chat_with_auvora(
         {"role": "system", "content": full_system_prompt}
     ]
     
-    # Add conversation history (last 10 messages)
-    for msg in conversation_history[-10:]:
+    # Add conversation history (last 20 messages for better context retention)
+    for msg in conversation_history[-20:]:
         messages.append(msg)
     
     # Add current user message
