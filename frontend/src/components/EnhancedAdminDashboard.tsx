@@ -141,7 +141,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'archive' | 'audit-log'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -372,7 +372,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   ...(currentRole === 'admin' ? [{ id: 'events', label: 'Events', subView: 'upcoming' }] : []),
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
-                  ...(currentRole === 'owner' || currentRole === 'admin' ? [{ id: 'archive', label: 'Archive', subView: 'all' }] : []),
+
                   ...(currentRole === 'owner' ? [{ id: 'audit-log', label: 'Audit Log', subView: 'all' }] : []),
                 ]
 
@@ -979,12 +979,13 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <h2 className="text-3xl font-bold text-gray-900">Families & Finance</h2>
             </div>
                         <Tabs value={subView} onValueChange={setSubView} className="w-full">
-                          <TabsList className="grid w-full grid-cols-5">
+                          <TabsList className="grid w-full grid-cols-6">
                             <TabsTrigger value="families">Family Accounts</TabsTrigger>
                             <TabsTrigger value="scholarships">Scholarships</TabsTrigger>
                             <TabsTrigger value="billing">Payments & Invoices</TabsTrigger>
                             <TabsTrigger value="store">Store / POS</TabsTrigger>
                             <TabsTrigger value="reports">Reports</TabsTrigger>
+                            {(currentRole === 'owner' || currentRole === 'admin') && <TabsTrigger value="archive">Archive</TabsTrigger>}
                           </TabsList>
               <TabsContent value="families" className="mt-6">
                 {billingFilter && (
@@ -1180,6 +1181,14 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                                 )}
                               </Tabs>
                             </TabsContent>
+                            {(currentRole === 'owner' || currentRole === 'admin') && (
+                              <TabsContent value="archive" className="mt-6">
+                                <ArchiveList
+                                  onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
+                                  onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
+                                />
+                              </TabsContent>
+                            )}
             </Tabs>
           </div>
         )}
@@ -1358,13 +1367,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </div>
                   <EventsCalendar role="admin" />
                 </div>
-              )}
-
-              {view === 'archive' && (
-                <ArchiveList
-                  onStudentClick={(studentId) => setAccountView({ type: 'student', id: studentId })}
-                  onFamilyClick={(familyId) => setAccountView({ type: 'family', id: familyId })}
-                />
               )}
 
               {view === 'audit-log' && currentRole === 'owner' && (
