@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { ConferenceScheduling } from './ConferenceScheduling'
 import { AskAuvoraWidget } from './AskAuvoraWidget'
+import { QuickActions } from './QuickActions'
 import { EventsCalendar } from './EventsCalendar'
 import { DocumentManagement } from './DocumentManagement'
 import { StoreComponent } from './StoreComponent'
@@ -776,6 +777,14 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
                 />
               )}
             </div>
+
+      {/* Quick Actions FAB */}
+      <QuickActions
+        currentRole="parent"
+        onAction={(action) => {
+          if (action === 'send-message') setView('messages')
+        }}
+      />
 
       {/* Ask Auvora Widget */}
       <AskAuvoraWidget userRole="parent" />

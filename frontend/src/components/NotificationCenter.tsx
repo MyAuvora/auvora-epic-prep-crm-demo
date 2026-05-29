@@ -1,0 +1,261 @@
+import { useState, useEffect, useRef } from 'react'
+import { Bell, X, AlertTriangle, UserPlus, DollarSign, FileWarning, Package, Calendar, CheckCircle } from 'lucide-react'
+
+interface Notification {
+  id: string
+  type: 'enrollment' | 'payment' | 'incident' | 'inventory' | 'attendance' | 'event' | 'system'
+  title: string
+  message: string
+  timestamp: Date
+  read: boolean
+  priority: 'high' | 'medium' | 'low'
+  actionUrl?: string
+}
+
+interface NotificationCenterProps {
+  currentRole: 'owner' | 'admin' | 'coach' | 'parent'
+}
+
+const DEMO_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'n1',
+    type: 'enrollment',
+    title: 'New Enrollment Application',
+    message: 'The Garcia family submitted an enrollment application for 2 students.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 15),
+    read: false,
+    priority: 'high'
+  },
+  {
+    id: 'n2',
+    type: 'payment',
+    title: 'Overdue Payment Alert',
+    message: '3 families have balances overdue by 30+ days.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    read: false,
+    priority: 'high'
+  },
+  {
+    id: 'n3',
+    type: 'incident',
+    title: 'Incident Report Filed',
+    message: 'Coach Williams filed an incident report for a student in Room 3.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
+    read: false,
+    priority: 'medium'
+  },
+  {
+    id: 'n4',
+    type: 'inventory',
+    title: 'Low Inventory Warning',
+    message: 'School T-Shirts (Size M) are running low — only 3 remaining.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
+    read: true,
+    priority: 'low'
+  },
+  {
+    id: 'n5',
+    type: 'attendance',
+    title: 'Attendance Concern',
+    message: 'Jake Thompson has been absent 4 times this week.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6),
+    read: true,
+    priority: 'medium'
+  },
+  {
+    id: 'n6',
+    type: 'event',
+    title: 'Event RSVP Deadline',
+    message: 'Science Fair RSVP deadline is tomorrow — 12 families haven\'t responded.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8),
+    read: true,
+    priority: 'low'
+  },
+  {
+    id: 'n7',
+    type: 'system',
+    title: 'Re-Enrollment Reminder',
+    message: 'Re-enrollment deadline is in 14 days. 8 families haven\'t started.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    read: true,
+    priority: 'medium'
+  }
+]
+
+const PARENT_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'pn1',
+    type: 'event',
+    title: 'Upcoming Event',
+    message: 'Science Fair is next Friday — don\'t forget to RSVP!',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    read: false,
+    priority: 'medium'
+  },
+  {
+    id: 'pn2',
+    type: 'payment',
+    title: 'Payment Confirmation',
+    message: 'Your payment of $850.00 was received. Thank you!',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    read: true,
+    priority: 'low'
+  },
+  {
+    id: 'pn3',
+    type: 'system',
+    title: 'Progress Update Available',
+    message: 'New report card is available for Emma in the Documents tab.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
+    read: true,
+    priority: 'low'
+  }
+]
+
+function getTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
+
+function getNotificationIcon(type: Notification['type']) {
+  switch (type) {
+    case 'enrollment': return <UserPlus className="w-4 h-4 text-blue-600" />
+    case 'payment': return <DollarSign className="w-4 h-4 text-green-600" />
+    case 'incident': return <FileWarning className="w-4 h-4 text-red-600" />
+    case 'inventory': return <Package className="w-4 h-4 text-orange-600" />
+    case 'attendance': return <AlertTriangle className="w-4 h-4 text-yellow-600" />
+    case 'event': return <Calendar className="w-4 h-4 text-purple-600" />
+    case 'system': return <Bell className="w-4 h-4 text-gray-600" />
+  }
+}
+
+export function NotificationCenter({ currentRole }: NotificationCenterProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>(
+    currentRole === 'parent' ? PARENT_NOTIFICATIONS : DEMO_NOTIFICATIONS
+  )
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  }
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+        style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+      >
+        <Bell className="w-5 h-5 text-white" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-xl z-50 max-h-[70vh] flex flex-col">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Notifications</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllRead}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                >
+                  <CheckCircle className="w-3 h-3" />
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-y-auto flex-1">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-gray-500">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No notifications</p>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      !notification.read ? 'bg-blue-50/50' : ''
+                    }`}
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        notification.priority === 'high' ? 'bg-red-100' :
+                        notification.priority === 'medium' ? 'bg-yellow-100' : 'bg-gray-100'
+                      }`}>
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm font-medium truncate ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                            {notification.title}
+                          </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); dismissNotification(notification.id) }}
+                            className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-400">{getTimeAgo(notification.timestamp)}</span>
+                          {!notification.read && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {notifications.length > 0 && (
+              <div className="px-4 py-2 border-t border-gray-200 text-center">
+                <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                  View All Notifications
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

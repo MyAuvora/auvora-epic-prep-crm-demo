@@ -5,6 +5,7 @@ import { ProfileInformation } from './ProfileInformation'
 import { AccountSettings } from './AccountSettings'
 import { HelpSupport } from './HelpSupport'
 import { PrivacySecurity } from './PrivacySecurity'
+import { NotificationCenter } from './NotificationCenter'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -384,6 +385,9 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                 <span className="font-medium truncate max-w-[80px] sm:max-w-none">{assignedCampusName}</span>
               </div>
               )}
+
+              {/* Notification Center */}
+              <NotificationCenter currentRole={currentRole} />
               
               <div className="relative">
                 <button
