@@ -59,6 +59,20 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE incidents ADD COLUMN admin_notes TEXT DEFAULT ''"))
             if "reviewed_by_staff_id" not in existing:
                 conn.execute(text("ALTER TABLE incidents ADD COLUMN reviewed_by_staff_id VARCHAR DEFAULT ''"))
+        # Products table: add stock_quantity if missing
+        if "products" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("products")]
+            if "stock_quantity" not in existing:
+                conn.execute(text("ALTER TABLE products ADD COLUMN stock_quantity INTEGER DEFAULT 100"))
+        # Orders table: add payment_method, receipt_sent, receipt_email if missing
+        if "orders" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("orders")]
+            if "payment_method" not in existing:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN payment_method VARCHAR DEFAULT 'card_on_file'"))
+            if "receipt_sent" not in existing:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN receipt_sent BOOLEAN DEFAULT 0"))
+            if "receipt_email" not in existing:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN receipt_email VARCHAR DEFAULT NULL"))
         conn.commit()
     finally:
         conn.close()

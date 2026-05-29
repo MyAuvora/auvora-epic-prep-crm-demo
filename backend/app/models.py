@@ -399,6 +399,7 @@ class Product(Base):
     image_url = Column(String)
     available = Column(Boolean, default=True)
     inventory_count = Column(Integer, default=0)
+    stock_quantity = Column(Integer, default=100)
 
 
 class Order(Base):
@@ -413,6 +414,9 @@ class Order(Base):
     status = Column(String, default="Pending")
     order_date = Column(DateTime, default=datetime.utcnow)
     payment_date = Column(DateTime)
+    payment_method = Column(String, default="card_on_file")
+    receipt_sent = Column(Boolean, default=False)
+    receipt_email = Column(String)
 
 
 class Conference(Base):

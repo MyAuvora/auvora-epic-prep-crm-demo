@@ -678,6 +678,7 @@ class Product(BaseModel):
     price: float
     image_url: Optional[str]
     available: bool
+    stock_quantity: int = 100
 
 class Order(BaseModel):
     order_id: str
@@ -688,6 +689,21 @@ class Order(BaseModel):
     status: OrderStatus
     order_date: datetime
     payment_date: Optional[datetime]
+    payment_method: str = "card_on_file"
+    receipt_sent: bool = False
+    receipt_email: Optional[str] = None
+
+class StoreNotification(BaseModel):
+    notification_id: str
+    order_id: str
+    campus_id: str
+    staff_id: str
+    family_name: str
+    items: List[dict]
+    total_amount: float
+    order_date: datetime
+    status: str = "pending"  # pending, acknowledged, fulfilled
+    acknowledged_at: Optional[datetime] = None
 
 class PhotoAlbum(BaseModel):
     album_id: str
@@ -1303,6 +1319,7 @@ documents_db: List[Document] = []
 document_signatures_db: List[DocumentSignature] = []
 products_db: List[Product] = []
 orders_db: List[Order] = []
+store_notifications_db: List[StoreNotification] = []
 photo_albums_db: List[PhotoAlbum] = []
 incidents_db: List[Incident] = []
 health_records_db: List[HealthRecord] = []
@@ -2304,6 +2321,45 @@ async def get_order(order_id: str):
 
 @app.post("/api/orders")
 async def create_order(order: Order):
+    # Find parent email and send receipt
+    parent = next((p for p in parents_db if p.parent_id == order.parent_id), None)
+    if parent:
+        order.receipt_sent = True
+        order.receipt_email = parent.email
+
+    # Find family to get student campus for CM notification
+    family = next((f for f in families_db if f.family_id == order.family_id), None)
+    campus_ids_to_notify: set = set()
+    if family:
+        for sid in family.student_ids:
+            student = next((s for s in students_db if s.student_id == sid), None)
+            if student:
+                campus_ids_to_notify.add(student.campus_id)
+
+    # Notify center managers at relevant campuses
+    for campus_id in campus_ids_to_notify:
+        center_managers = [s for s in staff_db if s.role == StaffRole.CENTER_MANAGER and campus_id in s.campus_ids]
+        for cm in center_managers:
+            notification = StoreNotification(
+                notification_id=f"sn_{order.order_id}_{cm.staff_id}",
+                order_id=order.order_id,
+                campus_id=campus_id,
+                staff_id=cm.staff_id,
+                family_name=family.family_name if family else "Unknown",
+                items=order.items,
+                total_amount=order.total_amount,
+                order_date=order.order_date,
+                status="pending"
+            )
+            store_notifications_db.append(notification)
+
+    # Decrease stock quantities
+    for item in order.items:
+        product = next((p for p in products_db if p.product_id == item.get("product_id")), None)
+        if product:
+            product.stock_quantity = max(0, product.stock_quantity - item.get("quantity", 1))
+            db_utils.save_product(product)
+
     orders_db.append(order)
     db_utils.save_order(order)
     return order
@@ -2318,6 +2374,28 @@ async def update_order(order_id: str, status: OrderStatus):
         order.payment_date = datetime.now()
     db_utils.save_order(order)
     return order
+
+@app.get("/api/store-notifications")
+async def get_store_notifications(staff_id: Optional[str] = None, campus_id: Optional[str] = None, status: Optional[str] = None):
+    results = store_notifications_db
+    if staff_id:
+        results = [n for n in results if n.staff_id == staff_id]
+    if campus_id:
+        results = [n for n in results if n.campus_id == campus_id]
+    if status:
+        results = [n for n in results if n.status == status]
+    return sorted(results, key=lambda n: n.order_date, reverse=True)
+
+@app.put("/api/store-notifications/{notification_id}")
+async def update_store_notification(notification_id: str, status_update: dict):
+    notification = next((n for n in store_notifications_db if n.notification_id == notification_id), None)
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    new_status = status_update.get("status", notification.status)
+    notification.status = new_status
+    if new_status in ("acknowledged", "fulfilled"):
+        notification.acknowledged_at = datetime.now()
+    return notification
 
 @app.get("/api/photo-albums")
 async def get_photo_albums(grade: Optional[str] = None):

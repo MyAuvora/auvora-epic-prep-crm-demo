@@ -496,6 +496,7 @@ def save_product(pydantic_prod):
             price=pydantic_prod.price,
             image_url=getattr(pydantic_prod, 'image_url', None),
             available=pydantic_prod.available,
+            stock_quantity=getattr(pydantic_prod, 'stock_quantity', 100),
         )
         _upsert(db, models.Product, "product_id", pydantic_prod.product_id, fields)
         db.commit()
@@ -526,6 +527,9 @@ def save_order(pydantic_order):
             status=_enum_val(pydantic_order.status),
             order_date=pydantic_order.order_date,
             payment_date=getattr(pydantic_order, 'payment_date', None),
+            payment_method=getattr(pydantic_order, 'payment_method', 'card_on_file'),
+            receipt_sent=getattr(pydantic_order, 'receipt_sent', False),
+            receipt_email=getattr(pydantic_order, 'receipt_email', None),
         )
         _upsert(db, models.Order, "order_id", pydantic_order.order_id, fields)
         db.commit()
@@ -1896,6 +1900,7 @@ def _product_to_dict(r):
         "description": r.description or "", "category": r.category or "Other",
         "price": r.price or 0.0, "image_url": r.image_url,
         "available": r.available if r.available is not None else True,
+        "stock_quantity": r.stock_quantity if r.stock_quantity is not None else 100,
     }
 
 
@@ -1906,6 +1911,9 @@ def _order_to_dict(r):
         "total_amount": r.total_amount or 0.0, "status": r.status or "Pending",
         "order_date": r.order_date or datetime.utcnow(),
         "payment_date": r.payment_date,
+        "payment_method": getattr(r, 'payment_method', None) or "card_on_file",
+        "receipt_sent": bool(getattr(r, 'receipt_sent', False)),
+        "receipt_email": getattr(r, 'receipt_email', None),
     }
 
 
