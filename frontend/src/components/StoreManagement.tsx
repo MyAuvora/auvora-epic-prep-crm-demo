@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Edit2, Trash2, Bell, CheckCircle, Clock, AlertTriangle, Eye } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Package, Plus, Edit2, Trash2, Bell, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
