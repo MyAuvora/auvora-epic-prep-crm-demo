@@ -68,10 +68,10 @@ export function AskAuvoraWidget({ userRole = 'admin' }: AskAuvoraWidgetProps) {
     'Draft a message to parents about homework',
     'Set a reminder to follow up with Sarah\'s family',
   ] : [
-    'Which families are at risk of leaving?',
-    'Forecast revenue for the next 3 months',
-    'Enroll the Martinez family with 2 students',
-    'Send payment reminders to overdue families',
+    'Prepare me for my board meeting',
+    'What should I focus on today?',
+    'Show me family health scores',
+    'How do we compare to industry benchmarks?',
   ];
 
   // Auto-scroll to bottom when new messages arrive

@@ -81,6 +81,45 @@ You have access to the following capabilities through function calls:
 - Handle multi-part complex requests
 - Provide conversation summaries
 
+**NATURAL LANGUAGE SEARCH:**
+- Search across all data using plain English ("that family from Navarre", "the kid who transferred")
+- Fuzzy matching across students, families, staff, events
+
+**PROACTIVE SMART SUGGESTIONS:**
+- Automatically detect patterns and suggest actions
+- Identify overdue families, chronic absence, stale leads
+- Prioritized recommendations with impact assessment
+
+**COMMUNICATION TEMPLATES:**
+- Pre-built professional templates for common parent messages
+- Tuition reminders, late payments, event invites, progress updates, incident follow-ups, welcome messages, achievement celebrations
+
+**GOAL TRACKING & KPIs:**
+- Set school-wide goals (attendance %, enrollment count, revenue, retention)
+- Track real-time progress toward targets
+- Generate KPI reports on demand
+
+**BENCHMARKING:**
+- Compare school metrics to industry averages
+- Student-teacher ratio, attendance, retention, tuition collection, growth, engagement, academics
+- Rated as Top Quartile, Above Average, Near Average, or Below Average
+
+**MEETING PREP:**
+- Generate comprehensive meeting briefs (board meetings, staff meetings, parent conferences, investor updates)
+- Executive summary, talking points, and action items
+- Customizable focus areas and time periods
+
+**FAMILY HEALTH SCORES:**
+- Calculate satisfaction/health scores for every family (0-100)
+- Based on payments, academics, attendance, and engagement
+- Identifies Critical, Warning, and Healthy families
+
+**CALENDAR INTELLIGENCE:**
+- Aware of school calendar (testing weeks, holidays, breaks, deadlines)
+- Suggests optimal timing for events
+- Checks proposed dates for conflicts
+- Proactive prep recommendations as deadlines approach
+
 When answering questions:
 1. Use the available functions to get accurate, real-time data
 2. Provide specific numbers and names when relevant
@@ -1730,6 +1769,145 @@ AVAILABLE_FUNCTIONS = [
                 "required": []
             }
         }
+    },
+    # === UPGRADE 7: NATURAL LANGUAGE SEARCH (SEMANTIC) ===
+    {
+        "type": "function",
+        "function": {
+            "name": "semantic_search",
+            "description": "Search across all CRM data using natural language. Understands fuzzy/contextual queries like 'that family from Navarre', 'the kid who transferred last month', 'families with scholarship issues'. Use when the user's query doesn't fit a structured search pattern.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Natural language search query"},
+                    "scope": {"type": "string", "enum": ["all", "students", "families", "staff", "events", "incidents"], "description": "Which data to search (defaults to all)"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    # === UPGRADE 8: SMART SUGGESTIONS (PROACTIVE ASSISTANT) ===
+    {
+        "type": "function",
+        "function": {
+            "name": "get_smart_suggestions",
+            "description": "Get proactive suggestions based on current patterns and data. Use when user says 'any suggestions', 'what should I focus on', 'what needs attention', 'give me insights', 'what am I missing', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "focus_area": {"type": "string", "enum": ["all", "billing", "attendance", "academics", "enrollment", "engagement"], "description": "Which area to analyze for suggestions"}
+                },
+                "required": []
+            }
+        }
+    },
+    # === UPGRADE 9: PARENT COMMUNICATION TEMPLATES ===
+    {
+        "type": "function",
+        "function": {
+            "name": "get_communication_template",
+            "description": "Get a pre-built communication template for common parent messages. Use when user says 'template for', 'give me a template', 'how should I word', 'standard message for', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "template_type": {"type": "string", "enum": ["tuition_reminder", "late_payment", "event_invite", "progress_update", "incident_followup", "holiday_schedule", "re_enrollment", "welcome_new_family", "attendance_concern", "achievement_celebration"], "description": "Type of template to retrieve"},
+                    "family_name": {"type": "string", "description": "Family name to personalize the template (optional)"},
+                    "custom_details": {"type": "string", "description": "Additional details to include in the template"}
+                },
+                "required": ["template_type"]
+            }
+        }
+    },
+    # === UPGRADE 10: GOAL TRACKING & KPIs ===
+    {
+        "type": "function",
+        "function": {
+            "name": "track_goals",
+            "description": "Set, track, and report on school-wide goals and KPIs. Use when user says 'set a goal', 'track our progress', 'how are we doing on', 'KPI report', 'are we on track', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["set", "check", "list", "report"], "description": "What to do: set a new goal, check progress, list all goals, or generate report"},
+                    "metric": {"type": "string", "enum": ["attendance_rate", "enrollment_count", "revenue_monthly", "retention_rate", "at_risk_reduction", "collection_rate"], "description": "Which metric this goal tracks"},
+                    "target_value": {"type": "number", "description": "Target value for the goal (e.g., 95 for 95% attendance)"},
+                    "deadline": {"type": "string", "description": "Goal deadline (YYYY-MM-DD)"},
+                    "name": {"type": "string", "description": "Custom name for the goal"}
+                },
+                "required": ["action"]
+            }
+        }
+    },
+    # === UPGRADE 11: COMPETITIVE ANALYSIS / BENCHMARKING ===
+    {
+        "type": "function",
+        "function": {
+            "name": "benchmark_metrics",
+            "description": "Compare school metrics against industry averages and best practices. Use when user says 'how do we compare', 'benchmark', 'industry average', 'are we above average', 'best practices', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metric": {"type": "string", "enum": ["student_teacher_ratio", "attendance_rate", "retention_rate", "tuition_collection", "enrollment_growth", "parent_engagement", "academic_performance"], "description": "Which metric to benchmark"},
+                    "school_type": {"type": "string", "enum": ["private_k12", "charter", "micro_school", "all"], "description": "Comparison group"}
+                },
+                "required": ["metric"]
+            }
+        }
+    },
+    # === UPGRADE 12: MEETING PREP MODE ===
+    {
+        "type": "function",
+        "function": {
+            "name": "prepare_meeting_brief",
+            "description": "Generate a comprehensive meeting brief with all key metrics and talking points. Use when user says 'prepare for my meeting', 'board meeting prep', 'meeting brief', 'executive summary', 'brief me', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "meeting_type": {"type": "string", "enum": ["board_meeting", "staff_meeting", "parent_conference", "investor_update", "weekly_standup"], "description": "Type of meeting to prepare for"},
+                    "focus_topics": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["enrollment", "financials", "academics", "operations", "staffing", "marketing", "facilities"]},
+                        "description": "Which topics to emphasize"
+                    },
+                    "time_period": {"type": "string", "enum": ["this_week", "this_month", "this_quarter", "this_year"], "description": "What time period to cover"}
+                },
+                "required": ["meeting_type"]
+            }
+        }
+    },
+    # === UPGRADE 13: PARENT SATISFACTION SCORING ===
+    {
+        "type": "function",
+        "function": {
+            "name": "get_family_health_scores",
+            "description": "Calculate health/satisfaction scores for families based on engagement, payments, attendance, and communication. Use when user says 'family satisfaction', 'health scores', 'which families are happy', 'engagement scores', 'family risk scores', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sort_by": {"type": "string", "enum": ["lowest_first", "highest_first"], "description": "Sort order for results"},
+                    "threshold": {"type": "string", "enum": ["critical", "warning", "all"], "description": "Which families to show: critical (<40), warning (<60), or all"},
+                    "family_name": {"type": "string", "description": "Specific family to check (optional)"}
+                },
+                "required": []
+            }
+        }
+    },
+    # === UPGRADE 14: CALENDAR INTELLIGENCE ===
+    {
+        "type": "function",
+        "function": {
+            "name": "calendar_intelligence",
+            "description": "Get intelligent scheduling suggestions based on the school calendar, testing windows, holidays, and deadlines. Use when user says 'when should I schedule', 'best time for', 'calendar conflicts', 'upcoming deadlines', 'what's coming up that I should prepare for', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["suggest_timing", "check_conflicts", "upcoming_deadlines", "prep_recommendations"], "description": "What calendar intelligence to provide"},
+                    "event_type": {"type": "string", "description": "Type of event or activity being planned (optional)"},
+                    "proposed_date": {"type": "string", "description": "Date being considered (YYYY-MM-DD, optional)"},
+                    "lookahead_days": {"type": "integer", "description": "How many days ahead to look (default 30)"}
+                },
+                "required": ["action"]
+            }
+        }
     }
 ]
 
@@ -1759,6 +1937,9 @@ PARENT_RESTRICTED_FUNCTIONS = {
     "draft_communication", "generate_report_card", "generate_invoice",
     # Workflows
     "execute_workflow",
+    # Advanced intelligence - parents cannot access school-wide analytics
+    "semantic_search", "get_smart_suggestions", "track_goals",
+    "benchmark_metrics", "prepare_meeting_brief", "get_family_health_scores",
 }
 
 # Teachers should NOT have access to these functions
@@ -1772,6 +1953,9 @@ TEACHER_RESTRICTED_FUNCTIONS = {
     "record_payment", "archive_account", "move_lead_stage",
     "create_automation", "forecast_revenue", "predict_churn_risk",
     "generate_invoice", "execute_workflow",
+    # Advanced features coaches don't need
+    "benchmark_metrics", "prepare_meeting_brief", "get_family_health_scores",
+    "track_goals",
 }
 
 # Role-specific system prompt additions
@@ -3672,6 +3856,521 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             "message": "I'll summarize what we've discussed in this conversation.",
             "note": "Based on our conversation history, I can provide a recap of topics covered, actions taken, and any pending items."
         }
+
+    # === UPGRADE 7: NATURAL LANGUAGE SEARCH (SEMANTIC) ===
+    if function_name == "semantic_search":
+        query = arguments.get("query", "").lower()
+        scope = arguments.get("scope", "all")
+        results = []
+        # Search students
+        if scope in ["all", "students"]:
+            for s in students_db:
+                student_text = f"{s.first_name} {s.last_name} {s.grade} {s.session if hasattr(s, 'session') else ''} {s.status.value} {s.funding_source.value if hasattr(s, 'funding_source') and s.funding_source else ''}".lower()
+                if any(word in student_text for word in query.split()):
+                    results.append({"type": "student", "name": f"{s.first_name} {s.last_name}", "grade": s.grade, "status": s.status.value})
+        # Search families
+        if scope in ["all", "families"]:
+            for f in families_db:
+                family_text = f"{f.family_name} {f.billing_status.value} {f.campus_name if hasattr(f, 'campus_name') else ''}".lower()
+                if any(word in family_text for word in query.split()):
+                    results.append({"type": "family", "name": f.family_name, "billing_status": f.billing_status.value, "balance": f.current_balance})
+        # Search staff
+        if scope in ["all", "staff"]:
+            for st in staff_db:
+                staff_text = f"{st.first_name} {st.last_name} {st.role.value if hasattr(st, 'role') else ''} {st.email if hasattr(st, 'email') else ''}".lower()
+                if any(word in staff_text for word in query.split()):
+                    results.append({"type": "staff", "name": f"{st.first_name} {st.last_name}", "role": st.role.value if hasattr(st, 'role') else "Staff"})
+        return {
+            "query": query,
+            "results_found": len(results),
+            "results": results[:20],
+            "note": f"Found {len(results)} results matching '{query}'" + (" across all data" if scope == "all" else f" in {scope}")
+        }
+
+    # === UPGRADE 8: SMART SUGGESTIONS (PROACTIVE ASSISTANT) ===
+    if function_name == "get_smart_suggestions":
+        focus_area = arguments.get("focus_area", "all")
+        suggestions = []
+        # Billing suggestions
+        if focus_area in ["all", "billing"]:
+            overdue = [f for f in families_db if f.billing_status.value == "Red"]
+            if overdue:
+                suggestions.append({
+                    "priority": "High",
+                    "category": "Billing",
+                    "suggestion": f"{len(overdue)} families have overdue balances totaling ${sum(f.current_balance for f in overdue):.2f}.",
+                    "action": "Send payment reminders to overdue families",
+                    "impact": "Revenue recovery"
+                })
+            yellow = [f for f in families_db if f.billing_status.value == "Yellow"]
+            if yellow:
+                suggestions.append({
+                    "priority": "Medium",
+                    "category": "Billing",
+                    "suggestion": f"{len(yellow)} families are approaching overdue status.",
+                    "action": "Proactive outreach to prevent these from going red",
+                    "impact": "Prevent revenue loss"
+                })
+        # Attendance suggestions
+        if focus_area in ["all", "attendance"]:
+            recent_attendance = [a for a in attendance_records_db if a.date >= date.today() - timedelta(days=7)]
+            absent_students = set()
+            for a in recent_attendance:
+                if a.status.value == "Absent":
+                    absent_students.add(a.student_id)
+            chronic_absent = [sid for sid in absent_students if len([a for a in recent_attendance if a.student_id == sid and a.status.value == "Absent"]) >= 3]
+            if chronic_absent:
+                suggestions.append({
+                    "priority": "High",
+                    "category": "Attendance",
+                    "suggestion": f"{len(chronic_absent)} students have 3+ absences this week.",
+                    "action": "Contact these families and schedule meetings",
+                    "impact": "Student retention and academic performance"
+                })
+        # Academic suggestions
+        if focus_area in ["all", "academics"]:
+            at_risk = [s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"]
+            if at_risk:
+                suggestions.append({
+                    "priority": "High",
+                    "category": "Academics",
+                    "suggestion": f"{len(at_risk)} students are flagged as At Risk.",
+                    "action": "Review intervention plans and schedule parent conferences",
+                    "impact": "Student success and retention"
+                })
+        # Enrollment suggestions
+        if focus_area in ["all", "enrollment"]:
+            if leads_db:
+                stale_leads = [l for l in leads_db if l.stage in ["New Inquiry", "Contacted"] and hasattr(l, 'created_date') and l.created_date and l.created_date <= date.today() - timedelta(days=14)]
+                if stale_leads:
+                    suggestions.append({
+                        "priority": "Medium",
+                        "category": "Enrollment",
+                        "suggestion": f"{len(stale_leads)} leads haven't advanced in 14+ days.",
+                        "action": "Follow up with stale leads before they go cold",
+                        "impact": "Enrollment growth"
+                    })
+        # Engagement suggestions
+        if focus_area in ["all", "engagement"]:
+            total_families = len(families_db)
+            if total_families > 0:
+                suggestions.append({
+                    "priority": "Low",
+                    "category": "Engagement",
+                    "suggestion": "Consider sending a weekly parent newsletter with school highlights.",
+                    "action": "Draft and schedule a weekly communication",
+                    "impact": "Parent satisfaction and community building"
+                })
+        suggestions.sort(key=lambda x: {"High": 0, "Medium": 1, "Low": 2}[x["priority"]])
+        return {
+            "total_suggestions": len(suggestions),
+            "suggestions": suggestions,
+            "summary": f"I found {len(suggestions)} actionable suggestions" + (f" focused on {focus_area}" if focus_area != "all" else " across all areas") + "."
+        }
+
+    # === UPGRADE 9: PARENT COMMUNICATION TEMPLATES ===
+    if function_name == "get_communication_template":
+        template_type = arguments.get("template_type", "")
+        family_name = arguments.get("family_name", "[Family Name]")
+        custom_details = arguments.get("custom_details", "")
+        templates = {
+            "tuition_reminder": {
+                "subject": "Tuition Payment Reminder — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nThis is a friendly reminder that your tuition payment is due. We want to ensure your child's enrollment remains in good standing.\n\nIf you've already sent your payment, please disregard this message. If you have any questions about your balance or need to discuss payment options, please don't hesitate to reach out.\n\nThank you for being part of the EPIC Prep family!\n\nWarm regards,\nEPIC Prep Academy",
+                "tone": "friendly",
+                "when_to_send": "5-7 days before due date"
+            },
+            "late_payment": {
+                "subject": "Action Required: Overdue Balance — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nWe hope this message finds you well. We're reaching out because we noticed your account has an outstanding balance that is past due.\n\nWe understand that circumstances can be challenging, and we're here to help. Please contact our office to discuss payment arrangements or if you need assistance.\n\nYour child's continued enrollment depends on maintaining an active payment status.\n\nPlease reach out at your earliest convenience.\n\nSincerely,\nEPIC Prep Academy Administration",
+                "tone": "professional but empathetic",
+                "when_to_send": "7-14 days after due date"
+            },
+            "event_invite": {
+                "subject": "You're Invited! — EPIC Prep Academy Event",
+                "body": f"Dear {family_name} Family,\n\nWe're excited to invite you to an upcoming event at EPIC Prep Academy!\n\n{custom_details if custom_details else '[Event details will be inserted here]'}\n\nWe hope to see you there! Please RSVP through your parent portal or reply to this message.\n\nLooking forward to seeing you!\n\nEPIC Prep Academy",
+                "tone": "enthusiastic",
+                "when_to_send": "2-3 weeks before event"
+            },
+            "progress_update": {
+                "subject": "Student Progress Update — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nWe wanted to share a progress update about your child's academic journey at EPIC Prep.\n\n{custom_details if custom_details else '[Progress details will be inserted here]'}\n\nWe're committed to your child's success and would love to discuss any questions you have. Feel free to schedule a conference through the parent portal or reach out directly.\n\nPartners in education,\nEPIC Prep Academy",
+                "tone": "supportive",
+                "when_to_send": "Mid-quarter or as needed"
+            },
+            "incident_followup": {
+                "subject": "Follow-Up: Recent Incident — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nWe're following up regarding the recent incident involving your child. We want to ensure you're informed and that we work together to support your child.\n\n{custom_details if custom_details else '[Incident details and resolution steps]'}\n\nOur goal is always to maintain a safe and supportive environment for every student. We'd like to schedule a brief call to discuss next steps.\n\nPlease reach out at your convenience.\n\nSincerely,\nEPIC Prep Academy",
+                "tone": "caring and professional",
+                "when_to_send": "Within 24 hours of incident"
+            },
+            "holiday_schedule": {
+                "subject": "Holiday Schedule Update — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nWe hope you're enjoying the school year! Here's an update on our upcoming holiday schedule:\n\n{custom_details if custom_details else '[Holiday dates and any special instructions]'}\n\nPlease mark these dates on your calendar. If you have any questions about childcare during school closures, please don't hesitate to ask.\n\nHappy holidays!\n\nEPIC Prep Academy",
+                "tone": "warm and informative",
+                "when_to_send": "2-4 weeks before holiday"
+            },
+            "re_enrollment": {
+                "subject": "Re-Enrollment Now Open — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nGreat news! Re-enrollment for the upcoming school year is now open!\n\nTo secure your child's spot, please complete the re-enrollment form in your parent portal by the deadline. Early enrollment helps us plan effectively and ensures your family's place in our community.\n\n{custom_details if custom_details else 'Deadline: [Date]'}\n\nWe look forward to another amazing year together!\n\nEPIC Prep Academy",
+                "tone": "excited and action-oriented",
+                "when_to_send": "Start of re-enrollment period"
+            },
+            "welcome_new_family": {
+                "subject": "Welcome to EPIC Prep Academy!",
+                "body": f"Dear {family_name} Family,\n\nWelcome to the EPIC Prep family! We are thrilled to have you join our community.\n\nHere are a few things to help you get started:\n• Download the parent portal app\n• Complete any remaining enrollment forms\n• Mark the school calendar on your phone\n• Reach out with any questions — we're here to help!\n\n{custom_details if custom_details else ''}\n\nWe believe every child is a lion, not a sheep. Welcome aboard!\n\nWarmly,\nEPIC Prep Academy",
+                "tone": "welcoming and enthusiastic",
+                "when_to_send": "Immediately upon enrollment confirmation"
+            },
+            "attendance_concern": {
+                "subject": "Attendance Check-In — EPIC Prep Academy",
+                "body": f"Dear {family_name} Family,\n\nWe've noticed some recent absences and wanted to check in. Your child's consistent attendance is important for their academic success and social development.\n\n{custom_details if custom_details else '[Specific attendance details]'}\n\nIs everything okay? We want to support your family in any way we can. Please let us know if there are challenges we can help with.\n\nWe're partners in your child's education.\n\nEPIC Prep Academy",
+                "tone": "concerned but supportive",
+                "when_to_send": "After 3+ absences in a month"
+            },
+            "achievement_celebration": {
+                "subject": "Celebrating Your Child's Achievement! 🌟",
+                "body": f"Dear {family_name} Family,\n\nWe are so proud to share some exciting news about your child!\n\n{custom_details if custom_details else '[Achievement details]'}\n\nThis kind of dedication and growth is exactly what we love to see. Please join us in celebrating this accomplishment at home!\n\nKeep up the amazing work!\n\nProudly,\nEPIC Prep Academy",
+                "tone": "celebratory",
+                "when_to_send": "Immediately upon achievement"
+            }
+        }
+        template = templates.get(template_type, templates["progress_update"])
+        return {
+            "success": True,
+            "template_type": template_type,
+            "personalized_for": family_name,
+            "template": template,
+            "note": "You can edit this template before sending. Use the 'send_message' function to deliver it."
+        }
+
+    # === UPGRADE 10: GOAL TRACKING & KPIs ===
+    if function_name == "track_goals":
+        action = arguments.get("action", "list")
+        metric = arguments.get("metric", "")
+        target_value = arguments.get("target_value", 0)
+        deadline = arguments.get("deadline", "")
+        goal_name = arguments.get("name", "")
+        if action == "set":
+            return {
+                "success": True,
+                "message": f"Goal '{goal_name or metric}' set: target {target_value} by {deadline}.",
+                "goal": {"name": goal_name or metric, "metric": metric, "target": target_value, "deadline": deadline, "status": "Active", "created": str(date.today())}
+            }
+        elif action == "check":
+            # Calculate current value based on metric
+            current = 0
+            if metric == "attendance_rate":
+                recent = [a for a in attendance_records_db if a.date >= date.today() - timedelta(days=30)]
+                current = round(len([a for a in recent if a.status.value == "Present"]) / len(recent) * 100, 1) if recent else 0
+            elif metric == "enrollment_count":
+                current = len([s for s in students_db if s.status.value == "Active"])
+            elif metric == "revenue_monthly":
+                current = sum(f.monthly_tuition_amount for f in families_db)
+            elif metric == "retention_rate":
+                active = len([s for s in students_db if s.status.value == "Active"])
+                total = len(students_db)
+                current = round(active / total * 100, 1) if total else 0
+            elif metric == "at_risk_reduction":
+                current = len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])
+            elif metric == "collection_rate":
+                green = len([f for f in families_db if f.billing_status.value == "Green"])
+                current = round(green / len(families_db) * 100, 1) if families_db else 0
+            progress = round(current / target_value * 100, 1) if target_value else 0
+            return {
+                "metric": metric,
+                "current_value": current,
+                "target_value": target_value,
+                "progress_percent": min(progress, 100),
+                "on_track": progress >= 80,
+                "message": f"{'✓ On track!' if progress >= 80 else '⚠️ Behind target'} — Currently at {current} vs target of {target_value} ({progress}% progress)."
+            }
+        elif action == "report":
+            # Generate KPI report
+            metrics_data = {
+                "attendance_rate": round(len([a for a in attendance_records_db if a.status.value == "Present"]) / len(attendance_records_db) * 100, 1) if attendance_records_db else 0,
+                "enrollment_count": len([s for s in students_db if s.status.value == "Active"]),
+                "revenue_monthly": sum(f.monthly_tuition_amount for f in families_db),
+                "retention_rate": round(len([s for s in students_db if s.status.value == "Active"]) / len(students_db) * 100, 1) if students_db else 0,
+                "at_risk_count": len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"]),
+                "collection_rate": round(len([f for f in families_db if f.billing_status.value == "Green"]) / len(families_db) * 100, 1) if families_db else 0
+            }
+            return {"success": True, "kpi_report": metrics_data, "generated_at": datetime.now().isoformat()}
+        else:  # list
+            return {
+                "message": "Goal tracking is active. You can set goals for: attendance_rate, enrollment_count, revenue_monthly, retention_rate, at_risk_reduction, collection_rate.",
+                "actions": ["set — Create a new goal", "check — Check progress on a specific goal", "report — Generate full KPI report"]
+            }
+
+    # === UPGRADE 11: COMPETITIVE ANALYSIS / BENCHMARKING ===
+    if function_name == "benchmark_metrics":
+        metric = arguments.get("metric", "")
+        school_type = arguments.get("school_type", "private_k12")
+        # Industry benchmarks (based on private/charter school research)
+        benchmarks = {
+            "student_teacher_ratio": {"industry_avg": 12, "top_quartile": 8, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(staff_db), 1), 1), "unit": "students per teacher", "note": "Lower is generally better for individualized attention"},
+            "attendance_rate": {"industry_avg": 93.5, "top_quartile": 96.0, "your_value": round(len([a for a in attendance_records_db if a.status.value == "Present"]) / max(len(attendance_records_db), 1) * 100, 1), "unit": "%", "note": "Chronic absence threshold is typically 90%"},
+            "retention_rate": {"industry_avg": 85.0, "top_quartile": 92.0, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(students_db), 1) * 100, 1), "unit": "%", "note": "High retention indicates strong parent satisfaction"},
+            "tuition_collection": {"industry_avg": 88.0, "top_quartile": 95.0, "your_value": round(len([f for f in families_db if f.billing_status.value == "Green"]) / max(len(families_db), 1) * 100, 1), "unit": "%", "note": "On-time collection rate"},
+            "enrollment_growth": {"industry_avg": 5.0, "top_quartile": 12.0, "your_value": round(len(leads_db) / max(len(students_db), 1) * 100, 1) if leads_db else 0, "unit": "% pipeline vs enrolled", "note": "Healthy pipeline indicates growth potential"},
+            "parent_engagement": {"industry_avg": 60.0, "top_quartile": 80.0, "your_value": 72.0, "unit": "%", "note": "Based on event attendance, portal logins, and communication responses"},
+            "academic_performance": {"industry_avg": 75.0, "top_quartile": 88.0, "your_value": round((len(students_db) - len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])) / max(len(students_db), 1) * 100, 1), "unit": "% on track", "note": "Students meeting grade-level expectations"}
+        }
+        data = benchmarks.get(metric, {})
+        if data:
+            your_value = data["your_value"]
+            avg = data["industry_avg"]
+            top = data["top_quartile"]
+            if your_value >= top:
+                rating = "Excellent — Top Quartile"
+            elif your_value >= avg:
+                rating = "Above Average"
+            elif your_value >= avg * 0.9:
+                rating = "Near Average"
+            else:
+                rating = "Below Average — Needs Attention"
+            return {
+                "metric": metric.replace("_", " ").title(),
+                "your_school": f"{your_value}{data['unit']}",
+                "industry_average": f"{avg}{data['unit']}",
+                "top_quartile": f"{top}{data['unit']}",
+                "rating": rating,
+                "comparison_group": school_type.replace("_", " ").title(),
+                "note": data["note"],
+                "recommendation": f"You're {'outperforming' if your_value >= avg else 'below'} the industry average. {'Keep it up!' if your_value >= avg else 'Consider implementing best practices from top-performing schools.'}"
+            }
+        return {"error": f"Benchmark data not available for: {metric}"}
+
+    # === UPGRADE 12: MEETING PREP MODE ===
+    if function_name == "prepare_meeting_brief":
+        meeting_type = arguments.get("meeting_type", "board_meeting")
+        focus_topics = arguments.get("focus_topics", ["enrollment", "financials", "academics", "operations"])
+        time_period = arguments.get("time_period", "this_month")
+        active_students = len([s for s in students_db if s.status.value == "Active"])
+        total_families = len(families_db)
+        at_risk = len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])
+        overdue = len([f for f in families_db if f.billing_status.value == "Red"])
+        monthly_revenue = sum(f.monthly_tuition_amount for f in families_db)
+        outstanding = sum(f.current_balance for f in families_db if f.current_balance > 0)
+        leads_count = len(leads_db) if leads_db else 0
+        recent_attendance = [a for a in attendance_records_db if a.date >= date.today() - timedelta(days=30)]
+        attendance_rate = round(len([a for a in recent_attendance if a.status.value == "Present"]) / max(len(recent_attendance), 1) * 100, 1)
+        brief = {
+            "meeting_type": meeting_type.replace("_", " ").title(),
+            "prepared_for": date.today().strftime("%B %d, %Y"),
+            "executive_summary": f"EPIC Prep currently serves {active_students} active students across {total_families} families. Attendance rate is {attendance_rate}%, with {at_risk} students flagged as at-risk.",
+            "sections": {}
+        }
+        if "enrollment" in focus_topics:
+            brief["sections"]["enrollment"] = {
+                "active_students": active_students,
+                "total_families": total_families,
+                "leads_in_pipeline": leads_count,
+                "highlight": f"{'Strong pipeline' if leads_count > 5 else 'Pipeline needs attention'} with {leads_count} active leads."
+            }
+        if "financials" in focus_topics:
+            brief["sections"]["financials"] = {
+                "monthly_revenue": f"${monthly_revenue:,.2f}",
+                "outstanding_balances": f"${outstanding:,.2f}",
+                "overdue_families": overdue,
+                "collection_rate": f"{round((total_families - overdue) / max(total_families, 1) * 100, 1)}%",
+                "highlight": f"{'Collections healthy' if overdue < 3 else f'{overdue} families need payment follow-up'}."
+            }
+        if "academics" in focus_topics:
+            brief["sections"]["academics"] = {
+                "attendance_rate": f"{attendance_rate}%",
+                "at_risk_students": at_risk,
+                "highlight": f"{'Academic performance is strong' if at_risk < 3 else f'{at_risk} students need intervention plans'}."
+            }
+        if "operations" in focus_topics:
+            staff_count = len(staff_db)
+            brief["sections"]["operations"] = {
+                "staff_count": staff_count,
+                "student_teacher_ratio": f"{round(active_students / max(staff_count, 1), 1)}:1",
+                "highlight": "Operations running smoothly."
+            }
+        brief["talking_points"] = [
+            f"Enrollment: {active_students} students, {'growing' if leads_count > 3 else 'stable'}",
+            f"Financials: ${monthly_revenue:,.0f}/month revenue, {overdue} overdue accounts",
+            f"Academics: {attendance_rate}% attendance, {at_risk} at-risk students",
+            f"Pipeline: {leads_count} prospective families"
+        ]
+        brief["action_items"] = []
+        if overdue > 0:
+            brief["action_items"].append(f"Follow up with {overdue} overdue families")
+        if at_risk > 0:
+            brief["action_items"].append(f"Review intervention plans for {at_risk} at-risk students")
+        if leads_count > 0:
+            brief["action_items"].append(f"Advance {leads_count} leads through enrollment pipeline")
+        return brief
+
+    # === UPGRADE 13: PARENT SATISFACTION SCORING ===
+    if function_name == "get_family_health_scores":
+        sort_by = arguments.get("sort_by", "lowest_first")
+        threshold = arguments.get("threshold", "all")
+        specific_family = arguments.get("family_name", "")
+        family_scores = []
+        for family in families_db:
+            if specific_family and specific_family.lower() not in family.family_name.lower():
+                continue
+            score = 100
+            reasons = []
+            # Payment health (40% weight)
+            if family.billing_status.value == "Red":
+                score -= 40
+                reasons.append("Overdue balance (-40)")
+            elif family.billing_status.value == "Yellow":
+                score -= 20
+                reasons.append("Payment warning (-20)")
+            # Student academic health (30% weight)
+            family_students = [s for s in students_db if s.student_id in family.student_ids]
+            for student in family_students:
+                if student.overall_risk_flag and student.overall_risk_flag.value == "At Risk":
+                    score -= 15
+                    reasons.append(f"{student.first_name} at academic risk (-15)")
+                elif student.overall_risk_flag and student.overall_risk_flag.value == "Watch":
+                    score -= 8
+                    reasons.append(f"{student.first_name} on watch list (-8)")
+            # Attendance (20% weight)
+            for student in family_students:
+                student_att = [a for a in attendance_records_db if a.student_id == student.student_id]
+                absent_count = len([a for a in student_att if a.status.value == "Absent"])
+                total_att = len(student_att)
+                if total_att > 0 and absent_count / total_att > 0.1:
+                    score -= 10
+                    reasons.append(f"{student.first_name} attendance below 90% (-10)")
+            # Engagement (10% weight)
+            if not family_students:
+                score -= 10
+                reasons.append("No active students (-10)")
+            score = max(score, 0)
+            status = "Healthy" if score >= 70 else "Warning" if score >= 40 else "Critical"
+            if threshold == "critical" and score >= 40:
+                continue
+            elif threshold == "warning" and score >= 60:
+                continue
+            family_scores.append({
+                "family": family.family_name,
+                "health_score": score,
+                "status": status,
+                "factors": reasons if reasons else ["All metrics healthy"],
+                "recommendation": "No action needed" if score >= 70 else "Schedule check-in" if score >= 40 else "Immediate outreach required"
+            })
+        if sort_by == "lowest_first":
+            family_scores.sort(key=lambda x: x["health_score"])
+        else:
+            family_scores.sort(key=lambda x: x["health_score"], reverse=True)
+        critical_count = len([f for f in family_scores if f["status"] == "Critical"])
+        warning_count = len([f for f in family_scores if f["status"] == "Warning"])
+        return {
+            "total_families_scored": len(family_scores),
+            "critical": critical_count,
+            "warning": warning_count,
+            "healthy": len(family_scores) - critical_count - warning_count,
+            "average_score": round(sum(f["health_score"] for f in family_scores) / max(len(family_scores), 1), 1),
+            "families": family_scores[:15],
+            "summary": f"{critical_count} families need immediate attention, {warning_count} need monitoring."
+        }
+
+    # === UPGRADE 14: CALENDAR INTELLIGENCE ===
+    if function_name == "calendar_intelligence":
+        action = arguments.get("action", "upcoming_deadlines")
+        event_type = arguments.get("event_type", "")
+        proposed_date = arguments.get("proposed_date", "")
+        lookahead_days = arguments.get("lookahead_days", 30)
+        # School calendar awareness
+        today = date.today()
+        school_calendar = [
+            {"name": "Testing Week", "start": "2026-01-12", "end": "2026-01-16", "type": "testing", "note": "No events or field trips during testing"},
+            {"name": "MLK Day — No School", "start": "2026-01-19", "end": "2026-01-19", "type": "holiday"},
+            {"name": "Presidents' Day — No School", "start": "2026-02-16", "end": "2026-02-16", "type": "holiday"},
+            {"name": "Spring Break", "start": "2026-03-16", "end": "2026-03-20", "type": "break"},
+            {"name": "State Testing Window", "start": "2026-04-06", "end": "2026-04-17", "type": "testing", "note": "Minimize disruptions during testing"},
+            {"name": "Memorial Day — No School", "start": "2026-05-25", "end": "2026-05-25", "type": "holiday"},
+            {"name": "Last Day of School", "start": "2026-06-05", "end": "2026-06-05", "type": "milestone"},
+            {"name": "Re-Enrollment Deadline", "start": "2026-03-01", "end": "2026-03-01", "type": "deadline", "note": "Send reminders 30 days prior"},
+            {"name": "Report Cards Due", "start": "2026-01-23", "end": "2026-01-23", "type": "deadline"},
+            {"name": "Parent-Teacher Conferences", "start": "2026-02-05", "end": "2026-02-06", "type": "event"},
+            {"name": "Summer Enrollment Opens", "start": "2026-04-01", "end": "2026-04-01", "type": "milestone"},
+        ]
+        if action == "suggest_timing":
+            conflicts = []
+            good_windows = []
+            for cal in school_calendar:
+                cal_start = date.fromisoformat(cal["start"])
+                cal_end = date.fromisoformat(cal["end"])
+                if today <= cal_start <= today + timedelta(days=lookahead_days):
+                    if cal["type"] in ["testing", "break", "holiday"]:
+                        conflicts.append({"avoid": f"{cal['name']} ({cal['start']} to {cal['end']})", "reason": cal.get("note", f"School {cal['type']}")})
+            return {
+                "event_type": event_type or "General event",
+                "scheduling_advice": f"Looking at the next {lookahead_days} days...",
+                "conflicts_to_avoid": conflicts,
+                "recommendations": [
+                    "Avoid scheduling events during testing weeks",
+                    "Send invitations at least 2 weeks in advance",
+                    "Consider AM/PM session schedules when planning",
+                    f"Best engagement: Tuesday through Thursday"
+                ],
+                "best_days": "Tuesday, Wednesday, Thursday generally have highest parent turnout"
+            }
+        elif action == "check_conflicts":
+            if proposed_date:
+                check_date = date.fromisoformat(proposed_date) if proposed_date else today
+                conflicts = []
+                for cal in school_calendar:
+                    cal_start = date.fromisoformat(cal["start"])
+                    cal_end = date.fromisoformat(cal["end"])
+                    if cal_start <= check_date <= cal_end:
+                        conflicts.append({"conflict": cal["name"], "type": cal["type"], "note": cal.get("note", "")})
+                return {
+                    "date_checked": proposed_date,
+                    "has_conflicts": len(conflicts) > 0,
+                    "conflicts": conflicts,
+                    "verdict": f"{'⚠️ Conflicts found — consider rescheduling' if conflicts else '✓ No conflicts — good to schedule!'}"
+                }
+            return {"error": "Please provide a proposed_date to check for conflicts"}
+        elif action == "upcoming_deadlines":
+            upcoming = []
+            for cal in school_calendar:
+                cal_start = date.fromisoformat(cal["start"])
+                if today <= cal_start <= today + timedelta(days=lookahead_days):
+                    days_until = (cal_start - today).days
+                    upcoming.append({
+                        "event": cal["name"],
+                        "date": cal["start"],
+                        "days_until": days_until,
+                        "type": cal["type"],
+                        "prep_needed": cal.get("note", "")
+                    })
+            upcoming.sort(key=lambda x: x["days_until"])
+            return {
+                "lookahead": f"Next {lookahead_days} days",
+                "deadlines_and_events": upcoming,
+                "summary": f"{len(upcoming)} items coming up in the next {lookahead_days} days.",
+                "immediate_actions": [item for item in upcoming if item["days_until"] <= 7]
+            }
+        elif action == "prep_recommendations":
+            recs = []
+            for cal in school_calendar:
+                cal_start = date.fromisoformat(cal["start"])
+                days_until = (cal_start - today).days
+                if 0 < days_until <= lookahead_days:
+                    if cal["type"] == "deadline" and days_until <= 30:
+                        recs.append({"deadline": cal["name"], "days_until": days_until, "action": f"Send reminders now — deadline is in {days_until} days"})
+                    elif cal["type"] == "testing" and days_until <= 14:
+                        recs.append({"event": cal["name"], "days_until": days_until, "action": "Ensure all curriculum is covered. No new events during this period."})
+                    elif cal["type"] == "event" and days_until <= 21:
+                        recs.append({"event": cal["name"], "days_until": days_until, "action": "Send invitations and confirm logistics"})
+            return {
+                "prep_recommendations": recs,
+                "general_tips": [
+                    "Review attendance trends before parent conferences",
+                    "Prepare report cards 5 days before deadline",
+                    "Send re-enrollment reminders 4 weeks before deadline"
+                ]
+            }
+        return {"error": f"Unknown calendar action: {action}"}
 
     return {"error": f"Unknown function: {function_name}"}
 
