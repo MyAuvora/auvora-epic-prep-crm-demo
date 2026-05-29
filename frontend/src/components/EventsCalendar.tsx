@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, DollarSign, FileText, Users } from 'lucide-react';
+import { MapPin, Clock, DollarSign, FileText, Users, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,20 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
   const [loading, setLoading] = useState(true);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [workflowEvent, setWorkflowEvent] = useState<Event | null>(null);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    description: '',
+    event_type: 'School Event',
+    date: '',
+    time: '',
+    location: '',
+    capacity: '',
+    requires_rsvp: true,
+    requires_permission_slip: false,
+    requires_payment: false,
+    payment_amount: ''
+  });
 
   useEffect(() => {
     fetchEvents();
@@ -162,10 +176,56 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
     return <div className="text-center py-8">Loading events...</div>;
   }
 
+  const canManageEvents = role === 'owner' || role === 'admin';
+
+  const handleAddEvent = async () => {
+    try {
+      const newEvent = {
+        event_id: `event_${Date.now()}`,
+        campus_id: 'campus_1',
+        title: eventForm.title,
+        description: eventForm.description,
+        event_type: eventForm.event_type,
+        date: eventForm.date,
+        time: eventForm.time,
+        location: eventForm.location,
+        capacity: eventForm.capacity ? parseInt(eventForm.capacity) : null,
+        registered_count: 0,
+        permission_slip_content: null,
+        payment_description: null,
+        requires_rsvp: eventForm.requires_rsvp,
+        requires_permission_slip: eventForm.requires_permission_slip,
+        requires_payment: eventForm.requires_payment,
+        payment_amount: eventForm.requires_payment ? parseFloat(eventForm.payment_amount) || 0 : null,
+        created_by_staff_id: 'staff_1'
+      };
+
+      await fetch(`${API_URL}/api/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEvent)
+      });
+
+      setShowAddEvent(false);
+      setEventForm({ title: '', description: '', event_type: 'School Event', date: '', time: '', location: '', capacity: '', requires_rsvp: true, requires_permission_slip: false, requires_payment: false, payment_amount: '' });
+      fetchEvents();
+    } catch (error) {
+      console.error('Error creating event:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Upcoming Events</h2>
+          {canManageEvents && (
+            <Button onClick={() => setShowAddEvent(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Event
+            </Button>
+          )}
+        </div>
         {upcomingEvents.length === 0 ? (
           <p className="text-gray-500">No upcoming events</p>
         ) : (
@@ -346,6 +406,147 @@ export const EventsCalendar: React.FC<EventsCalendarProps> = ({ role, familyId, 
           parentId={_userId || 'parent_1'}
         />
       )}
+
+      {/* Add Event Modal */}
+      <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Event</DialogTitle>
+            <DialogDescription>Create a new event for parents and students.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
+              <input
+                type="text"
+                value={eventForm.title}
+                onChange={e => setEventForm({ ...eventForm, title: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. Spring Field Trip"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                value={eventForm.description}
+                onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="Event details..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Type *</label>
+                <select
+                  value={eventForm.event_type}
+                  onChange={e => setEventForm({ ...eventForm, event_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="School Event">School Event</option>
+                  <option value="Field Trip">Field Trip</option>
+                  <option value="Fundraiser">Fundraiser</option>
+                  <option value="Performance">Performance</option>
+                  <option value="Parent Night">Parent Night</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                <input
+                  type="text"
+                  value={eventForm.location}
+                  onChange={e => setEventForm({ ...eventForm, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Main Campus Gym"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                <input
+                  type="date"
+                  value={eventForm.date}
+                  onChange={e => setEventForm({ ...eventForm, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                <input
+                  type="time"
+                  value={eventForm.time}
+                  onChange={e => setEventForm({ ...eventForm, time: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Capacity (optional)</label>
+              <input
+                type="number"
+                value={eventForm.capacity}
+                onChange={e => setEventForm({ ...eventForm, capacity: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Leave blank for unlimited"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eventForm.requires_rsvp}
+                  onChange={e => setEventForm({ ...eventForm, requires_rsvp: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Requires RSVP</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eventForm.requires_permission_slip}
+                  onChange={e => setEventForm({ ...eventForm, requires_permission_slip: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Requires Permission Slip</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eventForm.requires_payment}
+                  onChange={e => setEventForm({ ...eventForm, requires_payment: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Requires Payment</span>
+              </label>
+              {eventForm.requires_payment && (
+                <div className="ml-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={eventForm.payment_amount}
+                    onChange={e => setEventForm({ ...eventForm, payment_amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowAddEvent(false)}>Cancel</Button>
+              <Button
+                onClick={handleAddEvent}
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={!eventForm.title || !eventForm.date || !eventForm.time || !eventForm.location}
+              >
+                Create Event
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

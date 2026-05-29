@@ -136,7 +136,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -362,6 +362,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   { id: 'operations', label: 'Operations', subView: 'events' },
                   { id: 'documents', label: 'Documents', subView: 'library' },
                   { id: 'analytics', label: 'Analytics', subView: 'at-risk' },
+                  ...(currentRole === 'admin' ? [{ id: 'events', label: 'Events', subView: 'upcoming' }] : []),
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
                 ]
@@ -1253,6 +1254,15 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
 
               {view === 'expenses' && currentRole === 'owner' && (
                 <BusinessExpenseTracker selectedCampusId={selectedCampusId} />
+              )}
+
+              {view === 'events' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-3xl font-bold text-gray-900">Events</h2>
+                  </div>
+                  <EventsCalendar role="admin" />
+                </div>
               )}
 
               {view === 'settings' && (
