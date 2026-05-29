@@ -179,7 +179,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
   return (
     <>
       {/* Blue to Red Gradient Theme with White Lion Logo */}
-      <header className="text-white shadow-lg" style={{ background: 'linear-gradient(to right, #1e3a5f 0%, #dc3545 100%)' }}>
+      <header className="text-white shadow-lg relative z-30" style={{ background: 'linear-gradient(to right, #1e3a5f 0%, #dc3545 100%)' }}>
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo and Title - Responsive */}
