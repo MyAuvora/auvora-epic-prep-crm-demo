@@ -4108,36 +4108,49 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         school_type = arguments.get("school_type", "private_k12")
         # Industry benchmarks (based on private/charter school research)
         benchmarks = {
-            "student_teacher_ratio": {"industry_avg": 12, "top_quartile": 8, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(staff_db), 1), 1), "unit": "students per teacher", "note": "Lower is generally better for individualized attention"},
-            "attendance_rate": {"industry_avg": 93.5, "top_quartile": 96.0, "your_value": round(len([a for a in attendance_records_db if a.status.value == "Present"]) / max(len(attendance_records_db), 1) * 100, 1), "unit": "%", "note": "Chronic absence threshold is typically 90%"},
-            "retention_rate": {"industry_avg": 85.0, "top_quartile": 92.0, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(students_db), 1) * 100, 1), "unit": "%", "note": "High retention indicates strong parent satisfaction"},
-            "tuition_collection": {"industry_avg": 88.0, "top_quartile": 95.0, "your_value": round(len([f for f in families_db if f.billing_status.value == "Green"]) / max(len(families_db), 1) * 100, 1), "unit": "%", "note": "On-time collection rate"},
-            "enrollment_growth": {"industry_avg": 5.0, "top_quartile": 12.0, "your_value": round(len(leads_db) / max(len(students_db), 1) * 100, 1) if leads_db else 0, "unit": "% pipeline vs enrolled", "note": "Healthy pipeline indicates growth potential"},
-            "parent_engagement": {"industry_avg": 60.0, "top_quartile": 80.0, "your_value": 72.0, "unit": "%", "note": "Based on event attendance, portal logins, and communication responses"},
-            "academic_performance": {"industry_avg": 75.0, "top_quartile": 88.0, "your_value": round((len(students_db) - len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])) / max(len(students_db), 1) * 100, 1), "unit": "% on track", "note": "Students meeting grade-level expectations"}
+            "student_teacher_ratio": {"industry_avg": 12, "top_quartile": 8, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(staff_db), 1), 1), "unit": "students per teacher", "note": "Lower is generally better for individualized attention", "lower_is_better": True},
+            "attendance_rate": {"industry_avg": 93.5, "top_quartile": 96.0, "your_value": round(len([a for a in attendance_records_db if a.status.value == "Present"]) / max(len(attendance_records_db), 1) * 100, 1), "unit": "%", "note": "Chronic absence threshold is typically 90%", "lower_is_better": False},
+            "retention_rate": {"industry_avg": 85.0, "top_quartile": 92.0, "your_value": round(len([s for s in students_db if s.status.value == "Active"]) / max(len(students_db), 1) * 100, 1), "unit": "%", "note": "High retention indicates strong parent satisfaction", "lower_is_better": False},
+            "tuition_collection": {"industry_avg": 88.0, "top_quartile": 95.0, "your_value": round(len([f for f in families_db if f.billing_status.value == "Green"]) / max(len(families_db), 1) * 100, 1), "unit": "%", "note": "On-time collection rate", "lower_is_better": False},
+            "enrollment_growth": {"industry_avg": 5.0, "top_quartile": 12.0, "your_value": round(len(leads_db) / max(len(students_db), 1) * 100, 1) if leads_db else 0, "unit": "% pipeline vs enrolled", "note": "Healthy pipeline indicates growth potential", "lower_is_better": False},
+            "parent_engagement": {"industry_avg": 60.0, "top_quartile": 80.0, "your_value": 72.0, "unit": "%", "note": "Based on event attendance, portal logins, and communication responses", "lower_is_better": False},
+            "academic_performance": {"industry_avg": 75.0, "top_quartile": 88.0, "your_value": round((len(students_db) - len([s for s in students_db if s.overall_risk_flag and s.overall_risk_flag.value == "At Risk"])) / max(len(students_db), 1) * 100, 1), "unit": "% on track", "note": "Students meeting grade-level expectations", "lower_is_better": False}
         }
         data = benchmarks.get(metric, {})
         if data:
             your_value = data["your_value"]
             avg = data["industry_avg"]
             top = data["top_quartile"]
-            if your_value >= top:
-                rating = "Excellent — Top Quartile"
-            elif your_value >= avg:
-                rating = "Above Average"
-            elif your_value >= avg * 0.9:
-                rating = "Near Average"
+            lower_is_better = data.get("lower_is_better", False)
+            if lower_is_better:
+                if your_value <= top:
+                    rating = "Excellent — Top Quartile"
+                elif your_value <= avg:
+                    rating = "Above Average"
+                elif your_value <= avg * 1.1:
+                    rating = "Near Average"
+                else:
+                    rating = "Below Average — Needs Attention"
+                is_outperforming = your_value <= avg
             else:
-                rating = "Below Average — Needs Attention"
+                if your_value >= top:
+                    rating = "Excellent — Top Quartile"
+                elif your_value >= avg:
+                    rating = "Above Average"
+                elif your_value >= avg * 0.9:
+                    rating = "Near Average"
+                else:
+                    rating = "Below Average — Needs Attention"
+                is_outperforming = your_value >= avg
             return {
                 "metric": metric.replace("_", " ").title(),
-                "your_school": f"{your_value}{data['unit']}",
-                "industry_average": f"{avg}{data['unit']}",
-                "top_quartile": f"{top}{data['unit']}",
+                "your_school": f"{your_value} {data['unit']}",
+                "industry_average": f"{avg} {data['unit']}",
+                "top_quartile": f"{top} {data['unit']}",
                 "rating": rating,
                 "comparison_group": school_type.replace("_", " ").title(),
                 "note": data["note"],
-                "recommendation": f"You're {'outperforming' if your_value >= avg else 'below'} the industry average. {'Keep it up!' if your_value >= avg else 'Consider implementing best practices from top-performing schools.'}"
+                "recommendation": f"You're {'outperforming' if is_outperforming else 'below'} the industry average. {'Keep it up!' if is_outperforming else 'Consider implementing best practices from top-performing schools.'}"
             }
         return {"error": f"Benchmark data not available for: {metric}"}
 
