@@ -1900,6 +1900,7 @@ def _product_to_dict(r):
         "description": r.description or "", "category": r.category or "Other",
         "price": r.price or 0.0, "image_url": r.image_url,
         "available": r.available if r.available is not None else True,
+        "stock_quantity": r.stock_quantity if r.stock_quantity is not None else 100,
     }
 
 
@@ -1910,6 +1911,9 @@ def _order_to_dict(r):
         "total_amount": r.total_amount or 0.0, "status": r.status or "Pending",
         "order_date": r.order_date or datetime.utcnow(),
         "payment_date": r.payment_date,
+        "payment_method": getattr(r, 'payment_method', None) or "card_on_file",
+        "receipt_sent": bool(getattr(r, 'receipt_sent', False)),
+        "receipt_email": getattr(r, 'receipt_email', None),
     }
 
 
