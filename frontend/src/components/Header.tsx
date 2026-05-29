@@ -400,10 +400,10 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
                 {showDropdown && (
                   <>
                     <div 
-                      className="fixed inset-0 z-10" 
+                      className="fixed inset-0 z-40" 
                       onClick={() => setShowDropdown(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20 py-2">
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-50 py-2">
                                             <div className="px-4 py-3 border-b border-gray-200">
                                               <p className="text-sm font-medium text-gray-900">
                                                 {userName}
