@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Query, Body, Depends
+from fastapi import FastAPI, HTTPException, Query, Body, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, Response
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime, date, timedelta
@@ -14,6 +14,15 @@ import stripe
 import httpx
 import json
 import secrets
+import logging
+
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("epic.api")
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -30,6 +39,12 @@ from .procare_import import router as procare_import_router, set_reload_callback
 
 # Import autonomous task scheduler
 from . import autonomous_tasks
+
+# Import production services
+from .auth_middleware import ClerkAuthMiddleware
+from .rate_limiter import RateLimitMiddleware
+from . import email_service
+from . import file_storage
 
 # Import database components
 from .database import engine, get_db, init_db, SessionLocal
@@ -132,13 +147,19 @@ def startup_db():
     except Exception:
         db.close()
 
-    # Check if database is empty and seed if needed
+    # Check if database is empty — seed demo data only in non-production mode
+    production_mode = os.getenv("PRODUCTION_MODE", "").lower() in ("1", "true", "yes")
     db = SessionLocal()
     try:
         if db.query(models.Organization).count() == 0:
-            print("Database is empty, seeding with demo data...")
-            db.close()
-            db_utils.seed_from_demo_data()
+            if production_mode:
+                print("Production mode: skipping demo data, seeding infrastructure only")
+                db.close()
+                _seed_essential_infrastructure()
+            else:
+                print("Database is empty, seeding with demo data...")
+                db.close()
+                db_utils.seed_from_demo_data()
         else:
             print("Database has existing data, skipping seed")
             db.close()
@@ -146,27 +167,158 @@ def startup_db():
             _seed_essential_infrastructure()
     except Exception as e:
         db.close()
-        print(f"Error checking database: {e}")
-        # Fallback: try to seed anyway
-        try:
-            db_utils.seed_from_demo_data()
-        except Exception:
-            pass
+        logger.error(f"Error checking database: {e}")
+        if not production_mode:
+            try:
+                db_utils.seed_from_demo_data()
+            except Exception:
+                pass
 
-# Disable CORS. Do not remove this for full-stack development.
+# CORS configuration — restrict to known origins in production
+_allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
+    "https://epic.myauvora.com",
+    "https://auvora-epic-prep-crm-demo.vercel.app",
+    "http://localhost:5173",  # Local dev
+    "http://localhost:3000",  # Local dev
+]
+_allowed_origins = [o.strip() for o in _allowed_origins if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# Security headers middleware
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
+# Add authentication middleware (only active when CLERK_SECRET_KEY is set)
+app.add_middleware(ClerkAuthMiddleware)
 
 # Include Clerk user management router
 app.include_router(clerk_users_router)
 
 # Include ProCare CSV import router
 app.include_router(procare_import_router)
+
+
+# ============== Health Check & System Endpoints ==============
+
+@app.get("/healthz")
+async def healthcheck():
+    """Health check endpoint for monitoring and load balancers."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "email": "configured" if email_service._is_configured() else "log-only",
+            "storage": file_storage.get_storage_status()["provider"],
+            "stripe": "configured" if os.getenv("STRIPE_SECRET_KEY") else "not-configured",
+            "ai": "configured" if os.getenv("OPENAI_API_KEY") else "not-configured",
+        }
+    }
+
+
+@app.get("/api/system/status")
+async def system_status():
+    """System status overview for admin dashboard."""
+    return {
+        "production_mode": os.getenv("PRODUCTION_MODE", "").lower() in ("1", "true", "yes"),
+        "email_provider": "sendgrid" if email_service._is_configured() else "log",
+        "storage_provider": file_storage.get_storage_status()["provider"],
+        "stripe_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
+        "quickbooks_configured": bool(os.getenv("QUICKBOOKS_CLIENT_ID")),
+        "clerk_configured": bool(os.getenv("CLERK_SECRET_KEY")),
+        "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
+    }
+
+
+# ============== File Upload/Download Endpoints ==============
+
+@app.post("/api/files/upload")
+async def upload_file_endpoint(
+    file: UploadFile = File(...),
+    category: str = Query("documents", description="File category (documents, photos, reports)"),
+):
+    """Upload a file to storage (S3 or local)."""
+    content = await file.read()
+    max_size = 25 * 1024 * 1024  # 25 MB
+    if len(content) > max_size:
+        raise HTTPException(status_code=413, detail="File too large (max 25 MB)")
+
+    result = await file_storage.upload_file(
+        content=content,
+        filename=file.filename or "upload",
+        category=category,
+        content_type=file.content_type or "application/octet-stream",
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result.get("error", "Upload failed"))
+    return result
+
+
+@app.get("/api/files/{file_key:path}")
+async def download_file_endpoint(file_key: str):
+    """Download a file from storage by its key."""
+    content = await file_storage.get_file(file_key)
+    if content is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    # Guess content type from extension
+    ext = os.path.splitext(file_key)[1].lower()
+    content_types = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".csv": "text/csv",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    ct = content_types.get(ext, "application/octet-stream")
+    return Response(content=content, media_type=ct)
+
+
+# ============== Email Endpoints ==============
+
+@app.post("/api/email/send-test")
+async def send_test_email(to_email: str = Query(..., description="Email address to send test to")):
+    """Send a test email to verify email configuration."""
+    result = await email_service.send_email(
+        to_email=to_email,
+        subject="EPIC Prep Academy - Test Email",
+        html_content="""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0;">EPIC Prep Academy</h1>
+            </div>
+            <div style="padding: 20px;">
+                <p>This is a test email from the EPIC CRM system.</p>
+                <p>If you received this email, your email configuration is working correctly.</p>
+            </div>
+        </div>
+        """,
+    )
+    return result
+
 
 class Session(str, Enum):
     MORNING = "Morning"
@@ -2394,6 +2546,18 @@ async def create_order(order: Order):
     if parent:
         order.receipt_sent = True
         order.receipt_email = parent.email
+        # Send actual email receipt
+        try:
+            await email_service.send_receipt_email(
+                to_email=parent.email,
+                parent_name=f"{parent.first_name} {parent.last_name}",
+                order_items=order.items,
+                total=order.total_amount,
+                payment_method=order.payment_method,
+                order_id=order.order_id,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send receipt email: {e}")
 
     # Find family to get student campus for CM notification
     family = next((f for f in families_db if f.family_id == order.family_id), None)

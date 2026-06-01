@@ -34,6 +34,7 @@ import { QuickBooksIntegration } from './QuickBooksIntegration'
 import { StripeIntegration } from './StripeIntegration'
 import UserManagement from './UserManagement'
 import { ProCareImport } from './ProCareImport'
+import { SystemStatus } from './SystemStatus'
 import { PaymentProvidersSettings } from './PaymentProvidersSettings'
 import { BusinessExpenseTracker } from './BusinessExpenseTracker'
 import { CurriculumBuilder } from './CurriculumBuilder'
@@ -524,16 +525,28 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                         User Management
                       </button>
                       {currentRole === 'owner' && (
-                        <button
-                          onClick={() => {
-                            setView('settings')
-                            setSubView('import')
-                            setSettingsMenuOpen(false)
-                          }}
-                          className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
-                        >
-                          ProCare Data Import
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setView('settings')
+                              setSubView('import')
+                              setSettingsMenuOpen(false)
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 border-t border-gray-100"
+                          >
+                            ProCare Data Import
+                          </button>
+                          <button
+                            onClick={() => {
+                              setView('settings')
+                              setSubView('status')
+                              setSettingsMenuOpen(false)
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+                          >
+                            System Status
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
@@ -1392,6 +1405,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 <div className="space-y-6">
                   {subView === 'import' && currentRole === 'owner' ? (
                     <ProCareImport campusId={selectedCampusId} />
+                  ) : subView === 'status' && currentRole === 'owner' ? (
+                    <SystemStatus />
                   ) : (
                     <UserManagement />
                   )}
