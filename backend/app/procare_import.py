@@ -19,6 +19,17 @@ from . import models
 
 router = APIRouter(prefix="/api/import", tags=["ProCare Import"])
 
+# Callback set by main.py to refresh in-memory data after a successful import.
+_reload_callback = None
+
+def set_reload_callback(cb):
+    global _reload_callback
+    _reload_callback = cb
+
+def _trigger_reload():
+    if _reload_callback:
+        _reload_callback()
+
 ALLOWED_EXTENSIONS = ('.csv', '.txt', '.xlsx')
 
 
@@ -95,21 +106,31 @@ STUDENT_COLUMN_MAP = {
     "child last name": "last_name", "childlastname": "last_name", "child_last_name": "last_name",
     "student last name": "last_name",
     "child name": "full_name", "childname": "full_name", "student name": "full_name", "name": "full_name",
+    "full name": "full_name", "fullname": "full_name",
     "dateofbirth": "date_of_birth", "date_of_birth": "date_of_birth", "date of birth": "date_of_birth",
     "dob": "date_of_birth", "birthdate": "date_of_birth", "birth date": "date_of_birth",
+    "birthday": "date_of_birth",
     "grade": "grade", "grade level": "grade", "gradelevel": "grade",
     "classroom": "room", "room": "room", "class": "room", "classname": "room", "class name": "room",
+    "student room": "room", "studentroom": "room", "primary classroom": "room",
+    "assigned room": "room", "assigned classroom": "room",
     "status": "status", "enrollment status": "status", "enrollmentstatus": "status", "enrollment_status": "status",
+    "active": "status",
     "familyid": "family_id", "family_id": "family_id", "family id": "family_id",
+    "account id": "family_id", "accountid": "family_id",
     "childid": "child_id", "child_id": "child_id", "child id": "child_id",
     "studentid": "student_id", "student_id": "student_id", "student id": "student_id",
+    "record id": "student_id", "recordid": "student_id",
+    "external student id": "student_id", "externalstudentid": "student_id",
     "session": "session",
     "date of admission": "enrollment_start_date", "dateofadmission": "enrollment_start_date",
     "enrollment date": "enrollment_start_date", "enrollmentdate": "enrollment_start_date",
     "enrollment_start_date": "enrollment_start_date", "start date": "enrollment_start_date",
+    "admitted date": "enrollment_start_date",
     "funding source": "funding_source", "fundingsource": "funding_source", "funding_source": "funding_source",
     "centername": "campus_name", "center name": "campus_name", "center": "campus_name",
     "campus": "campus_name", "campus_name": "campus_name", "school": "campus_name",
+    "location": "campus_name", "site": "campus_name",
 }
 
 FAMILY_COLUMN_MAP = {
@@ -130,10 +151,14 @@ PARENT_COLUMN_MAP = {
     "parent last name": "last_name", "parentlastname": "last_name", "parent_last_name": "last_name",
     "guardian last name": "last_name",
     "parent name": "full_name", "parentname": "full_name", "guardian name": "full_name", "guardian": "full_name",
-    "name": "full_name",
+    "name": "full_name", "full name": "full_name",
+    "parent1 name": "full_name", "parent 1 name": "full_name",
+    "parent2 name": "full_name", "parent 2 name": "full_name",
     "email": "email", "email address": "email", "emailaddress": "email", "parent email": "email",
+    "parent1 email": "email", "parent 1 email": "email",
     "phone": "phone", "phone number": "phone", "phonenumber": "phone", "home phone": "phone",
     "cell phone": "phone", "mobile": "phone", "parent phone": "phone",
+    "parent1 phone": "phone", "parent 1 phone": "phone",
     "relationship": "relationship_type", "relationship_type": "relationship_type",
     "relation": "relationship_type", "type": "relationship_type",
     "familyid": "family_id", "family_id": "family_id", "family id": "family_id",
@@ -418,6 +443,8 @@ async def import_students(
             errors.append(f"Row {i}: {str(e)}")
 
     db.commit()
+    if imported > 0:
+        _trigger_reload()
     return ImportResult(
         data_type="students",
         total_rows=len(rows) - 1,
@@ -490,6 +517,8 @@ async def import_families(
             errors.append(f"Row {i}: {str(e)}")
 
     db.commit()
+    if imported > 0:
+        _trigger_reload()
     return ImportResult(
         data_type="families",
         total_rows=len(rows) - 1,
@@ -605,6 +634,8 @@ async def import_parents(
             errors.append(f"Row {i}: {str(e)}")
 
     db.commit()
+    if imported > 0:
+        _trigger_reload()
     return ImportResult(
         data_type="parents",
         total_rows=len(rows) - 1,
@@ -700,6 +731,8 @@ async def import_staff(
             errors.append(f"Row {i}: {str(e)}")
 
     db.commit()
+    if imported > 0:
+        _trigger_reload()
     return ImportResult(
         data_type="staff",
         total_rows=len(rows) - 1,

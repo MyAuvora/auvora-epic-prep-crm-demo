@@ -26,7 +26,7 @@ from .ai_agent import chat_with_auvora
 from .clerk_users import router as clerk_users_router
 
 # Import ProCare CSV import router
-from .procare_import import router as procare_import_router
+from .procare_import import router as procare_import_router, set_reload_callback
 
 # Import autonomous task scheduler
 from . import autonomous_tasks
@@ -1458,6 +1458,9 @@ def load_data_from_db():
     time_clock_db = [TimeClock(**d) for d in data.get("time_clock", [])]
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
+
+# Register the reload callback so imports refresh in-memory data
+set_reload_callback(load_data_from_db)
 
 @app.on_event("startup")
 async def startup_event():
