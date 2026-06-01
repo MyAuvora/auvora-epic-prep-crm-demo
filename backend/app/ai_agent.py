@@ -2172,7 +2172,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
             results = [s for s in results if s.overall_risk_flag.value == "At risk"]
         
         if arguments.get("funding_source"):
-            results = [s for s in results if s.funding_source.value == arguments["funding_source"]]
+            results = [s for s in results if s.funding_source == arguments["funding_source"]]
         
         return {
             "count": len(results),
@@ -2185,7 +2185,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "attendance": f"{s.attendance_present_count}P / {s.attendance_absent_count}A / {s.attendance_tardy_count}T",
                     "grade_flag": s.overall_grade_flag.value,
                     "risk_flag": s.overall_risk_flag.value,
-                    "funding": s.funding_source.value
+                    "funding": s.funding_source
                 }
                 for s in results[:20]  # Limit to 20 results
             ]
@@ -2247,7 +2247,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                 "grade": student.grade,
                 "date_of_birth": str(student.date_of_birth),
                 "session": student.session.value,
-                "room": student.room.value,
+                "room": student.room,
                 "status": student.status.value,
                 "enrollment_start": str(student.enrollment_start_date)
             },
@@ -2277,7 +2277,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                 "annual_amount": scholarship.annual_award_amount if scholarship else 0,
                 "remaining": scholarship.remaining_balance if scholarship else 0
             } if scholarship else None,
-            "funding_source": student.funding_source.value,
+            "funding_source": student.funding_source,
             "step_up_percentage": student.step_up_percentage
         }
     
@@ -2349,7 +2349,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "name": f"{s.first_name} {s.last_name}",
                     "grade": s.grade,
                     "status": s.status.value,
-                    "funding": s.funding_source.value
+                    "funding": s.funding_source
                 }
                 for s in students
             ],
@@ -3865,7 +3865,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         # Search students
         if scope in ["all", "students"]:
             for s in students_db:
-                student_text = f"{s.first_name} {s.last_name} {s.grade} {s.session if hasattr(s, 'session') else ''} {s.status.value} {s.funding_source.value if hasattr(s, 'funding_source') and s.funding_source else ''}".lower()
+                student_text = f"{s.first_name} {s.last_name} {s.grade} {s.session if hasattr(s, 'session') else ''} {s.status.value} {s.funding_source if hasattr(s, 'funding_source') and s.funding_source else ''}".lower()
                 if any(word in student_text for word in query.split()):
                     results.append({"type": "student", "name": f"{s.first_name} {s.last_name}", "grade": s.grade, "status": s.status.value})
         # Search families
