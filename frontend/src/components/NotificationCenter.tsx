@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Bell, X, AlertTriangle, UserPlus, DollarSign, FileWarning, Package, Calendar, CheckCircle } from 'lucide-react'
+import { Bell, X, AlertTriangle, UserPlus, DollarSign, FileWarning, Package, Calendar, CheckCircle, FileSignature } from 'lucide-react'
 
 interface Notification {
   id: string
-  type: 'enrollment' | 'payment' | 'incident' | 'inventory' | 'attendance' | 'event' | 'system'
+  type: 'enrollment' | 'payment' | 'incident' | 'inventory' | 'attendance' | 'event' | 'system' | 'permission_slip'
   title: string
   message: string
   timestamp: Date
@@ -79,6 +79,15 @@ const DEMO_NOTIFICATIONS: Notification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
     read: true,
     priority: 'medium'
+  },
+  {
+    id: 'n8',
+    type: 'permission_slip',
+    title: 'Unsigned Permission Slips',
+    message: 'Loading permission slip alerts...',
+    timestamp: new Date(),
+    read: false,
+    priority: 'high'
   }
 ]
 
@@ -109,6 +118,15 @@ const PARENT_NOTIFICATIONS: Notification[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
     read: true,
     priority: 'low'
+  },
+  {
+    id: 'pn4',
+    type: 'permission_slip',
+    title: 'Permission Slip Required',
+    message: 'Loading permission slip alerts...',
+    timestamp: new Date(),
+    read: false,
+    priority: 'high'
   }
 ]
 
@@ -131,15 +149,66 @@ function getNotificationIcon(type: Notification['type']) {
     case 'inventory': return <Package className="w-4 h-4 text-orange-600" />
     case 'attendance': return <AlertTriangle className="w-4 h-4 text-yellow-600" />
     case 'event': return <Calendar className="w-4 h-4 text-purple-600" />
+    case 'permission_slip': return <FileSignature className="w-4 h-4 text-indigo-600" />
     case 'system': return <Bell className="w-4 h-4 text-gray-600" />
   }
 }
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export function NotificationCenter({ currentRole }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(
     currentRole === 'parent' ? PARENT_NOTIFICATIONS : DEMO_NOTIFICATIONS
   )
+
+  useEffect(() => {
+    async function fetchPermissionSlipAlerts() {
+      try {
+        const params = currentRole === 'parent' ? '?family_id=fam_1' : ''
+        const res = await fetch(`${API_URL}/api/permission-slip-alerts${params}`)
+        if (!res.ok) return
+        const alerts = await res.json()
+        if (alerts.length === 0) {
+          setNotifications(prev => prev.filter(n => n.type !== 'permission_slip'))
+          return
+        }
+
+        const permNotifications: Notification[] = alerts.map((alert: any, idx: number) => {
+          if (currentRole === 'parent') {
+            const names = alert.student_names?.join(', ') || 'your student'
+            return {
+              id: `perm_${alert.event_id}_${idx}`,
+              type: 'permission_slip' as const,
+              title: `Permission Slip: ${alert.event_title}`,
+              message: `${names} needs a signed permission slip for ${alert.event_title} on ${alert.event_date}. ${alert.days_until} day(s) until the event.`,
+              timestamp: new Date(),
+              read: false,
+              priority: alert.urgency === 'high' ? 'high' as const : alert.urgency === 'medium' ? 'medium' as const : 'low' as const,
+            }
+          } else {
+            return {
+              id: `perm_${alert.event_id}_${idx}`,
+              type: 'permission_slip' as const,
+              title: `Unsigned Permission Slips: ${alert.event_title}`,
+              message: `${alert.unsigned_count} of ${alert.total_enrolled} student(s) have not signed permission slips for ${alert.event_title} (${alert.event_date}). ${alert.days_until} day(s) remaining.`,
+              timestamp: new Date(),
+              read: false,
+              priority: alert.urgency === 'high' ? 'high' as const : alert.urgency === 'medium' ? 'medium' as const : 'low' as const,
+            }
+          }
+        })
+
+        setNotifications(prev => [
+          ...permNotifications,
+          ...prev.filter(n => n.type !== 'permission_slip'),
+        ])
+      } catch (err) {
+        setNotifications(prev => prev.filter(n => n.type !== 'permission_slip'))
+      }
+    }
+    fetchPermissionSlipAlerts()
+  }, [currentRole])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.read).length

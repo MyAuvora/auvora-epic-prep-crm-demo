@@ -44,6 +44,7 @@ import { RecentActivityFeed } from './RecentActivityFeed'
 import { AuditLog } from './AuditLog'
 import { DashboardWidgets } from './DashboardWidgets'
 import { AutonomousTaskManager } from './AutonomousTaskManager'
+import { PermissionSlipTracker } from './PermissionSlipTracker'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -1307,6 +1308,11 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 <TabsTrigger value="store">Store</TabsTrigger>
               </TabsList>
               <TabsContent value="events" className="mt-6">
+                {(currentRole === 'owner' || currentRole === 'admin') && (
+                  <div className="mb-6">
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} />
+                  </div>
+                )}
                 <EventsCalendar role="admin" />
               </TabsContent>
               <TabsContent value="incidents" className="mt-6">
@@ -1367,6 +1373,9 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   <div className="flex justify-between items-center">
                     <h2 className="text-3xl font-bold text-gray-900">Events</h2>
                   </div>
+                  {(currentRole === 'owner' || currentRole === 'admin') && (
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} />
+                  )}
                   <EventsCalendar role="admin" />
                 </div>
               )}

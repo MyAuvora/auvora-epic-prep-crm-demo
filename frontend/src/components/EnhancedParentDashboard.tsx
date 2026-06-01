@@ -18,6 +18,7 @@ import { GradeBreakdownModal } from './GradeBreakdownModal'
 import { PaymentMethodStorage } from './PaymentMethodStorage'
 import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { DailyBibleVerse } from './DailyBibleVerse'
+import { ParentPermissionSlipAlert } from './ParentPermissionSlipAlert'
 import { EnrollmentForm } from './EnrollmentForm'
 import { ParentEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { SimplifiedBillingSummary } from './SimplifiedBillingSummary'
@@ -382,6 +383,11 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Parent Dashboard</p>
             </div>
 
+                        <ParentPermissionSlipAlert
+                          familyId={parentData.family.family_id}
+                          onNavigateToEvents={() => setView('events')}
+                        />
+
                         <div className="mb-8">
                           <DailyBibleVerse />
                         </div>
@@ -741,7 +747,10 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
         )}
 
         {view === 'events' && (
-          <EventsCalendar role="parent" userId={parentId} />
+          <div className="space-y-4">
+            <ParentPermissionSlipAlert familyId={parentData.family.family_id} />
+            <EventsCalendar role="parent" userId={parentId} />
+          </div>
         )}
 
                 {view === 'documents' && (
