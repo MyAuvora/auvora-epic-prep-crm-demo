@@ -183,14 +183,6 @@ _allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALL
 ]
 _allowed_origins = [o.strip() for o in _allowed_origins if o.strip()]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Security headers middleware
 from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
 
@@ -204,13 +196,24 @@ class SecurityHeadersMiddleware(_BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         return response
 
+# Middleware ordering: Starlette runs last-added first (outermost).
+# CORS must be outermost so 401/429 responses still get CORS headers.
+# Order of add_middleware calls (first added = innermost, last added = outermost):
+#   1. SecurityHeaders (innermost — adds headers to all responses)
+#   2. ClerkAuth (rejects unauthenticated requests)
+#   3. RateLimit (rejects over-limit requests)
+#   4. CORS (outermost — ensures ALL responses including 401/429 get CORS headers)
+
 app.add_middleware(SecurityHeadersMiddleware)
-
-# Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
-
-# Add authentication middleware (only active when CLERK_SECRET_KEY is set)
 app.add_middleware(ClerkAuthMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include Clerk user management router
 app.include_router(clerk_users_router)

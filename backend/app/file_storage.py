@@ -146,6 +146,10 @@ async def get_file(key: str) -> Optional[bytes]:
 
     # Local fallback
     file_path = os.path.join(LOCAL_STORAGE_DIR, key)
+    # Prevent path traversal
+    if not os.path.realpath(file_path).startswith(os.path.realpath(LOCAL_STORAGE_DIR)):
+        logger.warning(f"[STORAGE-TRAVERSAL] Blocked path traversal attempt: {key}")
+        return None
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
             return f.read()
@@ -176,6 +180,10 @@ async def delete_file(key: str) -> bool:
 
     # Local fallback
     file_path = os.path.join(LOCAL_STORAGE_DIR, key)
+    # Prevent path traversal
+    if not os.path.realpath(file_path).startswith(os.path.realpath(LOCAL_STORAGE_DIR)):
+        logger.warning(f"[STORAGE-TRAVERSAL] Blocked path traversal attempt: {key}")
+        return False
     if os.path.exists(file_path):
         os.remove(file_path)
         logger.info(f"[LOCAL-DELETE] {key}")
