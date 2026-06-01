@@ -527,7 +527,7 @@ class Student(BaseModel):
     overall_grade_flag: GradeFlag
     ixl_status_flag: IXLStatus
     overall_risk_flag: RiskFlag
-    funding_source: FundingSource = FundingSource.OUT_OF_POCKET
+    funding_source: str = "Out-of-Pocket"
     step_up_percentage: int = 0
 
 class Family(BaseModel):
@@ -1517,6 +1517,20 @@ curricula_db: List[CurriculumItem] = []
 curriculum_units_db: List[CurriculumUnitItem] = []
 time_clock_db: List[TimeClock] = []
 
+def _safe_load(model_class, records: list) -> list:
+    """Load records into Pydantic models, skipping any that fail validation."""
+    result = []
+    for d in records:
+        try:
+            result.append(model_class(**d))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Skipping invalid {model_class.__name__} record: {e}"
+            )
+    return result
+
+
 def load_data_from_db():
     """Load all data from the SQLite database into in-memory lists for fast reads."""
     global organizations_db, campuses_db, users_db, audit_logs_db
@@ -1551,66 +1565,66 @@ def load_data_from_db():
         if user_dict.get("role") in role_migration:
             user_dict["role"] = role_migration[user_dict["role"]]
 
-    # Convert dicts back to Pydantic models for each entity type
-    organizations_db = [Organization(**d) for d in data.get("organizations", [])]
-    campuses_db = [Campus(**d) for d in data.get("campuses", [])]
-    users_db = [User(**d) for d in data.get("users", [])]
-    audit_logs_db = [AuditLog(**d) for d in data.get("audit_logs", [])]
-    students_db = [Student(**d) for d in data.get("students", [])]
-    families_db = [Family(**d) for d in data.get("families", [])]
-    parents_db = [Parent(**d) for d in data.get("parents", [])]
-    staff_db = [Staff(**d) for d in data.get("staff", [])]
-    grade_records_db = [GradeRecord(**d) for d in data.get("grade_records", [])]
-    behavior_notes_db = [BehaviorNote(**d) for d in data.get("behavior_notes", [])]
-    attendance_records_db = [AttendanceRecord(**d) for d in data.get("attendance_records", [])]
-    ixl_summaries_db = [IXLSummary(**d) for d in data.get("ixl_summaries", [])]
-    acellus_summaries_db = [AcellusSummary(**d) for d in data.get("acellus_summaries", [])]
-    acellus_courses_db = [AcellusCourse(**d) for d in data.get("acellus_courses", [])]
-    billing_records_db = [BillingRecord(**d) for d in data.get("billing_records", [])]
-    conferences_db = [Conference(**d) for d in data.get("conferences", [])]
-    messages_db = [Message(**d) for d in data.get("messages", [])]
-    events_db = [Event(**d) for d in data.get("events", [])]
-    event_rsvps_db = [EventRSVP(**d) for d in data.get("event_rsvps", [])]
-    documents_db = [Document(**d) for d in data.get("documents", [])]
-    document_signatures_db = [DocumentSignature(**d) for d in data.get("document_signatures", [])]
-    products_db = [Product(**d) for d in data.get("products", [])]
-    orders_db = [Order(**d) for d in data.get("orders", [])]
-    photo_albums_db = [PhotoAlbum(**d) for d in data.get("photo_albums", [])]
-    incidents_db = [Incident(**d) for d in data.get("incidents", [])]
-    health_records_db = [HealthRecord(**d) for d in data.get("health_records", [])]
-    invoices_db = [Invoice(**d) for d in data.get("invoices", [])]
-    invoice_line_items_db = [InvoiceLineItem(**d) for d in data.get("invoice_line_items", [])]
-    payment_plans_db = [PaymentPlan(**d) for d in data.get("payment_plans", [])]
-    payment_schedules_db = [PaymentSchedule(**d) for d in data.get("payment_schedules", [])]
-    leads_db = [Lead(**d) for d in data.get("leads", [])]
-    campus_capacity_db = [CampusCapacity(**d) for d in data.get("campus_capacity", [])]
-    message_templates_db = [MessageTemplate(**d) for d in data.get("message_templates", [])]
-    broadcast_messages_db = [BroadcastMessage(**d) for d in data.get("broadcast_messages", [])]
-    automated_alerts_db = [AutomatedAlert(**d) for d in data.get("automated_alerts", [])]
-    academic_standards_db = [AcademicStandard(**d) for d in data.get("academic_standards", [])]
-    standard_assessments_db = [StandardAssessment(**d) for d in data.get("standard_assessments", [])]
-    progress_reports_db = [ProgressReport(**d) for d in data.get("progress_reports", [])]
-    iep_504_plans_db = [IEP504Plan(**d) for d in data.get("iep_504_plans", [])]
-    accommodations_db = [Accommodation(**d) for d in data.get("accommodations", [])]
-    iep_goals_db = [IEPGoal(**d) for d in data.get("iep_goals", [])]
-    intervention_plans_db = [InterventionPlan(**d) for d in data.get("intervention_plans", [])]
-    intervention_progress_db = [InterventionProgress(**d) for d in data.get("intervention_progress", [])]
-    at_risk_assessments_db = [AtRiskAssessment(**d) for d in data.get("at_risk_assessments", [])]
-    retention_predictions_db = [RetentionPrediction(**d) for d in data.get("retention_predictions", [])]
-    enrollment_forecasts_db = [EnrollmentForecast(**d) for d in data.get("enrollment_forecasts", [])]
-    assignments_db = [Assignment(**d) for d in data.get("assignments", [])]
-    grade_entries_db = [GradeEntry(**d) for d in data.get("grade_entries", [])]
-    announcements_db = [Announcement(**d) for d in data.get("announcements", [])]
-    announcement_reads_db = [AnnouncementRead(**d) for d in data.get("announcement_reads", [])]
-    event_workflows_db = [EventWorkflow(**d) for d in data.get("event_workflows", [])]
-    sufs_scholarships_db = [SUFSScholarship(**d) for d in data.get("sufs_scholarships", [])]
-    sufs_claims_db = [SUFSClaim(**d) for d in data.get("sufs_claims", [])]
-    sufs_payments_db = [SUFSPayment(**d) for d in data.get("sufs_payments", [])]
-    sufs_payment_allocations_db = [SUFSPaymentAllocation(**d) for d in data.get("sufs_payment_allocations", [])]
-    business_expenses_db = [BusinessExpense(**d) for d in data.get("business_expenses", [])]
-    curricula_db = [CurriculumItem(**d) for d in data.get("curricula", [])]
-    curriculum_units_db = [CurriculumUnitItem(**d) for d in data.get("curriculum_units", [])]
-    time_clock_db = [TimeClock(**d) for d in data.get("time_clock", [])]
+    # Convert dicts back to Pydantic models, skipping records that fail validation
+    organizations_db = _safe_load(Organization, data.get("organizations", []))
+    campuses_db = _safe_load(Campus, data.get("campuses", []))
+    users_db = _safe_load(User, data.get("users", []))
+    audit_logs_db = _safe_load(AuditLog, data.get("audit_logs", []))
+    students_db = _safe_load(Student, data.get("students", []))
+    families_db = _safe_load(Family, data.get("families", []))
+    parents_db = _safe_load(Parent, data.get("parents", []))
+    staff_db = _safe_load(Staff, data.get("staff", []))
+    grade_records_db = _safe_load(GradeRecord, data.get("grade_records", []))
+    behavior_notes_db = _safe_load(BehaviorNote, data.get("behavior_notes", []))
+    attendance_records_db = _safe_load(AttendanceRecord, data.get("attendance_records", []))
+    ixl_summaries_db = _safe_load(IXLSummary, data.get("ixl_summaries", []))
+    acellus_summaries_db = _safe_load(AcellusSummary, data.get("acellus_summaries", []))
+    acellus_courses_db = _safe_load(AcellusCourse, data.get("acellus_courses", []))
+    billing_records_db = _safe_load(BillingRecord, data.get("billing_records", []))
+    conferences_db = _safe_load(Conference, data.get("conferences", []))
+    messages_db = _safe_load(Message, data.get("messages", []))
+    events_db = _safe_load(Event, data.get("events", []))
+    event_rsvps_db = _safe_load(EventRSVP, data.get("event_rsvps", []))
+    documents_db = _safe_load(Document, data.get("documents", []))
+    document_signatures_db = _safe_load(DocumentSignature, data.get("document_signatures", []))
+    products_db = _safe_load(Product, data.get("products", []))
+    orders_db = _safe_load(Order, data.get("orders", []))
+    photo_albums_db = _safe_load(PhotoAlbum, data.get("photo_albums", []))
+    incidents_db = _safe_load(Incident, data.get("incidents", []))
+    health_records_db = _safe_load(HealthRecord, data.get("health_records", []))
+    invoices_db = _safe_load(Invoice, data.get("invoices", []))
+    invoice_line_items_db = _safe_load(InvoiceLineItem, data.get("invoice_line_items", []))
+    payment_plans_db = _safe_load(PaymentPlan, data.get("payment_plans", []))
+    payment_schedules_db = _safe_load(PaymentSchedule, data.get("payment_schedules", []))
+    leads_db = _safe_load(Lead, data.get("leads", []))
+    campus_capacity_db = _safe_load(CampusCapacity, data.get("campus_capacity", []))
+    message_templates_db = _safe_load(MessageTemplate, data.get("message_templates", []))
+    broadcast_messages_db = _safe_load(BroadcastMessage, data.get("broadcast_messages", []))
+    automated_alerts_db = _safe_load(AutomatedAlert, data.get("automated_alerts", []))
+    academic_standards_db = _safe_load(AcademicStandard, data.get("academic_standards", []))
+    standard_assessments_db = _safe_load(StandardAssessment, data.get("standard_assessments", []))
+    progress_reports_db = _safe_load(ProgressReport, data.get("progress_reports", []))
+    iep_504_plans_db = _safe_load(IEP504Plan, data.get("iep_504_plans", []))
+    accommodations_db = _safe_load(Accommodation, data.get("accommodations", []))
+    iep_goals_db = _safe_load(IEPGoal, data.get("iep_goals", []))
+    intervention_plans_db = _safe_load(InterventionPlan, data.get("intervention_plans", []))
+    intervention_progress_db = _safe_load(InterventionProgress, data.get("intervention_progress", []))
+    at_risk_assessments_db = _safe_load(AtRiskAssessment, data.get("at_risk_assessments", []))
+    retention_predictions_db = _safe_load(RetentionPrediction, data.get("retention_predictions", []))
+    enrollment_forecasts_db = _safe_load(EnrollmentForecast, data.get("enrollment_forecasts", []))
+    assignments_db = _safe_load(Assignment, data.get("assignments", []))
+    grade_entries_db = _safe_load(GradeEntry, data.get("grade_entries", []))
+    announcements_db = _safe_load(Announcement, data.get("announcements", []))
+    announcement_reads_db = _safe_load(AnnouncementRead, data.get("announcement_reads", []))
+    event_workflows_db = _safe_load(EventWorkflow, data.get("event_workflows", []))
+    sufs_scholarships_db = _safe_load(SUFSScholarship, data.get("sufs_scholarships", []))
+    sufs_claims_db = _safe_load(SUFSClaim, data.get("sufs_claims", []))
+    sufs_payments_db = _safe_load(SUFSPayment, data.get("sufs_payments", []))
+    sufs_payment_allocations_db = _safe_load(SUFSPaymentAllocation, data.get("sufs_payment_allocations", []))
+    business_expenses_db = _safe_load(BusinessExpense, data.get("business_expenses", []))
+    curricula_db = _safe_load(CurriculumItem, data.get("curricula", []))
+    curriculum_units_db = _safe_load(CurriculumUnitItem, data.get("curriculum_units", []))
+    time_clock_db = _safe_load(TimeClock, data.get("time_clock", []))
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
 
