@@ -59,7 +59,11 @@ const DATA_TYPE_CONFIG: Record<DataType, { label: string; icon: typeof Users; de
   },
 }
 
-export function ProCareImport() {
+interface ProCareImportProps {
+  campusId?: string | null
+}
+
+export function ProCareImport({ campusId }: ProCareImportProps = {}) {
   const [selectedType, setSelectedType] = useState<DataType | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -162,7 +166,10 @@ export function ProCareImport() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const response = await fetch(`${API_URL}/api/import/${selectedType}`, {
+      const params = new URLSearchParams()
+      if (campusId) params.append('campus_id', campusId)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      const response = await fetch(`${API_URL}/api/import/${selectedType}${qs}`, {
         method: 'POST',
         body: formData,
       })
