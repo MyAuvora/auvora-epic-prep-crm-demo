@@ -1391,7 +1391,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               {view === 'settings' && (
                 <div className="space-y-6">
                   {subView === 'import' && currentRole === 'owner' ? (
-                    <ProCareImport />
+                    <ProCareImport campusId={selectedCampusId} />
                   ) : (
                     <UserManagement />
                   )}
