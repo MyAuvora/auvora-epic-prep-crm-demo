@@ -516,7 +516,7 @@ class Student(BaseModel):
     date_of_birth: date
     grade: str
     session: Session
-    room: Room
+    room: str = "Room 1"
     status: StudentStatus
     family_id: str
     enrollment_start_date: date
@@ -1271,7 +1271,7 @@ class Assignment(BaseModel):
     assignment_id: str
     campus_id: str
     teacher_id: str
-    room: Room
+    room: str = "Room 1"
     subject: str
     assignment_type: AssignmentType
     title: str
@@ -1687,7 +1687,7 @@ async def get_students(
     family_id: Optional[str] = None,
     grade: Optional[str] = None,
     session: Optional[Session] = None,
-    room: Optional[Room] = None,
+    room: Optional[str] = None,
     billing_status: Optional[BillingStatus] = None,
     risk_flag: Optional[RiskFlag] = None,
     ixl_status: Optional[IXLStatus] = None,
@@ -6428,7 +6428,7 @@ async def public_enroll(enrollment: PublicEnrollmentRequest):
             date_of_birth=date.fromisoformat(s.dateOfBirth) if s.dateOfBirth else date.today(),
             grade=s.gradeLevel or "K",
             session=session_val,
-            room=Room.ROOM_1,
+            room="Room 1",
             status=StudentStatus.WAITLISTED,
             family_id=family_id,
             enrollment_start_date=date.today(),
