@@ -3845,6 +3845,89 @@ async def sign_permission_slip(workflow_id: str, signature_id: str):
             return event_workflows_db[i]
     raise HTTPException(status_code=404, detail="Workflow not found")
 
+@app.get("/api/permission-slip-alerts")
+async def get_permission_slip_alerts(
+    family_id: Optional[str] = None,
+    campus_id: Optional[str] = None,
+):
+    """Get unsigned permission slip alerts for field trips.
+    
+    School side (no family_id): returns all unsigned slips grouped by event.
+    Parent side (with family_id): returns unsigned slips for that family's students.
+    """
+    # Find events that require permission slips and are upcoming (or today)
+    today = date.today()
+    perm_events = [
+        e for e in events_db
+        if e.requires_permission_slip
+        and e.date is not None
+        and (e.date if isinstance(e.date, date) else date.fromisoformat(str(e.date))) >= today
+        and (campus_id is None or e.campus_id == campus_id)
+    ]
+
+    alerts = []
+    for event in perm_events:
+        event_date = event.date if isinstance(event.date, date) else date.fromisoformat(str(event.date))
+        days_until = (event_date - today).days
+
+        # Get all workflows for this event
+        event_workflows = [w for w in event_workflows_db if w.event_id == event.event_id]
+
+        if family_id:
+            # Parent view: only their family's unsigned slips
+            family_workflows = [w for w in event_workflows if w.family_id == family_id and not w.permission_slip_signed]
+            if family_workflows:
+                student_names = []
+                for w in family_workflows:
+                    student = next((s for s in students_db if s.student_id == w.student_id), None)
+                    student_names.append(f"{student.first_name} {student.last_name}" if student else w.student_id)
+                alerts.append({
+                    "event_id": event.event_id,
+                    "event_title": event.title,
+                    "event_date": str(event.date),
+                    "event_type": event.event_type,
+                    "days_until": days_until,
+                    "unsigned_count": len(family_workflows),
+                    "student_names": student_names,
+                    "workflows": [{"workflow_id": w.workflow_id, "student_id": w.student_id} for w in family_workflows],
+                    "urgency": "high" if days_until <= 3 else "medium" if days_until <= 7 else "low",
+                })
+        else:
+            # School view: all unsigned slips per event
+            unsigned = [w for w in event_workflows if not w.permission_slip_signed]
+            signed = [w for w in event_workflows if w.permission_slip_signed]
+
+            unsigned_details = []
+            for w in unsigned:
+                student = next((s for s in students_db if s.student_id == w.student_id), None)
+                family = next((f for f in families_db if f.family_id == w.family_id), None)
+                unsigned_details.append({
+                    "workflow_id": w.workflow_id,
+                    "student_id": w.student_id,
+                    "student_name": f"{student.first_name} {student.last_name}" if student else w.student_id,
+                    "family_id": w.family_id,
+                    "family_name": family.family_name if family else w.family_id,
+                })
+
+            if unsigned:
+                alerts.append({
+                    "event_id": event.event_id,
+                    "event_title": event.title,
+                    "event_date": str(event.date),
+                    "event_type": event.event_type,
+                    "days_until": days_until,
+                    "total_enrolled": len(event_workflows),
+                    "signed_count": len(signed),
+                    "unsigned_count": len(unsigned),
+                    "unsigned_students": unsigned_details,
+                    "urgency": "high" if days_until <= 3 else "medium" if days_until <= 7 else "low",
+                })
+
+    # Sort by urgency (closest events first)
+    alerts.sort(key=lambda a: a["days_until"])
+    return alerts
+
+
 @app.post("/api/event-workflows/{workflow_id}/complete-payment")
 async def complete_payment(workflow_id: str, order_id: str):
     for i, w in enumerate(event_workflows_db):
