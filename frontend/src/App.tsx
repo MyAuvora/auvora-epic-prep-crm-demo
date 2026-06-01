@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useUser, useAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
+import { initApiClient } from './lib/api'
 import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
 import { TeacherDashboard } from './components/TeacherDashboard'
 import { EnhancedParentDashboard } from './components/EnhancedParentDashboard'
@@ -16,7 +17,13 @@ type Page = 'dashboard' | 'terms' | 'privacy'
 
 function AuthenticatedApp() {
   const { user } = useUser()
+  const { getToken } = useAuth()
   const [currentRole, setCurrentRole] = useState<Role>('owner')
+
+  // Initialize API client with Clerk auth token
+  useEffect(() => {
+    initApiClient(getToken)
+  }, [getToken])
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
