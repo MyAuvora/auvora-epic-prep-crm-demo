@@ -119,15 +119,6 @@ const PARENT_NOTIFICATIONS: Notification[] = [
     read: true,
     priority: 'low'
   },
-  {
-    id: 'pn4',
-    type: 'permission_slip',
-    title: 'Permission Slip Required',
-    message: 'Loading permission slip alerts...',
-    timestamp: new Date(),
-    read: false,
-    priority: 'high'
-  }
 ]
 
 function getTimeAgo(date: Date): string {
@@ -165,8 +156,12 @@ export function NotificationCenter({ currentRole }: NotificationCenterProps) {
   useEffect(() => {
     async function fetchPermissionSlipAlerts() {
       try {
-        const params = currentRole === 'parent' ? '?family_id=fam_1' : ''
-        const res = await fetch(`${API_URL}/api/permission-slip-alerts${params}`)
+        // Parent-side alerts are handled by ParentPermissionSlipAlert with the real familyId
+        if (currentRole === 'parent') {
+          setNotifications(prev => prev.filter(n => n.type !== 'permission_slip'))
+          return
+        }
+        const res = await fetch(`${API_URL}/api/permission-slip-alerts`)
         if (!res.ok) return
         const alerts = await res.json()
         if (alerts.length === 0) {
@@ -174,30 +169,15 @@ export function NotificationCenter({ currentRole }: NotificationCenterProps) {
           return
         }
 
-        const permNotifications: Notification[] = alerts.map((alert: any, idx: number) => {
-          if (currentRole === 'parent') {
-            const names = alert.student_names?.join(', ') || 'your student'
-            return {
-              id: `perm_${alert.event_id}_${idx}`,
-              type: 'permission_slip' as const,
-              title: `Permission Slip: ${alert.event_title}`,
-              message: `${names} needs a signed permission slip for ${alert.event_title} on ${alert.event_date}. ${alert.days_until} day(s) until the event.`,
-              timestamp: new Date(),
-              read: false,
-              priority: alert.urgency === 'high' ? 'high' as const : alert.urgency === 'medium' ? 'medium' as const : 'low' as const,
-            }
-          } else {
-            return {
-              id: `perm_${alert.event_id}_${idx}`,
-              type: 'permission_slip' as const,
-              title: `Unsigned Permission Slips: ${alert.event_title}`,
-              message: `${alert.unsigned_count} of ${alert.total_enrolled} student(s) have not signed permission slips for ${alert.event_title} (${alert.event_date}). ${alert.days_until} day(s) remaining.`,
-              timestamp: new Date(),
-              read: false,
-              priority: alert.urgency === 'high' ? 'high' as const : alert.urgency === 'medium' ? 'medium' as const : 'low' as const,
-            }
-          }
-        })
+        const permNotifications: Notification[] = alerts.map((alert: any, idx: number) => ({
+          id: `perm_${alert.event_id}_${idx}`,
+          type: 'permission_slip' as const,
+          title: `Unsigned Permission Slips: ${alert.event_title}`,
+          message: `${alert.unsigned_count} of ${alert.total_enrolled} student(s) have not signed permission slips for ${alert.event_title} (${alert.event_date}). ${alert.days_until} day(s) remaining.`,
+          timestamp: new Date(),
+          read: false,
+          priority: alert.urgency === 'high' ? 'high' as const : alert.urgency === 'medium' ? 'medium' as const : 'low' as const,
+        }))
 
         setNotifications(prev => [
           ...permNotifications,

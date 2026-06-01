@@ -3906,7 +3906,7 @@ async def get_permission_slip_alerts(
                     "student_id": w.student_id,
                     "student_name": f"{student.first_name} {student.last_name}" if student else w.student_id,
                     "family_id": w.family_id,
-                    "family_name": f"{family.parent1_first_name} {family.parent1_last_name}" if family else w.family_id,
+                    "family_name": family.family_name if family else w.family_id,
                 })
 
             if unsigned:
