@@ -2204,7 +2204,7 @@ async def get_teacher_dashboard(staff_id: str):
         room_name = room_parts[0]
         session_name = room_parts[1] if len(room_parts) > 1 else "Morning"
         
-        room_students = [s for s in students_db if s.room.value == room_name and s.session.value == session_name]
+        room_students = [s for s in students_db if s.room == room_name and s.session.value == session_name]
         
         rooms_data.append({
             "room": room_name,
@@ -3131,7 +3131,7 @@ async def get_family_statement(family_id: str, format: str = "json"):
                 'student_id': s.student_id,
                 'name': f"{s.first_name} {s.last_name}",
                 'grade': s.grade,
-                'funding_source': s.funding_source.value if s.funding_source else None
+                'funding_source': s.funding_source if s.funding_source else None
             }
             for s in family_students
         ],
@@ -3864,7 +3864,7 @@ async def get_assignments(campus_id: Optional[str] = None, teacher_id: Optional[
     if teacher_id:
         filtered = [a for a in filtered if a.teacher_id == teacher_id]
     if room:
-        filtered = [a for a in filtered if a.room.value == room]
+        filtered = [a for a in filtered if a.room == room]
     return filtered
 
 @app.get("/api/assignments/{assignment_id}")
