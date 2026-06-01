@@ -28,6 +28,9 @@ from .clerk_users import router as clerk_users_router
 # Import ProCare CSV import router
 from .procare_import import router as procare_import_router
 
+# Import autonomous task scheduler
+from . import autonomous_tasks
+
 # Import database components
 from .database import engine, get_db, init_db, SessionLocal
 from . import models, crud
@@ -1459,6 +1462,11 @@ def load_data_from_db():
 @app.on_event("startup")
 async def startup_event():
     load_data_from_db()
+    autonomous_tasks.start_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    autonomous_tasks.stop_scheduler()
 
 @app.get("/healthz")
 async def healthz():
@@ -7384,3 +7392,154 @@ async def get_timesheet_summary(staff_id: Optional[str] = None, start_date: Opti
             summary["total_pay"] = round(summary["pay_rate"] / 26, 2)  # bi-weekly salary
 
     return list(staff_summaries.values())
+
+
+# ---------------------------------------------------------------------------
+# Autonomous Tasks API
+# ---------------------------------------------------------------------------
+
+class AutonomousTaskUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    schedule_interval_minutes: Optional[int] = None
+    schedule_cron: Optional[str] = None
+    config_json: Optional[str] = None
+
+
+@app.get("/api/autonomous-tasks")
+async def get_autonomous_tasks():
+    db = SessionLocal()
+    try:
+        tasks = db.query(models.AutonomousTask).order_by(models.AutonomousTask.task_id).all()
+        result = []
+        for t in tasks:
+            result.append({
+                "task_id": t.task_id,
+                "task_type": t.task_type,
+                "name": t.name,
+                "description": t.description,
+                "enabled": t.enabled,
+                "schedule_cron": t.schedule_cron,
+                "schedule_interval_minutes": t.schedule_interval_minutes,
+                "config_json": t.config_json,
+                "last_run": t.last_run.isoformat() if t.last_run else None,
+                "next_run": t.next_run.isoformat() if t.next_run else None,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.patch("/api/autonomous-tasks/{task_id}")
+async def update_autonomous_task(task_id: str, update: AutonomousTaskUpdate):
+    db = SessionLocal()
+    try:
+        task = db.query(models.AutonomousTask).filter(
+            models.AutonomousTask.task_id == task_id
+        ).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if update.enabled is not None:
+            task.enabled = update.enabled
+        if update.schedule_interval_minutes is not None:
+            task.schedule_interval_minutes = update.schedule_interval_minutes
+            task.schedule_cron = None
+        if update.schedule_cron is not None:
+            task.schedule_cron = update.schedule_cron
+            task.schedule_interval_minutes = None
+        if update.config_json is not None:
+            task.config_json = update.config_json
+        task.updated_at = datetime.now()
+        db.commit()
+
+        autonomous_tasks.reload_task(task_id)
+
+        return {"status": "updated", "task_id": task_id}
+    finally:
+        db.close()
+
+
+@app.post("/api/autonomous-tasks/{task_id}/run")
+async def run_autonomous_task_now(task_id: str):
+    log_id = autonomous_tasks.run_task_now(task_id)
+    if log_id is None:
+        raise HTTPException(status_code=404, detail="Task not found or no runner available")
+    return {"status": "executed", "log_id": log_id}
+
+
+@app.get("/api/autonomous-task-logs")
+async def get_autonomous_task_logs(
+    task_id: Optional[str] = None,
+    task_type: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = Query(default=50, le=200),
+):
+    db = SessionLocal()
+    try:
+        q = db.query(models.AutonomousTaskLog).order_by(
+            models.AutonomousTaskLog.started_at.desc()
+        )
+        if task_id:
+            q = q.filter(models.AutonomousTaskLog.task_id == task_id)
+        if task_type:
+            q = q.filter(models.AutonomousTaskLog.task_type == task_type)
+        if status:
+            q = q.filter(models.AutonomousTaskLog.status == status)
+        logs = q.limit(limit).all()
+        result = []
+        for log in logs:
+            result.append({
+                "log_id": log.log_id,
+                "task_id": log.task_id,
+                "task_type": log.task_type,
+                "task_name": log.task_name,
+                "status": log.status,
+                "started_at": log.started_at.isoformat() if log.started_at else None,
+                "completed_at": log.completed_at.isoformat() if log.completed_at else None,
+                "result_summary": log.result_summary,
+                "details_json": log.details_json,
+                "items_processed": log.items_processed,
+                "errors": log.errors,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.get("/api/autonomous-task-logs/{log_id}")
+async def get_autonomous_task_log_detail(log_id: str):
+    db = SessionLocal()
+    try:
+        log = db.query(models.AutonomousTaskLog).filter(
+            models.AutonomousTaskLog.log_id == log_id
+        ).first()
+        if not log:
+            raise HTTPException(status_code=404, detail="Log not found")
+        return {
+            "log_id": log.log_id,
+            "task_id": log.task_id,
+            "task_type": log.task_type,
+            "task_name": log.task_name,
+            "status": log.status,
+            "started_at": log.started_at.isoformat() if log.started_at else None,
+            "completed_at": log.completed_at.isoformat() if log.completed_at else None,
+            "result_summary": log.result_summary,
+            "details_json": log.details_json,
+            "items_processed": log.items_processed,
+            "errors": log.errors,
+        }
+    finally:
+        db.close()
+
+
+@app.get("/api/autonomous-tasks/status")
+async def get_scheduler_status():
+    running = autonomous_tasks.scheduler.running
+    jobs = []
+    if running:
+        for job in autonomous_tasks.scheduler.get_jobs():
+            jobs.append({
+                "job_id": job.id,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            })
+    return {"scheduler_running": running, "active_jobs": len(jobs), "jobs": jobs}

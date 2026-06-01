@@ -43,6 +43,7 @@ import { QuickActions } from './QuickActions'
 import { RecentActivityFeed } from './RecentActivityFeed'
 import { AuditLog } from './AuditLog'
 import { DashboardWidgets } from './DashboardWidgets'
+import { AutonomousTaskManager } from './AutonomousTaskManager'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -141,7 +142,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log' | 'ai-agent'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -373,6 +374,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
 
+                  ...(currentRole === 'owner' ? [{ id: 'ai-agent', label: 'AI Agent', subView: 'tasks' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'audit-log', label: 'Audit Log', subView: 'all' }] : []),
                 ]
 
@@ -1367,6 +1369,10 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   </div>
                   <EventsCalendar role="admin" />
                 </div>
+              )}
+
+              {view === 'ai-agent' && currentRole === 'owner' && (
+                <AutonomousTaskManager />
               )}
 
               {view === 'audit-log' && currentRole === 'owner' && (

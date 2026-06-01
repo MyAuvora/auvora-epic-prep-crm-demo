@@ -17,6 +17,7 @@ httpx = "^0.28.1"
 sqlalchemy = "^2.0.48"
 aiosqlite = "^0.22.1"
 stripe = "^15.0.1"
+apscheduler = "^3.10.4"
 
 
 [build-system]

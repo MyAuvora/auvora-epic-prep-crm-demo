@@ -1088,3 +1088,38 @@ class AppMetadata(Base):
     key = Column(String, unique=True, nullable=False)
     value = Column(String)
 
+
+class AutonomousTask(Base):
+    __tablename__ = "autonomous_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(String, unique=True, index=True)
+    task_type = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    enabled = Column(Boolean, default=True)
+    schedule_cron = Column(String)
+    schedule_interval_minutes = Column(Integer)
+    config_json = Column(Text, default="{}")
+    last_run = Column(DateTime)
+    next_run = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AutonomousTaskLog(Base):
+    __tablename__ = "autonomous_task_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    log_id = Column(String, unique=True, index=True)
+    task_id = Column(String, index=True)
+    task_type = Column(String)
+    task_name = Column(String)
+    status = Column(String, default="running")
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
+    result_summary = Column(Text)
+    details_json = Column(Text, default="{}")
+    items_processed = Column(Integer, default=0)
+    errors = Column(Text)
+
