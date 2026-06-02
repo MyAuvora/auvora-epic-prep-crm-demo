@@ -99,8 +99,15 @@ export function PublicEnrollmentPage() {
   const [students, setStudents] = useState<StudentInfo[]>([{ ...emptyStudent, id: `student_${Date.now()}` }]);
   const [parents, setParents] = useState<ParentInfo[]>([{ ...emptyParent, id: `parent_${Date.now()}`, isPrimary: true }]);
   const [authorizedPickups, setAuthorizedPickups] = useState<AuthorizedPickup[]>([]);
-  const [policyAgreements, setPolicyAgreements] = useState({
-    photoRelease: false,
+  const [policyAgreements, setPolicyAgreements] = useState<{
+    photoRelease: 'accept' | 'deny' | null;
+    liabilityWaiver: boolean;
+    medicalAuthorization: boolean;
+    parentHandbook: boolean;
+    electronicSignature: string;
+    signatureDate: string;
+  }>({
+    photoRelease: null,
     liabilityWaiver: false,
     medicalAuthorization: false,
     parentHandbook: false,
@@ -197,11 +204,11 @@ export function PublicEnrollmentPage() {
       case 1:
         return students.every(s => s.firstName && s.lastName && s.dateOfBirth && s.allergies && s.medication && s.addressLine && s.city && s.state && s.zipcode && s.academicInfo && s.stepUpApplied && s.gradeLevel && s.campusType && s.sessionPreference);
       case 2:
-        return parents.every(p => p.firstName && p.lastName && p.email && p.phone && p.workPhone && p.employer);
+        return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
       case 3:
         return true;
       case 4:
-        return policyAgreements.photoRelease &&
+        return policyAgreements.photoRelease !== null &&
                policyAgreements.liabilityWaiver &&
                policyAgreements.medicalAuthorization &&
                policyAgreements.parentHandbook &&
@@ -666,7 +673,7 @@ export function PublicEnrollmentPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Work Phone <span className="text-red-500">*</span></label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Work Phone</label>
                           <input
                             type="tel"
                             value={parent.workPhone}
@@ -676,7 +683,7 @@ export function PublicEnrollmentPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer <span className="text-red-500">*</span></label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer</label>
                           <input
                             type="text"
                             value={parent.employer}
@@ -826,22 +833,47 @@ export function PublicEnrollmentPage() {
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
                     <div className="space-y-4">
-                      <div className="flex items-start">
-                        <input
-                          type="checkbox"
-                          id="photoRelease"
-                          checked={policyAgreements.photoRelease}
-                          onChange={(e) => setPolicyAgreements({...policyAgreements, photoRelease: e.target.checked})}
-                          className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="photoRelease" className="ml-3 text-sm text-gray-700">
-                          <span className="font-medium">Photo/Video Release</span> <span className="text-red-500">*</span>
-                          <p className="text-gray-500 mt-1">
+                      <div className="space-y-3">
+                        <div>
+                          <span className="font-medium text-sm text-gray-700">Photo/Video Release</span> <span className="text-red-500">*</span>
+                          <p className="text-gray-500 text-sm mt-1">
                             I grant EPIC Prep Academy permission to use photographs and/or video of my child(ren)
                             for educational, promotional, and marketing purposes including but not limited to
                             the school website, social media, newsletters, and promotional materials.
                           </p>
-                        </label>
+                        </div>
+                        <div className="flex gap-4 mt-2">
+                          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
+                            policyAgreements.photoRelease === 'accept' 
+                              ? 'border-green-500 bg-green-50 text-green-700' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="photoRelease"
+                              value="accept"
+                              checked={policyAgreements.photoRelease === 'accept'}
+                              onChange={() => setPolicyAgreements({...policyAgreements, photoRelease: 'accept'})}
+                              className="w-4 h-4 text-green-600"
+                            />
+                            <span className="font-medium text-sm">Accept</span>
+                          </label>
+                          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
+                            policyAgreements.photoRelease === 'deny' 
+                              ? 'border-red-500 bg-red-50 text-red-700' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="photoRelease"
+                              value="deny"
+                              checked={policyAgreements.photoRelease === 'deny'}
+                              onChange={() => setPolicyAgreements({...policyAgreements, photoRelease: 'deny'})}
+                              className="w-4 h-4 text-red-600"
+                            />
+                            <span className="font-medium text-sm">Deny</span>
+                          </label>
+                        </div>
                       </div>
 
                       <div className="flex items-start">

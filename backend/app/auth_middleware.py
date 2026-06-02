@@ -34,6 +34,7 @@ PUBLIC_PREFIXES = (
     "/docs",
     "/openapi.json",
     "/redoc",
+    "/api/public/",
 )
 
 
