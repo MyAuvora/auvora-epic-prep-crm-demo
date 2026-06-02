@@ -683,7 +683,7 @@ export function PublicEnrollmentPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer <span className="text-red-500">*</span></label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Employer</label>
                           <input
                             type="text"
                             value={parent.employer}

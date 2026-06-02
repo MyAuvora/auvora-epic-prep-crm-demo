@@ -649,7 +649,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Employer <span className="text-red-500">*</span>
+                          Employer
                         </label>
                         <input
                           type="text"
