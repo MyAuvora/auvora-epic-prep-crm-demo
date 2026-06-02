@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Users, Mail, Phone, Calendar, GraduationCap, MapPin } from 'lucide-react';
+import { Users, Mail, Phone, Calendar, GraduationCap, MapPin, CheckCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -29,6 +29,14 @@ interface Lead {
   tour_date: string | null;
   notes: string;
   assigned_to: string | null;
+  family_id?: string | null;
+  enrollment_data?: Record<string, unknown> | null;
+}
+
+interface Campus {
+  campus_id: string;
+  name: string;
+  location: string;
 }
 
 interface LeadDetailModalProps {
@@ -39,16 +47,16 @@ interface LeadDetailModalProps {
   onLeadUpdated: () => void;
 }
 
-const stages = ['New Inquiry', 'Contacted', 'Tour Scheduled', 'Toured', 'Application Submitted', 'Accepted', 'Enrolled', 'Lost'];
+const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Lost'];
 
 const getStageColor = (stage: string) => {
   const colors: Record<string, string> = {
-    'New Inquiry': 'bg-blue-100 text-blue-800',
+    'New': 'bg-blue-100 text-blue-800',
+    'Contact': 'bg-cyan-100 text-cyan-800',
     'Contacted': 'bg-purple-100 text-purple-800',
     'Tour Scheduled': 'bg-yellow-100 text-yellow-800',
-    'Toured': 'bg-orange-100 text-orange-800',
-    'Application Submitted': 'bg-indigo-100 text-indigo-800',
-    'Accepted': 'bg-green-100 text-green-800',
+    'Tour Complete': 'bg-orange-100 text-orange-800',
+    'Enrolling': 'bg-indigo-100 text-indigo-800',
     'Enrolled': 'bg-emerald-100 text-emerald-800',
     'Lost': 'bg-red-100 text-red-800'
   };
@@ -60,14 +68,36 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   const [tourDate, setTourDate] = useState(lead?.tour_date || '');
   const [notes, setNotes] = useState(lead?.notes || '');
   const [loading, setLoading] = useState(false);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [enrollCampusId, setEnrollCampusId] = useState('');
+  const [enrollSession, setEnrollSession] = useState('Morning');
+  const [enrollRoom, setEnrollRoom] = useState('');
+  const [showEnrollForm, setShowEnrollForm] = useState(false);
 
   useEffect(() => {
     if (lead) {
       setSelectedStage(lead.stage);
       setTourDate(lead.tour_date || '');
       setNotes(lead.notes || '');
+      setShowEnrollForm(false);
     }
   }, [lead]);
+
+  useEffect(() => {
+    const fetchCampuses = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/campuses`);
+        if (res.ok) {
+          const data = await res.json();
+          setCampuses(data);
+          if (data.length > 0) setEnrollCampusId(data[0].campus_id);
+        }
+      } catch (e) {
+        console.error('Error fetching campuses:', e);
+      }
+    };
+    fetchCampuses();
+  }, []);
 
   if (!lead) return null;
 
@@ -84,9 +114,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
 
       const response = await fetch(`${API_URL}/api/admissions/leads/${lead.lead_id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedLead),
       });
 
@@ -105,13 +133,49 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     }
   };
 
+  const handleFinalizeEnrollment = async () => {
+    if (!enrollCampusId) {
+      alert('Please select a campus');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admissions/leads/${lead.lead_id}/enroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campus_id: enrollCampusId,
+          session: enrollSession,
+          room: enrollRoom,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to enroll student');
+      }
+
+      const result = await response.json();
+      alert(result.message || 'Student enrolled successfully!');
+      onLeadUpdated();
+      onClose();
+    } catch (error) {
+      console.error('Error enrolling student:', error);
+      alert(error instanceof Error ? error.message : 'Failed to enroll student');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isEnrollingStage = lead.stage === 'Enrolling';
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[90vw] sm:max-w-lg md:max-w-2xl max-h-[85vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            {mode === 'view' ? 'Lead Details' : 'Update Lead Stage'}
+            {showEnrollForm ? 'Finalize Enrollment' : mode === 'view' ? 'Lead Details' : 'Update Lead Stage'}
           </DialogTitle>
         </DialogHeader>
 
@@ -176,7 +240,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                   <span>Last Contact: {new Date(lead.last_contact_date).toLocaleDateString()}</span>
                 </div>
               )}
-              {lead.tour_date && mode === 'view' && (
+              {lead.tour_date && !showEnrollForm && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Calendar className="h-4 w-4" />
                   <span>Tour: {new Date(lead.tour_date).toLocaleDateString()}</span>
@@ -185,14 +249,14 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
             </div>
           </div>
 
-          {mode === 'view' && lead.notes && (
+          {!showEnrollForm && lead.notes && (
             <div className="space-y-2">
               <h4 className="font-medium text-gray-700 border-b pb-1">Notes</h4>
               <p className="text-sm text-gray-600 italic">{lead.notes}</p>
             </div>
           )}
 
-          {mode === 'update-stage' && (
+          {mode === 'update-stage' && !showEnrollForm && (
             <div className="space-y-4 pt-2 border-t">
               <h4 className="font-medium text-gray-700">Update Information</h4>
               
@@ -203,7 +267,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {stages.map((stage) => (
+                    {stages.filter(s => s !== 'Enrolled').map((stage) => (
                       <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                     ))}
                   </SelectContent>
@@ -232,15 +296,105 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
               </div>
             </div>
           )}
+
+          {/* Enrollment Finalization Form */}
+          {showEnrollForm && (
+            <div className="space-y-4 pt-2 border-t">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <h4 className="font-medium text-green-800 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Finalize Enrollment
+                </h4>
+                <p className="text-sm text-green-700 mt-1">
+                  Assign {lead.child_first_name} to a campus and session to complete enrollment.
+                  This will create the student and family accounts in the system.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Campus <span className="text-red-500">*</span></Label>
+                <Select value={enrollCampusId} onValueChange={setEnrollCampusId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select campus..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campuses.map((c) => (
+                      <SelectItem key={c.campus_id} value={c.campus_id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Session</Label>
+                <Select value={enrollSession} onValueChange={setEnrollSession}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Morning">Morning (AM)</SelectItem>
+                    <SelectItem value="Afternoon">Afternoon (PM)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Classroom (optional)</Label>
+                <Input
+                  value={enrollRoom}
+                  onChange={(e) => setEnrollRoom(e.target.value)}
+                  placeholder="e.g., Room A, Room 1"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-            {mode === 'view' ? 'Close' : 'Cancel'}
+        <DialogFooter className="flex gap-2">
+          <Button type="button" variant="outline" onClick={() => {
+            if (showEnrollForm) {
+              setShowEnrollForm(false);
+            } else {
+              onClose();
+            }
+          }} disabled={loading}>
+            {showEnrollForm ? 'Back' : mode === 'view' ? 'Close' : 'Cancel'}
           </Button>
-          {mode === 'update-stage' && (
-            <Button onClick={handleUpdateStage} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+
+          {mode === 'update-stage' && !showEnrollForm && (
+            <>
+              <Button onClick={handleUpdateStage} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+              {isEnrollingStage && (
+                <Button
+                  onClick={() => setShowEnrollForm(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Finalize Enrollment
+                </Button>
+              )}
+            </>
+          )}
+
+          {mode === 'view' && isEnrollingStage && (
+            <Button
+              onClick={() => setShowEnrollForm(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Finalize Enrollment
+            </Button>
+          )}
+
+          {showEnrollForm && (
+            <Button
+              onClick={handleFinalizeEnrollment}
+              disabled={loading || !enrollCampusId}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {loading ? 'Enrolling...' : 'Complete Enrollment'}
             </Button>
           )}
         </DialogFooter>

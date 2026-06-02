@@ -384,7 +384,7 @@ def create_lead(db: Session, campus_id: str, parent_first_name: str, parent_last
         child_dob=child_dob,
         desired_grade=desired_grade,
         desired_start_date=desired_start_date,
-        stage="New Inquiry",
+        stage="New",
         source=source,
         notes=notes
     )

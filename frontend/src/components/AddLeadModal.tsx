@@ -36,7 +36,7 @@ export function AddLeadModal({ open, onClose, onLeadAdded, selectedCampusId }: A
     child_dob: '',
     desired_grade: '',
     desired_start_date: new Date().toISOString().split('T')[0],
-    stage: 'New Inquiry',
+    stage: 'New',
     source: 'Website',
     notes: ''
   });
@@ -123,7 +123,7 @@ export function AddLeadModal({ open, onClose, onLeadAdded, selectedCampusId }: A
       child_dob: '',
       desired_grade: '',
       desired_start_date: new Date().toISOString().split('T')[0],
-      stage: 'New Inquiry',
+      stage: 'New',
       source: 'Website',
       notes: ''
     });
@@ -294,7 +294,8 @@ export function AddLeadModal({ open, onClose, onLeadAdded, selectedCampusId }: A
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="New Inquiry">New Inquiry</SelectItem>
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Contact">Contact</SelectItem>
                   <SelectItem value="Contacted">Contacted</SelectItem>
                   <SelectItem value="Tour Scheduled">Tour Scheduled</SelectItem>
                 </SelectContent>

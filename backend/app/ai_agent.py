@@ -253,7 +253,7 @@ Access to their own children's information only.
 
 ### 4. Admissions
 **What it shows:** Enrollment pipeline for prospective families
-- Leads by stage (New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled)
+- Leads by stage (New → Contact → Contacted → Tour Scheduled → Tour Complete → Enrolling → Enrolled)
 - Lead details and follow-up tracking
 
 **How to access:** Click "Admissions" in the top navigation
@@ -642,7 +642,7 @@ Access to their own children's information only.
 
 #### How to manage the enrollment pipeline:
 1. Go to Admissions
-2. View leads organized by stage (New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled)
+2. View leads organized by stage (New → Contact → Contacted → Tour Scheduled → Tour Complete → Enrolling → Enrolled)
 3. Click a lead to update their stage or add notes
 4. Move leads through stages as they progress
 
@@ -1207,7 +1207,7 @@ AVAILABLE_FUNCTIONS = [
                 "properties": {
                     "stage": {
                         "type": "string",
-                        "enum": ["New Inquiry", "Contacted", "Tour Scheduled", "Toured", "Application Submitted", "Accepted", "Enrolled", "Lost"],
+                        "enum": ["New", "Contact", "Contacted", "Tour Scheduled", "Tour Complete", "Enrolling", "Enrolled", "Lost"],
                         "description": "Filter by pipeline stage"
                     }
                 },
@@ -1494,7 +1494,7 @@ AVAILABLE_FUNCTIONS = [
                 "type": "object",
                 "properties": {
                     "lead_name": {"type": "string", "description": "Lead/parent name"},
-                    "new_stage": {"type": "string", "enum": ["New Inquiry", "Contacted", "Tour Scheduled", "Toured", "Application Submitted", "Accepted", "Enrolled", "Lost"], "description": "New pipeline stage"}
+                    "new_stage": {"type": "string", "enum": ["New", "Contact", "Contacted", "Tour Scheduled", "Tour Complete", "Enrolling", "Enrolled", "Lost"], "description": "New pipeline stage"}
                 },
                 "required": ["lead_name", "new_stage"]
             }
@@ -2958,7 +2958,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                 "roles": ["owner", "admin"],
                 "steps": [
                     "Go to Admissions to see all leads",
-                    "Leads are organized by stage: New Inquiry → Contacted → Tour Scheduled → Toured → Application Submitted → Accepted → Enrolled",
+                    "Leads are organized by stage: New → Contact → Contacted → Tour Scheduled → Tour Complete → Enrolling → Enrolled",
                     "Click on a lead to update their status or add notes",
                     "Move leads through stages as they progress"
                 ]
@@ -3941,7 +3941,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         # Enrollment suggestions
         if focus_area in ["all", "enrollment"]:
             if leads_db:
-                stale_leads = [l for l in leads_db if l.stage in ["New Inquiry", "Contacted"] and hasattr(l, 'created_date') and l.created_date and l.created_date <= date.today() - timedelta(days=14)]
+                stale_leads = [l for l in leads_db if l.stage in ["New", "Contact"] and hasattr(l, 'created_date') and l.created_date and l.created_date <= date.today() - timedelta(days=14)]
                 if stale_leads:
                     suggestions.append({
                         "priority": "Medium",
