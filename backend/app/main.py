@@ -3600,12 +3600,12 @@ async def finalize_enrollment(lead_id: str, req: FinalizeEnrollmentRequest):
     if req.session and ("pm" in req.session.lower() or "afternoon" in req.session.lower()):
         session_val = Session.AFTERNOON
 
-    funding = "Out of Pocket"
+    funding = "Out-of-Pocket"
     step_pct = 0
     if matching_student:
         step_up = matching_student.get("stepUpApplied", "")
         if step_up in ("yes_approved", "yes_pending"):
-            funding = "Step Up"
+            funding = "Step-Up"
             step_pct = 100 if step_up == "yes_approved" else 0
 
     student = Student(
