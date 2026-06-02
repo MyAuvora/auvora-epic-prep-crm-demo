@@ -478,7 +478,11 @@ def run_recurring_invoices():
             summary = f"Generated {count} recurring invoice(s)"
         except Exception as e:
             count = 0
-            summary = f"Recurring invoice processing attempted: {e}"
+            summary = f"Recurring invoice processing failed: {e}"
+            _finish_log(db, log, "failed", summary, count, {"generated_count": count}, errors=str(e))
+            _update_last_run(db, task_row.task_id)
+            logger.warning(summary)
+            return
 
         _finish_log(db, log, "completed", summary, count, {"generated_count": count})
         _update_last_run(db, task_row.task_id)

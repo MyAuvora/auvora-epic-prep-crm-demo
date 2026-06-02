@@ -3103,6 +3103,10 @@ async def process_recurring_invoices():
             template.next_invoice_date = template.next_invoice_date + relativedelta(months=3)
         elif freq == "yearly":
             template.next_invoice_date = template.next_invoice_date + relativedelta(years=1)
+        else:
+            # Unknown frequency — cancel to prevent infinite generation
+            template.is_recurring = "cancelled"
+            template.next_invoice_date = None
 
         template.last_updated = datetime.now()
         db_utils.save_invoice(template)
