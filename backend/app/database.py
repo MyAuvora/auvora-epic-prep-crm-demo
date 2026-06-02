@@ -91,6 +91,13 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE invoices ADD COLUMN recurring_parent_id VARCHAR DEFAULT NULL"))
             if "next_invoice_date" not in existing:
                 conn.execute(text("ALTER TABLE invoices ADD COLUMN next_invoice_date DATE DEFAULT NULL"))
+        # Leads table: add family_id and enrollment_data if missing
+        if "leads" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("leads")]
+            if "family_id" not in existing:
+                conn.execute(text("ALTER TABLE leads ADD COLUMN family_id VARCHAR DEFAULT NULL"))
+            if "enrollment_data" not in existing:
+                conn.execute(text("ALTER TABLE leads ADD COLUMN enrollment_data TEXT DEFAULT NULL"))
         conn.commit()
     finally:
         conn.close()
