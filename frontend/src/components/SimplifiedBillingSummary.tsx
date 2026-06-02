@@ -70,7 +70,6 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
     });
   };
 
-  // Calculate progress percentage
   const getProgressPercentage = () => {
     if (!summary) return 0;
     const totalPaid = summary.scholarship_received_ytd + summary.parent_paid_ytd;
@@ -94,6 +93,9 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
       </Card>
     );
   }
+
+  const scholarshipPending = summary.payment_schedule.filter(p => p.type === 'scholarship' && p.status !== 'paid');
+  const parentPending = summary.payment_schedule.filter(p => p.type === 'parent' && p.status !== 'paid');
 
   return (
     <div className="space-y-6">
@@ -126,25 +128,15 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
             </div>
           </div>
 
-          {/* Tuition Breakdown */}
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-white/10 rounded-lg p-4">
-              <p className="text-blue-200 text-xs mb-1">Annual Tuition</p>
-              <p className="text-xl font-bold">{formatCurrency(summary.annual_tuition)}</p>
-            </div>
-            <div className="bg-green-500/20 rounded-lg p-4 border border-green-400/30">
-              <p className="text-green-200 text-xs mb-1">Scholarship Covers</p>
-              <p className="text-xl font-bold text-green-300">{formatCurrency(summary.scholarship_amount)}</p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-4 border-2 border-white/30">
-              <p className="text-blue-200 text-xs mb-1">Your Portion</p>
-              <p className="text-xl font-bold">{formatCurrency(summary.parent_responsibility)}</p>
-            </div>
+          {/* Annual Tuition at top */}
+          <div className="text-center mb-4">
+            <p className="text-blue-200 text-sm">Annual Tuition</p>
+            <p className="text-3xl font-bold">{formatCurrency(summary.annual_tuition)}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payment Due Card */}
+      {/* Amount Due + Monthly Payment */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className={summary.current_balance > 0 ? 'border-2 border-amber-400' : 'border-2 border-green-400'}>
           <CardHeader className="pb-2">
@@ -191,95 +183,156 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
             <p className="text-sm text-gray-500 mt-2">
               Due on the 1st of each month
             </p>
-
           </CardContent>
         </Card>
       </div>
 
-      {/* Year-to-Date Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Year-to-Date Payments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-green-800">Scholarship Received</span>
-              </div>
-              <p className="text-2xl font-bold text-green-700">{formatCurrency(summary.scholarship_received_ytd)}</p>
-              <p className="text-xs text-green-600 mt-1">From Step Up for Students</p>
-            </div>
-            
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-blue-800">Your Payments</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-700">{formatCurrency(summary.parent_paid_ytd)}</p>
-              <p className="text-xs text-blue-600 mt-1">Out-of-pocket payments</p>
-            </div>
-            
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span className="text-sm font-medium text-purple-800">Total Applied</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-700">{formatCurrency(summary.total_paid_ytd)}</p>
-              <p className="text-xs text-purple-600 mt-1">Combined payments</p>
-            </div>
+      {/* ===== TWO-COLUMN: Step Up vs Out of Pocket ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* LEFT COLUMN — Step Up (SUFS) */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+            <h3 className="text-lg font-bold text-green-800">Step Up For Students</h3>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Simple Payment Schedule */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Upcoming Payments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {summary.payment_schedule
-              .filter(p => p.status !== 'paid')
-              .slice(0, 4)
-              .map((payment, index) => (
-                <div 
-                  key={index}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    payment.type === 'scholarship' ? 'bg-green-50' : 'bg-blue-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      payment.type === 'scholarship' ? 'bg-green-500' : 'bg-blue-500'
-                    }`}></div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {payment.type === 'scholarship' ? 'Scholarship Payment' : 'Your Payment'}
-                      </p>
-                      <p className="text-xs text-gray-500">{formatDate(payment.due_date)}</p>
-                    </div>
+          <Card className="border-2 border-green-200 bg-green-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">Annual Scholarship</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-700">{formatCurrency(summary.scholarship_amount)}</div>
+              <p className="text-xs text-green-600 mt-1">Awarded for the school year</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">Received Year-to-Date</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-700">{formatCurrency(summary.scholarship_received_ytd)}</div>
+              <p className="text-xs text-green-600 mt-1">Sent directly to the school by SUFS</p>
+              {summary.scholarship_amount > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-green-600 mb-1">
+                    <span>Disbursed</span>
+                    <span>{((summary.scholarship_received_ytd / summary.scholarship_amount) * 100).toFixed(0)}%</span>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${
-                      payment.type === 'scholarship' ? 'text-green-700' : 'text-blue-700'
-                    }`}>
-                      {formatCurrency(payment.amount)}
-                    </p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      payment.status === 'overdue' 
-                        ? 'bg-red-100 text-red-700' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {payment.status === 'overdue' ? 'Overdue' : 'Upcoming'}
-                    </span>
+                  <div className="w-full bg-green-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (summary.scholarship_received_ytd / summary.scholarship_amount) * 100)}%` }}
+                    />
                   </div>
                 </div>
-              ))}
+              )}
+            </CardContent>
+          </Card>
+          {/* Upcoming SUFS payments */}
+          {scholarshipPending.length > 0 && (
+            <Card className="border border-green-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-green-700">Upcoming SUFS Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {scholarshipPending.slice(0, 3).map((payment, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-2 bg-green-50 rounded-lg text-sm">
+                    <div>
+                      <p className="font-medium text-green-800">Scholarship Payment</p>
+                      <p className="text-xs text-green-600">{formatDate(payment.due_date)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-700">{formatCurrency(payment.amount)}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        payment.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      }`}>
+                        {payment.status === 'overdue' ? 'Overdue' : 'Upcoming'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN — Out of Pocket */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <h3 className="text-lg font-bold text-blue-800">Out of Pocket</h3>
           </div>
-          
-          <p className="text-xs text-gray-500 mt-4 text-center">
+          <Card className="border-2 border-blue-200 bg-blue-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Your Annual Responsibility</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-700">{formatCurrency(summary.parent_responsibility)}</div>
+              <p className="text-xs text-blue-600 mt-1">After scholarship is applied</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Paid Year-to-Date</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-700">{formatCurrency(summary.parent_paid_ytd)}</div>
+              <p className="text-xs text-blue-600 mt-1">Your direct payments</p>
+              {summary.parent_responsibility > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-blue-600 mb-1">
+                    <span>Paid</span>
+                    <span>{((summary.parent_paid_ytd / summary.parent_responsibility) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (summary.parent_paid_ytd / summary.parent_responsibility) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Upcoming parent payments */}
+          {parentPending.length > 0 && (
+            <Card className="border border-blue-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700">Upcoming Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {parentPending.slice(0, 3).map((payment, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-2 bg-blue-50 rounded-lg text-sm">
+                    <div>
+                      <p className="font-medium text-blue-800">Your Payment</p>
+                      <p className="text-xs text-blue-600">{formatDate(payment.due_date)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-blue-700">{formatCurrency(payment.amount)}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        payment.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {payment.status === 'overdue' ? 'Overdue' : 'Upcoming'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Total Applied footer */}
+      <Card className="bg-gray-50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              <span className="text-sm font-medium text-gray-700">Total Applied to Tuition</span>
+            </div>
+            <span className="text-xl font-bold text-purple-700">{formatCurrency(summary.total_paid_ytd)}</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 text-center">
             Scholarship payments are sent directly to the school by Step Up for Students every 2 months.
           </p>
         </CardContent>
