@@ -6463,7 +6463,7 @@ class PublicEnrollmentPickup(BaseModel):
     phone: str
 
 class PublicEnrollmentPolicies(BaseModel):
-    photoRelease: bool = False
+    photoRelease: Optional[str] = None  # 'accept', 'deny', or null
     liabilityWaiver: bool = False
     medicalAuthorization: bool = False
     parentHandbook: bool = False
