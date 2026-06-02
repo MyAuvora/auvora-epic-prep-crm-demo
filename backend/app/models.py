@@ -257,6 +257,11 @@ class Invoice(Base):
     amount_paid = Column(Float, default=0.0)
     balance = Column(Float, default=0.0)
     notes = Column(Text)
+    is_recurring = Column(String, default="false")
+    recurring_frequency = Column(String)  # weekly, monthly, quarterly, yearly
+    recurring_end_date = Column(Date)
+    recurring_parent_id = Column(String)  # links generated invoices to the recurring template
+    next_invoice_date = Column(Date)
     created_date = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     family = relationship("Family", back_populates="invoices")

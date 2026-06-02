@@ -182,6 +182,9 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     description: '',
     amount: '',
     due_date: '',
+    is_recurring: false,
+    recurring_frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly' | 'yearly',
+    recurring_end_date: '',
     source: 'Out of Pocket' as 'Out of Pocket' | 'SUFS'
   });
   const [newSchedule, setNewSchedule] = useState({
@@ -396,7 +399,11 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     }
   };
 
-  // Create one-off invoice
+  const resetInvoiceForm = () => {
+    setNewInvoice({ description: '', amount: '', due_date: '', is_recurring: false, recurring_frequency: 'monthly', recurring_end_date: '', source: 'Out of Pocket' });
+  };
+
+  // Create one-off or recurring invoice
   const handleCreateInvoice = async () => {
     if (!newInvoice.description || !newInvoice.amount || !newInvoice.due_date) {
       alert('Please fill in all required fields');
@@ -410,13 +417,47 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     }
 
     try {
-      // Create a billing record for the invoice
+      // Create the invoice object (also used as recurring template)
+      const campusId = students[0]?.campus_id || 'campus_pace';
+      const invUid = Date.now().toString(36);
+      const invoicePayload = {
+        invoice_id: `inv_${invUid}`,
+        campus_id: campusId,
+        family_id: id,
+        invoice_number: `INV-CUSTOM-${invUid}`,
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: newInvoice.due_date,
+        status: 'Draft',
+        subtotal: amount,
+        tax: 0,
+        total: amount,
+        amount_paid: 0,
+        balance: amount,
+        notes: newInvoice.description,
+        is_recurring: newInvoice.is_recurring ? 'true' : 'false',
+        recurring_frequency: newInvoice.is_recurring ? newInvoice.recurring_frequency : null,
+        recurring_end_date: newInvoice.is_recurring && newInvoice.recurring_end_date ? newInvoice.recurring_end_date : null,
+        next_invoice_date: newInvoice.is_recurring ? newInvoice.due_date : null,
+        created_date: new Date().toISOString(),
+        last_updated: new Date().toISOString()
+      };
+
+      // Create the invoice via API
+      await fetch(`${API_URL}/api/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoicePayload)
+      });
+
+      // Also create a billing record for the charge
       const billingRecord = {
         billing_record_id: `br_${Date.now()}`,
         family_id: id,
         date: new Date().toISOString().split('T')[0],
         type: 'Charge',
-        description: newInvoice.description,
+        description: newInvoice.is_recurring
+          ? `${newInvoice.description} (Recurring ${newInvoice.recurring_frequency})`
+          : newInvoice.description,
         amount: amount,
         source: null,
         period_month: null,
@@ -424,27 +465,20 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
         student_id: null
       };
 
-      const response = await fetch(`${API_URL}/api/billing`, {
+      await fetch(`${API_URL}/api/billing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(billingRecord)
       });
 
-      if (response.ok) {
-        // Add to local state
-        setBillingRecords(prev => [...prev, billingRecord as BillingRecord]);
-        setShowNewInvoiceModal(false);
-        setNewInvoice({ description: '', amount: '', due_date: '', source: 'Out of Pocket' });
-        alert('Invoice created successfully');
-      } else {
-        // Even if API fails, add to local state for demo
-        setBillingRecords(prev => [...prev, billingRecord as BillingRecord]);
-        setShowNewInvoiceModal(false);
-        setNewInvoice({ description: '', amount: '', due_date: '', source: 'Out of Pocket' });
-      }
+      setBillingRecords(prev => [...prev, billingRecord as BillingRecord]);
+      setShowNewInvoiceModal(false);
+      resetInvoiceForm();
+      alert(newInvoice.is_recurring
+        ? `Recurring invoice created! It will auto-generate ${newInvoice.recurring_frequency}.`
+        : 'Invoice created successfully');
     } catch (error) {
       console.error('Error creating invoice:', error);
-      // Add to local state for demo purposes
       const billingRecord = {
         billing_record_id: `br_${Date.now()}`,
         family_id: id,
@@ -459,7 +493,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
       };
       setBillingRecords(prev => [...prev, billingRecord as BillingRecord]);
       setShowNewInvoiceModal(false);
-      setNewInvoice({ description: '', amount: '', due_date: '', source: 'Out of Pocket' });
+      resetInvoiceForm();
     }
   };
 
@@ -1289,11 +1323,61 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                           <option value="SUFS">Step Up for Students (SUFS)</option>
                         </select>
                       </div>
+
+                      {/* Recurring Invoice Toggle */}
+                      <div className="border-t pt-4">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={newInvoice.is_recurring}
+                              onChange={(e) => setNewInvoice({...newInvoice, is_recurring: e.target.checked})}
+                            />
+                            <div className={`w-10 h-5 rounded-full transition-colors ${newInvoice.is_recurring ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                              <div className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newInvoice.is_recurring ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`} />
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">Make this a recurring invoice</span>
+                        </label>
+                      </div>
+
+                      {newInvoice.is_recurring && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Frequency *</label>
+                            <select
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                              value={newInvoice.recurring_frequency}
+                              onChange={(e) => setNewInvoice({...newInvoice, recurring_frequency: e.target.value as 'weekly' | 'monthly' | 'quarterly' | 'yearly'})}
+                            >
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                              <option value="quarterly">Quarterly (Every 3 months)</option>
+                              <option value="yearly">Yearly</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date (optional)</label>
+                            <input
+                              type="date"
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                              value={newInvoice.recurring_end_date}
+                              onChange={(e) => setNewInvoice({...newInvoice, recurring_end_date: e.target.value})}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Leave blank for indefinite recurring</p>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-blue-700">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>A new invoice of ${newInvoice.amount || '0.00'} will be auto-generated {newInvoice.recurring_frequency}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
-                      <Button variant="outline" onClick={() => setShowNewInvoiceModal(false)}>Cancel</Button>
+                      <Button variant="outline" onClick={() => { setShowNewInvoiceModal(false); resetInvoiceForm(); }}>Cancel</Button>
                       <Button onClick={handleCreateInvoice} className="bg-red-600 hover:bg-red-700 text-white">
-                        Create Invoice
+                        {newInvoice.is_recurring ? 'Create Recurring Invoice' : 'Create Invoice'}
                       </Button>
                     </div>
                   </div>

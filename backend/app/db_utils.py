@@ -627,6 +627,11 @@ def save_invoice(pydantic_inv):
             amount_paid=pydantic_inv.amount_paid,
             balance=pydantic_inv.balance,
             notes=getattr(pydantic_inv, 'notes', None),
+            is_recurring=getattr(pydantic_inv, 'is_recurring', 'false'),
+            recurring_frequency=getattr(pydantic_inv, 'recurring_frequency', None),
+            recurring_end_date=getattr(pydantic_inv, 'recurring_end_date', None),
+            recurring_parent_id=getattr(pydantic_inv, 'recurring_parent_id', None),
+            next_invoice_date=getattr(pydantic_inv, 'next_invoice_date', None),
             created_date=pydantic_inv.created_date,
             last_updated=pydantic_inv.last_updated,
         )
