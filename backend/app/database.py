@@ -78,6 +78,19 @@ def _run_migrations():
             existing = [c["name"] for c in inspector.get_columns("families")]
             if "archived" not in existing:
                 conn.execute(text("ALTER TABLE families ADD COLUMN archived BOOLEAN DEFAULT 0"))
+        # Invoices table: add recurring fields if missing
+        if "invoices" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("invoices")]
+            if "is_recurring" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN is_recurring VARCHAR DEFAULT 'false'"))
+            if "recurring_frequency" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN recurring_frequency VARCHAR DEFAULT NULL"))
+            if "recurring_end_date" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN recurring_end_date DATE DEFAULT NULL"))
+            if "recurring_parent_id" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN recurring_parent_id VARCHAR DEFAULT NULL"))
+            if "next_invoice_date" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN next_invoice_date DATE DEFAULT NULL"))
         conn.commit()
     finally:
         conn.close()

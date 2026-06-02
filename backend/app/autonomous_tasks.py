@@ -90,6 +90,15 @@ DEFAULT_TASKS = [
         "schedule_cron": "0 8 * * *",  # daily at 8 AM
         "config_json": json.dumps({"message_template": "Happy Birthday, {student_name}! Wishing you a wonderful day from the EPIC Prep family!"}),
     },
+    {
+        "task_id": "auto_recurring_invoices",
+        "task_type": "recurring_invoices",
+        "name": "Recurring Invoice Generation",
+        "description": "Automatically generates invoices from recurring invoice templates when they are due.",
+        "enabled": True,
+        "schedule_cron": "0 6 * * *",  # daily at 6 AM
+        "config_json": json.dumps({}),
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -448,6 +457,46 @@ def run_birthday_messages():
         db.close()
 
 
+def run_recurring_invoices():
+    """Generate invoices from recurring invoice templates that are due."""
+    db = SessionLocal()
+    try:
+        task_row = db.query(models.AutonomousTask).filter(
+            models.AutonomousTask.task_id == "auto_recurring_invoices"
+        ).first()
+        if not task_row or not task_row.enabled:
+            return
+
+        log = _create_log(db, task_row.task_id, task_row.task_type, task_row.name)
+
+        # Call the recurring invoice processor via the API endpoint logic
+        import httpx
+        try:
+            resp = httpx.post("http://localhost:8000/api/invoices/process-recurring", timeout=30.0)
+            data = resp.json()
+            count = data.get("count", 0)
+            summary = f"Generated {count} recurring invoice(s)"
+        except Exception as e:
+            count = 0
+            summary = f"Recurring invoice processing failed: {e}"
+            _finish_log(db, log, "failed", summary, count, {"generated_count": count}, errors=str(e))
+            _update_last_run(db, task_row.task_id)
+            logger.warning(summary)
+            return
+
+        _finish_log(db, log, "completed", summary, count, {"generated_count": count})
+        _update_last_run(db, task_row.task_id)
+        logger.info(summary)
+    except Exception as e:
+        logger.error(f"Recurring invoices failed: {e}")
+        try:
+            _finish_log(db, log, "failed", str(e), errors=str(e))
+        except Exception:
+            pass
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Task registry
 # ---------------------------------------------------------------------------
@@ -459,6 +508,7 @@ TASK_RUNNERS = {
     "re_enrollment_reminders": run_re_enrollment_reminders,
     "low_inventory_alerts": run_low_inventory_alerts,
     "birthday_messages": run_birthday_messages,
+    "recurring_invoices": run_recurring_invoices,
 }
 
 # ---------------------------------------------------------------------------

@@ -627,6 +627,11 @@ def save_invoice(pydantic_inv):
             amount_paid=pydantic_inv.amount_paid,
             balance=pydantic_inv.balance,
             notes=getattr(pydantic_inv, 'notes', None),
+            is_recurring=getattr(pydantic_inv, 'is_recurring', 'false'),
+            recurring_frequency=getattr(pydantic_inv, 'recurring_frequency', None),
+            recurring_end_date=getattr(pydantic_inv, 'recurring_end_date', None),
+            recurring_parent_id=getattr(pydantic_inv, 'recurring_parent_id', None),
+            next_invoice_date=getattr(pydantic_inv, 'next_invoice_date', None),
             created_date=pydantic_inv.created_date,
             last_updated=pydantic_inv.last_updated,
         )
@@ -1973,6 +1978,11 @@ def _invoice_to_dict(r):
         "subtotal": r.subtotal or 0.0, "tax": r.tax or 0.0, "total": r.total or 0.0,
         "amount_paid": r.amount_paid or 0.0, "balance": r.balance or 0.0,
         "notes": r.notes,
+        "is_recurring": getattr(r, 'is_recurring', None) or "false",
+        "recurring_frequency": getattr(r, 'recurring_frequency', None),
+        "recurring_end_date": getattr(r, 'recurring_end_date', None),
+        "recurring_parent_id": getattr(r, 'recurring_parent_id', None),
+        "next_invoice_date": getattr(r, 'next_invoice_date', None),
         "created_date": r.created_date or datetime.utcnow(),
         "last_updated": r.last_updated or datetime.utcnow(),
     }

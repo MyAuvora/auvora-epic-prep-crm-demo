@@ -934,6 +934,11 @@ class Invoice(BaseModel):
     amount_paid: float
     balance: float
     notes: Optional[str] = None
+    is_recurring: str = "false"
+    recurring_frequency: Optional[str] = None  # weekly, monthly, quarterly, yearly
+    recurring_end_date: Optional[date] = None
+    recurring_parent_id: Optional[str] = None
+    next_invoice_date: Optional[date] = None
     created_date: datetime
     last_updated: datetime
 
@@ -2895,6 +2900,18 @@ async def get_invoices(campus_id: Optional[str] = None, family_id: Optional[str]
     
     return sorted(result, key=lambda x: x.invoice_date, reverse=True)
 
+
+@app.get("/api/invoices/recurring")
+async def get_recurring_invoices_list(campus_id: Optional[str] = None, family_id: Optional[str] = None):
+    """Get all recurring invoice templates"""
+    result = [i for i in invoices_db if i.is_recurring == "true"]
+    if campus_id:
+        result = [i for i in result if i.campus_id == campus_id]
+    if family_id:
+        result = [i for i in result if i.family_id == family_id]
+    return result
+
+
 @app.get("/api/invoices/{invoice_id}")
 async def get_invoice(invoice_id: str):
     """Get a specific invoice with line items"""
@@ -2993,6 +3010,110 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
         'count': len(generated_invoices),
         'invoices': generated_invoices
     }
+
+
+@app.put("/api/invoices/{invoice_id}/cancel-recurring")
+async def cancel_recurring_invoice(invoice_id: str):
+    """Cancel a recurring invoice (stop future generation)"""
+    invoice = next((i for i in invoices_db if i.invoice_id == invoice_id), None)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    if invoice.is_recurring != "true":
+        raise HTTPException(status_code=400, detail="Invoice is not recurring")
+
+    invoice.is_recurring = "cancelled"
+    invoice.next_invoice_date = None
+    invoice.last_updated = datetime.now()
+    db_utils.save_invoice(invoice)
+    return {"message": "Recurring invoice cancelled", "invoice_id": invoice_id}
+
+
+@app.post("/api/invoices/process-recurring")
+async def process_recurring_invoices():
+    """Generate any due recurring invoices. Called by the scheduler or manually."""
+    from dateutil.relativedelta import relativedelta
+
+    today = date.today()
+    generated = []
+
+    recurring = [i for i in invoices_db if i.is_recurring == "true" and i.next_invoice_date]
+
+    for template in recurring:
+        if template.next_invoice_date > today:
+            continue
+        if template.recurring_end_date and today > template.recurring_end_date:
+            template.is_recurring = "cancelled"
+            template.next_invoice_date = None
+            db_utils.save_invoice(template)
+            continue
+
+        inv_uid = uuid.uuid4().hex[:8]
+        new_invoice_id = f"inv_{inv_uid}"
+
+        new_invoice = Invoice(
+            invoice_id=new_invoice_id,
+            campus_id=template.campus_id,
+            family_id=template.family_id,
+            invoice_number=f"INV-REC-{today.year}-{today.month:02d}-{inv_uid}",
+            invoice_date=today,
+            due_date=today + timedelta(days=15),
+            status=InvoiceStatus.DRAFT,
+            subtotal=template.subtotal,
+            tax=template.tax,
+            total=template.total,
+            amount_paid=0.0,
+            balance=template.total,
+            notes=f"Auto-generated from recurring invoice {template.invoice_id}",
+            is_recurring="false",
+            recurring_parent_id=template.invoice_id,
+            created_date=datetime.now(),
+            last_updated=datetime.now()
+        )
+
+        # Copy line items from template
+        template_items = [li for li in invoice_line_items_db if li.invoice_id == template.invoice_id]
+        new_items = []
+        for item in template_items:
+            new_item = InvoiceLineItem(
+                line_item_id=f"line_{uuid.uuid4().hex[:8]}",
+                invoice_id=new_invoice_id,
+                description=item.description,
+                category=item.category,
+                student_id=item.student_id,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total=item.total,
+                funding_source=item.funding_source
+            )
+            new_items.append(new_item)
+
+        invoices_db.append(new_invoice)
+        db_utils.save_invoice(new_invoice)
+        for ni in new_items:
+            invoice_line_items_db.append(ni)
+            db_utils.save_invoice_line_item(ni)
+
+        # Advance next_invoice_date
+        freq = template.recurring_frequency
+        if freq == "weekly":
+            template.next_invoice_date = template.next_invoice_date + timedelta(weeks=1)
+        elif freq == "monthly":
+            template.next_invoice_date = template.next_invoice_date + relativedelta(months=1)
+        elif freq == "quarterly":
+            template.next_invoice_date = template.next_invoice_date + relativedelta(months=3)
+        elif freq == "yearly":
+            template.next_invoice_date = template.next_invoice_date + relativedelta(years=1)
+        else:
+            # Unknown frequency — cancel to prevent infinite generation
+            template.is_recurring = "cancelled"
+            template.next_invoice_date = None
+
+        template.last_updated = datetime.now()
+        db_utils.save_invoice(template)
+        generated.append(new_invoice)
+
+    return {"count": len(generated), "invoices": generated}
+
 
 @app.get("/api/payment-plans")
 async def get_payment_plans(campus_id: Optional[str] = None, family_id: Optional[str] = None, status: Optional[str] = None):
