@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { useUser, useAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
 import { initApiClient } from './lib/api'
 import { EnhancedAdminDashboard } from './components/EnhancedAdminDashboard'
@@ -21,7 +21,9 @@ function AuthenticatedApp() {
   const [currentRole, setCurrentRole] = useState<Role>('owner')
 
   // Initialize API client with Clerk auth token
-  useEffect(() => {
+  // useLayoutEffect fires before child useEffect hooks, preventing race conditions
+  // where child API calls go out before fetch is patched with auth tokens
+  useLayoutEffect(() => {
     initApiClient(getToken)
   }, [getToken])
   const [selectedUserId, setSelectedUserId] = useState<string>('staff_1')

@@ -61,7 +61,7 @@ export interface EnrollmentSubmission {
     phone: string;
   }[];
   policyAgreements: {
-    photoRelease: boolean;
+    photoRelease: 'accept' | 'deny' | null;
     liabilityWaiver: boolean;
     medicalAuthorization: boolean;
     parentHandbook: boolean;
