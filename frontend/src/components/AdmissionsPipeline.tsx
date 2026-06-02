@@ -88,19 +88,19 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
 
   const getStageColor = (stage: string) => {
     const colors: Record<string, string> = {
-      'New Inquiry': 'bg-blue-100 text-blue-800',
+      'New': 'bg-blue-100 text-blue-800',
+      'Contact': 'bg-cyan-100 text-cyan-800',
       'Contacted': 'bg-purple-100 text-purple-800',
       'Tour Scheduled': 'bg-yellow-100 text-yellow-800',
-      'Toured': 'bg-orange-100 text-orange-800',
-      'Application Submitted': 'bg-indigo-100 text-indigo-800',
-      'Accepted': 'bg-green-100 text-green-800',
+      'Tour Complete': 'bg-orange-100 text-orange-800',
+      'Enrolling': 'bg-indigo-100 text-indigo-800',
       'Enrolled': 'bg-emerald-100 text-emerald-800',
       'Lost': 'bg-red-100 text-red-800'
     };
     return colors[stage] || 'bg-gray-100 text-gray-800';
   };
 
-  const stages = ['New Inquiry', 'Contacted', 'Tour Scheduled', 'Toured', 'Application Submitted', 'Accepted', 'Enrolled', 'Lost'];
+  const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Lost'];
 
   if (loading) {
     return <div className="p-6">Loading admissions pipeline...</div>;

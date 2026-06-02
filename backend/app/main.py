@@ -978,12 +978,12 @@ class PaymentSchedule(BaseModel):
     paid_amount: float
 
 class LeadStage(str, Enum):
-    NEW_INQUIRY = "New Inquiry"
+    NEW = "New"
+    CONTACT = "Contact"
     CONTACTED = "Contacted"
     TOUR_SCHEDULED = "Tour Scheduled"
-    TOURED = "Toured"
-    APPLICATION_SUBMITTED = "Application Submitted"
-    ACCEPTED = "Accepted"
+    TOUR_COMPLETE = "Tour Complete"
+    ENROLLING = "Enrolling"
     ENROLLED = "Enrolled"
     LOST = "Lost"
 
@@ -1014,6 +1014,8 @@ class Lead(BaseModel):
     tour_date: Optional[date] = None
     notes: str
     assigned_to: Optional[str] = None  # staff_id
+    family_id: Optional[str] = None  # linked family when created from enrollment form
+    enrollment_data: Optional[dict] = None  # full enrollment form data
 
 class CampusCapacity(BaseModel):
     campus_id: str
@@ -3497,6 +3499,184 @@ async def update_lead(lead_id: str, lead: Lead):
     leads_db[index] = lead
     db_utils.save_lead(lead)
     return lead
+
+class FinalizeEnrollmentRequest(BaseModel):
+    campus_id: str
+    session: str = "Morning"
+    room: str = ""
+
+@app.post("/api/admissions/leads/{lead_id}/enroll")
+async def finalize_enrollment(lead_id: str, req: FinalizeEnrollmentRequest):
+    """Finalize enrollment for a lead — creates family, parent, and student records,
+    assigns to the specified campus, and removes the lead from the pipeline."""
+    import time
+
+    lead = next((l for l in leads_db if l.lead_id == lead_id), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    campus = next((c for c in campuses_db if c.campus_id == req.campus_id), None)
+    if not campus:
+        raise HTTPException(status_code=400, detail="Invalid campus_id")
+
+    enrollment_data = lead.enrollment_data or {}
+    parents_data = enrollment_data.get("parents", [])
+    students_data = enrollment_data.get("students", [])
+
+    # Find the specific student from enrollment data that matches this lead
+    matching_student = None
+    for s in students_data:
+        if s.get("firstName") == lead.child_first_name and s.get("lastName") == lead.child_last_name:
+            matching_student = s
+            break
+    if not matching_student and students_data:
+        matching_student = students_data[0]
+
+    # Create family
+    family_id = lead.family_id
+    family = None
+    if family_id:
+        family = next((f for f in families_db if f.family_id == family_id), None)
+
+    if not family:
+        family_id = f"family_{int(time.time() * 1000)}"
+        family_name = f"The {lead.parent_last_name} Family"
+        family = Family(
+            family_id=family_id,
+            family_name=family_name,
+            primary_parent_id="",
+            parent_ids=[],
+            student_ids=[],
+            monthly_tuition_amount=0,
+            current_balance=0,
+            billing_status=BillingStatus.GREEN,
+            last_payment_date=None,
+            last_payment_amount=None,
+        )
+        families_db.append(family)
+
+        # Create parent records from enrollment data
+        for i, p in enumerate(parents_data):
+            parent_id = f"parent_{int(time.time() * 1000)}_{i}"
+            parent = Parent(
+                parent_id=parent_id,
+                first_name=p.get("firstName", lead.parent_first_name),
+                last_name=p.get("lastName", lead.parent_last_name),
+                email=p.get("email", lead.email),
+                phone=p.get("phone", lead.phone),
+                relationship=p.get("relationship", "parent") or "parent",
+                primary_guardian=p.get("isPrimary", i == 0),
+                preferred_contact_method="email",
+                student_ids=[],
+            )
+            parents_db.append(parent)
+            db_utils.save_parent(parent)
+            family.parent_ids.append(parent_id)
+            if p.get("isPrimary", i == 0):
+                family.primary_parent_id = parent_id
+
+        if not parents_data:
+            # Fallback: create parent from lead info
+            parent_id = f"parent_{int(time.time() * 1000)}_0"
+            parent = Parent(
+                parent_id=parent_id,
+                first_name=lead.parent_first_name,
+                last_name=lead.parent_last_name,
+                email=lead.email,
+                phone=lead.phone,
+                relationship="parent",
+                primary_guardian=True,
+                preferred_contact_method="email",
+                student_ids=[],
+            )
+            parents_db.append(parent)
+            db_utils.save_parent(parent)
+            family.parent_ids.append(parent_id)
+            family.primary_parent_id = parent_id
+
+    # Create student record
+    student_id = f"student_{int(time.time() * 1000)}"
+    session_val = Session.MORNING
+    if req.session and ("pm" in req.session.lower() or "afternoon" in req.session.lower()):
+        session_val = Session.AFTERNOON
+
+    funding = "Out-of-Pocket"
+    step_pct = 0
+    if matching_student:
+        step_up = matching_student.get("stepUpApplied", "")
+        if step_up in ("yes_approved", "yes_pending"):
+            funding = "Step-Up"
+            step_pct = 100 if step_up == "yes_approved" else 0
+
+    student = Student(
+        student_id=student_id,
+        campus_id=req.campus_id,
+        first_name=lead.child_first_name,
+        last_name=lead.child_last_name,
+        date_of_birth=lead.child_dob if lead.child_dob else date.today(),
+        grade=lead.desired_grade or "K",
+        session=session_val,
+        room=req.room or "Unassigned",
+        status=StudentStatus.ACTIVE,
+        family_id=family_id,
+        enrollment_start_date=date.today(),
+        enrollment_end_date=None,
+        attendance_present_count=0,
+        attendance_absent_count=0,
+        attendance_tardy_count=0,
+        overall_grade_flag=GradeFlag.ON_TRACK,
+        ixl_status_flag=IXLStatus.ON_TRACK,
+        overall_risk_flag=RiskFlag.NONE,
+        funding_source=funding,
+        step_up_percentage=step_pct,
+    )
+    students_db.append(student)
+    db_utils.save_student(student)
+    family.student_ids.append(student_id)
+
+    # Update parent student_ids
+    for pid in family.parent_ids:
+        p = next((pp for pp in parents_db if pp.parent_id == pid), None)
+        if p:
+            p.student_ids.append(student_id)
+            db_utils.save_parent(p)
+
+    db_utils.save_family(family)
+
+    # Create health record if medical info in enrollment data
+    if matching_student and (matching_student.get("allergies") or matching_student.get("medication")):
+        hr_id = f"health_{int(time.time() * 1000)}"
+        allergies_str = matching_student.get("allergies", "")
+        medication_str = matching_student.get("medication", "")
+        health_record = HealthRecord(
+            health_record_id=hr_id,
+            campus_id=req.campus_id,
+            student_id=student_id,
+            allergies=[a.strip() for a in allergies_str.split(",") if a.strip()] if allergies_str and allergies_str.lower() != "none" else [],
+            medications=[m.strip() for m in medication_str.split(",") if m.strip()] if medication_str and medication_str.lower() != "none" else [],
+            medical_conditions=[],
+            emergency_contact_name=f"{lead.parent_first_name} {lead.parent_last_name}",
+            emergency_contact_phone=lead.phone,
+            emergency_contact_relationship="parent",
+            physician_name=None,
+            physician_phone=None,
+            last_updated=date.today(),
+        )
+        health_records_db.append(health_record)
+        db_utils.save_health_record(health_record)
+
+    # Mark lead as Enrolled and link family
+    lead.stage = LeadStage.ENROLLED
+    lead.family_id = family_id
+    db_utils.save_lead(lead)
+
+    # Remove lead from active pipeline (keep in DB for history)
+    return {
+        "success": True,
+        "message": f"{lead.child_first_name} {lead.child_last_name} has been enrolled at {campus.name}.",
+        "student_id": student_id,
+        "family_id": family_id,
+    }
 
 @app.get("/api/admissions/capacity")
 async def get_campus_capacity(campus_id: Optional[str] = None):
@@ -6485,7 +6665,7 @@ async def get_public_campuses():
 @app.post("/api/public/enroll")
 async def public_enroll(enrollment: PublicEnrollmentRequest):
     """Public endpoint - accepts enrollment form submissions from parents (no auth required).
-    Creates family, parent(s), student(s), and health records in the CRM."""
+    Creates a pipeline lead for each student in 'New' stage. No auto-assignment of campus/class/session."""
     import time
 
     if not enrollment.parents:
@@ -6493,129 +6673,46 @@ async def public_enroll(enrollment: PublicEnrollmentRequest):
     if not enrollment.students:
         raise HTTPException(status_code=422, detail="At least one student is required")
 
-    campus = next((c for c in campuses_db if c.campus_id == enrollment.campus_id), None)
-    if not campus and campuses_db:
-        campus = campuses_db[0]
-    campus_id = campus.campus_id if campus else "campus_1"
-
-    # Create family from primary parent's last name
     primary_parent = next((p for p in enrollment.parents if p.isPrimary), enrollment.parents[0])
-    family_id = f"family_{int(time.time() * 1000)}"
-    family_name = f"The {primary_parent.lastName} Family"
 
-    family = Family(
-        family_id=family_id,
-        family_name=family_name,
-        primary_parent_id="",
-        parent_ids=[],
-        student_ids=[],
-        monthly_tuition_amount=0,
-        current_balance=0,
-        billing_status=BillingStatus.GREEN,
-        last_payment_date=None,
-        last_payment_amount=None,
-    )
-    families_db.append(family)
-    db_utils.save_family(family)
+    # Store full enrollment data for later use during final enrollment
+    enrollment_dict = {
+        "students": [s.dict() for s in enrollment.students],
+        "parents": [p.dict() for p in enrollment.parents],
+        "authorizedPickups": [ap.dict() for ap in enrollment.authorizedPickups],
+        "policyAgreements": enrollment.policyAgreements.dict(),
+    }
 
-    # Create parent records
-    created_parents = []
-    for i, p in enumerate(enrollment.parents):
-        parent_id = f"parent_{int(time.time() * 1000)}_{i}"
-        parent = Parent(
-            parent_id=parent_id,
-            first_name=p.firstName,
-            last_name=p.lastName,
-            email=p.email,
-            phone=p.phone,
-            relationship=p.relationship or "parent",
-            primary_guardian=p.isPrimary,
-            preferred_contact_method="email",
-            student_ids=[],
+    # Create a pipeline lead for each student
+    created_leads = []
+    for s in enrollment.students:
+        lead_id = f"lead_{int(time.time() * 1000)}_{len(created_leads)}"
+        lead = Lead(
+            lead_id=lead_id,
+            campus_id="",  # unassigned — Owner will assign during pipeline
+            parent_first_name=primary_parent.firstName,
+            parent_last_name=primary_parent.lastName,
+            email=primary_parent.email,
+            phone=primary_parent.phone,
+            child_first_name=s.firstName,
+            child_last_name=s.lastName,
+            child_dob=date.fromisoformat(s.dateOfBirth) if s.dateOfBirth else date.today(),
+            desired_grade=s.gradeLevel or "K",
+            desired_start_date=date.today(),
+            stage=LeadStage.NEW,
+            source=LeadSource.WEBSITE,
+            created_date=date.today(),
+            notes=f"Submitted via enrollment form. Step Up: {s.stepUpApplied or 'N/A'}. Amount: ${s.stepUpAmount or '0'}.",
+            enrollment_data=enrollment_dict,
         )
-        parents_db.append(parent)
-        db_utils.save_parent(parent)
-        family.parent_ids.append(parent_id)
-        if p.isPrimary:
-            family.primary_parent_id = parent_id
-        created_parents.append(parent)
-
-    # Create student records
-    created_students = []
-    for i, s in enumerate(enrollment.students):
-        student_id = f"student_{int(time.time() * 1000)}_{i}"
-
-        session_val = Session.MORNING
-        if s.sessionPreference and (s.sessionPreference.upper() == "PM" or "afternoon" in s.sessionPreference.lower()):
-            session_val = Session.AFTERNOON
-
-        funding = FundingSource.OUT_OF_POCKET
-        step_pct = 0
-        if s.stepUpApplied in ("yes_approved", "yes_pending"):
-            funding = FundingSource.STEP_UP
-            step_pct = 100 if s.stepUpApplied == "yes_approved" else 0
-
-        student = Student(
-            student_id=student_id,
-            campus_id=campus_id,
-            first_name=s.firstName,
-            last_name=s.lastName,
-            date_of_birth=date.fromisoformat(s.dateOfBirth) if s.dateOfBirth else date.today(),
-            grade=s.gradeLevel or "K",
-            session=session_val,
-            room="Room 1",
-            status=StudentStatus.WAITLISTED,
-            family_id=family_id,
-            enrollment_start_date=date.today(),
-            enrollment_end_date=None,
-            attendance_present_count=0,
-            attendance_absent_count=0,
-            attendance_tardy_count=0,
-            overall_grade_flag=GradeFlag.ON_TRACK,
-            ixl_status_flag=IXLStatus.ON_TRACK,
-            overall_risk_flag=RiskFlag.NONE,
-            funding_source=funding,
-            step_up_percentage=step_pct,
-        )
-        students_db.append(student)
-        db_utils.save_student(student)
-        family.student_ids.append(student_id)
-
-        # Update parent student_ids
-        for cp in created_parents:
-            cp.student_ids.append(student_id)
-            db_utils.save_parent(cp)
-
-        # Create health record if medical info provided
-        if s.allergies or s.medication:
-            hr_id = f"health_{int(time.time() * 1000)}_{i}"
-            health_record = HealthRecord(
-                health_record_id=hr_id,
-                campus_id=campus_id,
-                student_id=student_id,
-                allergies=[a.strip() for a in s.allergies.split(",") if a.strip()] if s.allergies and s.allergies.lower() != "none" else [],
-                medications=[m.strip() for m in s.medication.split(",") if m.strip()] if s.medication and s.medication.lower() != "none" else [],
-                medical_conditions=[],
-                emergency_contact_name=f"{primary_parent.firstName} {primary_parent.lastName}",
-                emergency_contact_phone=primary_parent.phone,
-                emergency_contact_relationship=primary_parent.relationship or "parent",
-                physician_name=None,
-                physician_phone=None,
-                last_updated=date.today(),
-            )
-            health_records_db.append(health_record)
-            db_utils.save_health_record(health_record)
-
-        created_students.append(student)
-
-    # Save updated family with all IDs
-    db_utils.save_family(family)
+        leads_db.append(lead)
+        db_utils.save_lead(lead)
+        created_leads.append(lead)
 
     return {
         "success": True,
-        "message": f"Enrollment submitted for {', '.join(s.firstName + ' ' + s.lastName for s in enrollment.students)}",
-        "family_id": family_id,
-        "student_ids": [s.student_id for s in created_students],
+        "message": f"Enrollment submitted for {', '.join(s.firstName + ' ' + s.lastName for s in enrollment.students)}. Your application is now being reviewed.",
+        "lead_ids": [l.lead_id for l in created_leads],
     }
 
 @app.get("/api/enrollment-submissions")

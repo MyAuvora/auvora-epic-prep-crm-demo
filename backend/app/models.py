@@ -299,13 +299,15 @@ class Lead(Base):
     child_dob = Column(Date)
     desired_grade = Column(String)
     desired_start_date = Column(Date)
-    stage = Column(String, default="New Inquiry")
+    stage = Column(String, default="New")
     source = Column(String)
     created_date = Column(Date, default=date.today)
     last_contact_date = Column(Date)
     tour_date = Column(Date)
     notes = Column(Text)
     assigned_to = Column(String)
+    family_id = Column(String, nullable=True)
+    enrollment_data = Column(Text, nullable=True)  # JSON string of enrollment form data
 
 
 class Event(Base):

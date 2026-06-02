@@ -361,7 +361,7 @@ def seed_database():
                     db.add(payment_record)
         
         # Create some leads
-        lead_stages = ["New Inquiry", "Contacted", "Tour Scheduled", "Toured", "Application Submitted"]
+        lead_stages = ["New", "Contact", "Contacted", "Tour Scheduled", "Tour Complete", "Enrolling"]
         lead_sources = ["Website", "Referral", "Social Media", "Walk-in", "Event"]
         
         for i in range(10):

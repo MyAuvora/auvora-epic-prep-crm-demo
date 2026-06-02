@@ -729,6 +729,8 @@ def save_lead(pydantic_lead):
             tour_date=getattr(pydantic_lead, 'tour_date', None),
             notes=pydantic_lead.notes,
             assigned_to=getattr(pydantic_lead, 'assigned_to', None),
+            family_id=getattr(pydantic_lead, 'family_id', None),
+            enrollment_data=json.dumps(pydantic_lead.enrollment_data) if getattr(pydantic_lead, 'enrollment_data', None) else None,
         )
         _upsert(db, models.Lead, "lead_id", pydantic_lead.lead_id, fields)
         db.commit()
@@ -2033,11 +2035,13 @@ def _lead_to_dict(r):
         "child_dob": r.child_dob or date(2018, 1, 1),
         "desired_grade": r.desired_grade or "K",
         "desired_start_date": r.desired_start_date or date(2025, 8, 15),
-        "stage": r.stage or "New Inquiry", "source": r.source or "Website",
+        "stage": r.stage or "New", "source": r.source or "Website",
         "created_date": r.created_date or date.today(),
         "last_contact_date": r.last_contact_date,
         "tour_date": r.tour_date, "notes": r.notes or "",
         "assigned_to": r.assigned_to,
+        "family_id": getattr(r, 'family_id', None),
+        "enrollment_data": json.loads(r.enrollment_data) if getattr(r, 'enrollment_data', None) else None,
     }
 
 
