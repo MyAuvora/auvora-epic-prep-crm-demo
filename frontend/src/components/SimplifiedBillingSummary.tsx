@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, CreditCard } from 'lucide-react';
+import { CheckCircle, Clock, CreditCard, FileText, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -28,27 +28,69 @@ interface PaymentScheduleItem {
   status: 'paid' | 'pending' | 'overdue';
 }
 
+interface OOPInvoice {
+  invoice_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  status: string;
+  total: number;
+  amount_paid: number;
+  balance: number;
+  notes?: string;
+  is_recurring?: string;
+  recurring_frequency?: string;
+}
+
+interface OOPPayment {
+  billing_record_id: string;
+  date: string;
+  description: string;
+  amount: number;
+  source: string | null;
+}
+
 interface SimplifiedBillingSummaryProps {
   familyId: string;
 }
 
 export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryProps) {
   const [summary, setSummary] = useState<BillingSummary | null>(null);
+  const [invoices, setInvoices] = useState<OOPInvoice[]>([]);
+  const [oopPayments, setOopPayments] = useState<OOPPayment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBillingSummary();
+    fetchAll();
   }, [familyId]);
 
-  const fetchBillingSummary = async () => {
+  const fetchAll = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/families/${familyId}/billing-summary`);
-      if (response.ok) {
-        const data = await response.json();
+      const [summaryRes, invoicesRes, recordsRes] = await Promise.all([
+        fetch(`${API_URL}/api/families/${familyId}/billing-summary`),
+        fetch(`${API_URL}/api/invoices?family_id=${familyId}`),
+        fetch(`${API_URL}/api/billing/${familyId}`)
+      ]);
+
+      if (summaryRes.ok) {
+        const data = await summaryRes.json();
         setSummary(data);
       }
+
+      if (invoicesRes.ok) {
+        const invData: OOPInvoice[] = await invoicesRes.json();
+        setInvoices(invData);
+      }
+
+      if (recordsRes.ok) {
+        const records: OOPPayment[] = await recordsRes.json();
+        const oop = records.filter(
+          (r: OOPPayment) => r.amount < 0 && r.source !== 'Step-Up' && r.source !== 'SUFS'
+        );
+        setOopPayments(oop.sort((a: OOPPayment, b: OOPPayment) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      }
     } catch (error) {
-      console.error('Error fetching billing summary:', error);
+      console.error('Error fetching billing data:', error);
     } finally {
       setLoading(false);
     }
@@ -95,7 +137,14 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
   }
 
   const scholarshipPending = summary.payment_schedule.filter(p => p.type === 'scholarship' && p.status !== 'paid');
-  const parentPending = summary.payment_schedule.filter(p => p.type === 'parent' && p.status !== 'paid');
+
+  // OOP balance from invoices: exclude cancelled, compute from active only
+  const activeInvoices = invoices.filter(inv => inv.status !== 'Cancelled');
+  const oopInvoiceTotal = activeInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const oopInvoicePaid = activeInvoices.reduce((sum, inv) => sum + inv.amount_paid, 0);
+  const oopBalance = oopInvoiceTotal - oopInvoicePaid;
+  const unpaidInvoices = activeInvoices.filter(inv => inv.balance > 0 && inv.status !== 'Paid');
+  const paidInvoices = activeInvoices.filter(inv => inv.balance <= 0 || inv.status === 'Paid');
 
   return (
     <div className="space-y-6">
@@ -128,64 +177,13 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
             </div>
           </div>
 
-          {/* Annual Tuition at top */}
+          {/* Annual Tuition */}
           <div className="text-center mb-4">
             <p className="text-blue-200 text-sm">Annual Tuition</p>
             <p className="text-3xl font-bold">{formatCurrency(summary.annual_tuition)}</p>
           </div>
         </CardContent>
       </Card>
-
-      {/* Amount Due + Monthly Payment */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className={summary.current_balance > 0 ? 'border-2 border-amber-400' : 'border-2 border-green-400'}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              {summary.current_balance > 0 ? (
-                <Clock className="h-5 w-5 text-amber-500" />
-              ) : (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              )}
-              Amount Due Now
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-bold ${summary.current_balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-              {formatCurrency(Math.max(0, summary.current_balance))}
-            </div>
-            {summary.current_balance <= 0 ? (
-              <p className="text-sm text-green-600 mt-2">You're all caught up!</p>
-            ) : (
-              <p className="text-sm text-gray-500 mt-2">
-                Due by {formatDate(summary.next_payment_due)}
-              </p>
-            )}
-            {summary.current_balance > 0 && (
-              <Button className="w-full mt-4 bg-[#0A2463] hover:bg-[#163B9A]">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pay Now
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#0A2463]" />
-              Your Monthly Payment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#0A2463]">
-              {formatCurrency(summary.monthly_parent_payment)}
-            </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Due on the 1st of each month
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* ===== TWO-COLUMN: Step Up vs Out of Pocket ===== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -227,7 +225,6 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
               )}
             </CardContent>
           </Card>
-          {/* Upcoming SUFS payments */}
           {scholarshipPending.length > 0 && (
             <Card className="border border-green-200">
               <CardHeader className="pb-2">
@@ -261,26 +258,89 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
             <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
             <h3 className="text-lg font-bold text-blue-800">Out of Pocket</h3>
           </div>
-          <Card className="border-2 border-blue-200 bg-blue-50/50">
+
+          {/* Current Balance Card — the key card */}
+          <Card className={`border-2 ${oopBalance > 0 ? 'border-red-300 bg-red-50/50' : 'border-green-300 bg-green-50/50'}`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Your Annual Responsibility</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                {oopBalance > 0 ? (
+                  <Clock className="h-4 w-4 text-red-500" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                )}
+                <span className={oopBalance > 0 ? 'text-red-700' : 'text-green-700'}>
+                  Current Balance
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-700">{formatCurrency(summary.parent_responsibility)}</div>
-              <p className="text-xs text-blue-600 mt-1">After scholarship is applied</p>
+              <div className={`text-4xl font-bold ${oopBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {oopBalance > 0 ? `-${formatCurrency(oopBalance)}` : formatCurrency(0)}
+              </div>
+              {oopBalance > 0 ? (
+                <p className="text-sm text-red-600 mt-2">
+                  You owe {formatCurrency(oopBalance)} across {unpaidInvoices.length} invoice{unpaidInvoices.length !== 1 ? 's' : ''}
+                </p>
+              ) : (
+                <p className="text-sm text-green-600 mt-2">You're all caught up!</p>
+              )}
+              {oopBalance > 0 && (
+                <Button className="w-full mt-4 bg-[#0A2463] hover:bg-[#163B9A]">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pay Now
+                </Button>
+              )}
             </CardContent>
           </Card>
+
+          {/* Unpaid invoices — what the owner has billed */}
+          {unpaidInvoices.length > 0 && (
+            <Card className="border border-blue-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Open Invoices
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {unpaidInvoices.map(inv => (
+                  <div key={inv.invoice_id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div>
+                      <p className="font-medium text-blue-900 text-sm">{inv.invoice_number}</p>
+                      <p className="text-xs text-blue-600">
+                        Due {formatDate(inv.due_date)}
+                        {inv.notes && <span className="ml-1">· {inv.notes}</span>}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-red-600">{formatCurrency(inv.balance)}</p>
+                      {inv.amount_paid > 0 && (
+                        <p className="text-xs text-green-600">
+                          {formatCurrency(inv.amount_paid)} paid
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Year-to-date paid summary */}
           <Card className="border border-blue-200">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Paid Year-to-Date</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Paid Year-to-Date
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-700">{formatCurrency(summary.parent_paid_ytd)}</div>
-              <p className="text-xs text-blue-600 mt-1">Your direct payments</p>
+              <p className="text-xs text-blue-600 mt-1">Total out-of-pocket payments made</p>
               {summary.parent_responsibility > 0 && (
                 <div className="mt-3">
                   <div className="flex justify-between text-xs text-blue-600 mb-1">
-                    <span>Paid</span>
+                    <span>Annual progress</span>
                     <span>{((summary.parent_paid_ytd / summary.parent_responsibility) * 100).toFixed(0)}%</span>
                   </div>
                   <div className="w-full bg-blue-200 rounded-full h-2">
@@ -293,32 +353,54 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
               )}
             </CardContent>
           </Card>
-          {/* Upcoming parent payments */}
-          {parentPending.length > 0 && (
-            <Card className="border border-blue-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-blue-700">Upcoming Payments</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {parentPending.slice(0, 3).map((payment, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-blue-50 rounded-lg text-sm">
-                    <div>
-                      <p className="font-medium text-blue-800">Your Payment</p>
-                      <p className="text-xs text-blue-600">{formatDate(payment.due_date)}</p>
+
+          {/* Previous payments list */}
+          <Card className="border border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Previous Payments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {oopPayments.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {oopPayments.map(payment => (
+                    <div key={payment.billing_record_id} className="flex justify-between items-center p-2 bg-white rounded-lg border text-sm">
+                      <div>
+                        <p className="font-medium text-gray-800">{payment.description}</p>
+                        <p className="text-xs text-gray-500">{formatDate(payment.date)}</p>
+                      </div>
+                      <p className="font-bold text-green-600">{formatCurrency(Math.abs(payment.amount))}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-blue-700">{formatCurrency(payment.amount)}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        payment.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {payment.status === 'overdue' ? 'Overdue' : 'Upcoming'}
-                      </span>
-                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">No payments recorded yet</p>
+              )}
+
+              {/* Paid invoices — settled */}
+              {paidInvoices.length > 0 && (
+                <div className="mt-4 pt-3 border-t">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Settled Invoices</p>
+                  <div className="space-y-1">
+                    {paidInvoices.map(inv => (
+                      <div key={inv.invoice_id} className="flex justify-between items-center p-2 bg-green-50 rounded text-sm">
+                        <div>
+                          <p className="font-medium text-green-800">{inv.invoice_number}</p>
+                          <p className="text-xs text-green-600">{formatDate(inv.invoice_date)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-green-700">{formatCurrency(inv.total)}</p>
+                          <span className="text-xs text-green-600">Paid</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
