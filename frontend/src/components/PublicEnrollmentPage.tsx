@@ -187,7 +187,9 @@ export function PublicEnrollmentPage() {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({ detail: 'Submission failed' }));
-        throw new Error(err.detail || 'Submission failed');
+        const detail = err.detail;
+        const message = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg || '').join(', ') : 'Submission failed';
+        throw new Error(message || 'Submission failed');
       }
       const result = await response.json();
       setSubmittedNames(result.message || 'Enrollment submitted successfully!');
