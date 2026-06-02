@@ -69,7 +69,7 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
       const [summaryRes, invoicesRes, recordsRes] = await Promise.all([
         fetch(`${API_URL}/api/families/${familyId}/billing-summary`),
         fetch(`${API_URL}/api/invoices?family_id=${familyId}`),
-        fetch(`${API_URL}/api/billing-records/${familyId}`)
+        fetch(`${API_URL}/api/billing/${familyId}`)
       ]);
 
       if (summaryRes.ok) {
@@ -138,12 +138,13 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
 
   const scholarshipPending = summary.payment_schedule.filter(p => p.type === 'scholarship' && p.status !== 'paid');
 
-  // OOP balance from invoices: total invoiced minus total paid on those invoices
-  const oopInvoiceTotal = invoices.reduce((sum, inv) => sum + inv.total, 0);
-  const oopInvoicePaid = invoices.reduce((sum, inv) => sum + inv.amount_paid, 0);
+  // OOP balance from invoices: exclude cancelled, compute from active only
+  const activeInvoices = invoices.filter(inv => inv.status !== 'Cancelled');
+  const oopInvoiceTotal = activeInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const oopInvoicePaid = activeInvoices.reduce((sum, inv) => sum + inv.amount_paid, 0);
   const oopBalance = oopInvoiceTotal - oopInvoicePaid;
-  const unpaidInvoices = invoices.filter(inv => inv.balance > 0 && inv.status !== 'Cancelled');
-  const paidInvoices = invoices.filter(inv => inv.balance <= 0 || inv.status === 'Paid');
+  const unpaidInvoices = activeInvoices.filter(inv => inv.balance > 0 && inv.status !== 'Paid');
+  const paidInvoices = activeInvoices.filter(inv => inv.balance <= 0 || inv.status === 'Paid');
 
   return (
     <div className="space-y-6">
