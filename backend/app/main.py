@@ -1569,7 +1569,7 @@ def load_data_from_db():
     global assignments_db, grade_entries_db, announcements_db, announcement_reads_db, event_workflows_db
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global business_expenses_db
-    global curricula_db, curriculum_units_db
+    global curricula_db, curriculum_units_db, curriculum_files_db
     global time_clock_db
 
     data = db_utils.load_all_from_db()
@@ -6218,7 +6218,7 @@ async def reset_database(confirm: str = Query(..., description="Must be 'CONFIRM
     global sufs_scholarships_db, sufs_claims_db, sufs_payments_db, sufs_payment_allocations_db
     global time_off_requests_db, payment_methods_db
     global business_expenses_db
-    global curricula_db, curriculum_units_db
+    global curricula_db, curriculum_units_db, curriculum_files_db
     global time_clock_db
 
     # Clear all in-memory lists
@@ -7690,6 +7690,12 @@ async def delete_curriculum(curriculum_id: str):
     if not curriculum:
         raise HTTPException(status_code=404, detail="Curriculum not found")
     curricula_db.remove(curriculum)
+    # Also remove associated files
+    global curriculum_files_db
+    files_to_remove = [f for f in curriculum_files_db if f.curriculum_id == curriculum_id]
+    for f in files_to_remove:
+        curriculum_files_db.remove(f)
+        db_utils.delete_curriculum_file(f.file_id)
     # Also remove associated units
     global curriculum_units_db
     units_to_remove = [u for u in curriculum_units_db if u.curriculum_id == curriculum_id]
