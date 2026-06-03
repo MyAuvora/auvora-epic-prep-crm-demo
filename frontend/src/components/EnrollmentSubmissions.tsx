@@ -145,8 +145,8 @@ export function ParentEnrollmentSubmissions({ parentEmail }: ParentEnrollmentSub
         <CardContent className="py-12 text-center">
           <FileText className="w-12 h-12 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Enrollment Submissions</h3>
-          <p className="text-gray-500">You haven't submitted any enrollment forms yet.</p>
-          <p className="text-gray-500 text-sm mt-2">Go to the Enrollment tab to submit a new enrollment form.</p>
+          <p className="text-gray-500">You haven't submitted any enrollment applications yet.</p>
+          <p className="text-gray-500 text-sm mt-2">Go to the Enrollment tab to submit a new enrollment application.</p>
         </CardContent>
       </Card>
     );

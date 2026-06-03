@@ -289,7 +289,7 @@ export function PublicEnrollmentPage() {
                             : 'bg-gray-200 text-gray-500'
                       }`}
                     >
-                      {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number + 1}
+                      {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
                     </div>
                     <span className={`text-xs mt-1 ${currentStep === step.number ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
                       {step.title}
@@ -550,8 +550,8 @@ export function PublicEnrollmentPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">Select session</option>
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
+                            <option value="AM">AM (8:00am - 11:30am)</option>
+                            <option value="PM">PM (12:30pm - 4:00pm)</option>
                           </select>
                         </div>
                       </div>
