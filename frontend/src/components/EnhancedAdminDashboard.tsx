@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle, Settings, Upload } from 'lucide-react'
+import { Users, DollarSign, Calendar, AlertTriangle, UserPlus, Download, Eye, MessageSquare, FileWarning, Menu, Link, Copy, CheckCircle, Settings, Upload, Bot } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -144,7 +144,7 @@ function EnrollmentLinkButton() {
 }
 
 export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
-  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log' | 'ai-agent'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -376,7 +376,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                   ...(currentRole === 'owner' || currentRole === 'admin' || currentRole === 'coach' ? [{ id: 'curriculum', label: 'Curriculum', subView: 'all' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'expenses', label: 'Expenses', subView: 'overview' }] : []),
 
-                  ...(currentRole === 'owner' ? [{ id: 'ai-agent', label: 'AI Agent', subView: 'tasks' }] : []),
                   ...(currentRole === 'owner' ? [{ id: 'audit-log', label: 'Audit Log', subView: 'all' }] : []),
                 ]
 
@@ -454,22 +453,40 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                       Settings
                     </button>
                     {currentRole === 'owner' && (
-                      <button
-                        onClick={() => {
-                          setView('settings')
-                          setSubView('import')
-                          setMobileMenuOpen(false)
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
-                          view === 'settings' && subView === 'import'
-                            ? 'text-white'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                        style={view === 'settings' && subView === 'import' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
-                      >
-                        <Upload className="h-4 w-4" />
-                        ProCare Data Import
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            setView('settings')
+                            setSubView('import')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
+                            view === 'settings' && subView === 'import'
+                              ? 'text-white'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                          style={view === 'settings' && subView === 'import' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <Upload className="h-4 w-4" />
+                          ProCare Data Import
+                        </button>
+                        <button
+                          onClick={() => {
+                            setView('settings')
+                            setSubView('ai-agent')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm font-medium flex items-center gap-2 ${
+                            view === 'settings' && subView === 'ai-agent'
+                              ? 'text-white'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                          style={view === 'settings' && subView === 'ai-agent' ? { background: 'linear-gradient(to right, #1e3a5f, #dc3545)' } : {}}
+                        >
+                          <Bot className="h-4 w-4" />
+                          AI Agent
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
@@ -542,9 +559,19 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                               setSubView('status')
                               setSettingsMenuOpen(false)
                             }}
-                            className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+                            className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 border-t border-gray-100"
                           >
                             System Status
+                          </button>
+                          <button
+                            onClick={() => {
+                              setView('settings')
+                              setSubView('ai-agent')
+                              setSettingsMenuOpen(false)
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+                          >
+                            AI Agent
                           </button>
                         </>
                       )}
@@ -1393,10 +1420,6 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 </div>
               )}
 
-              {view === 'ai-agent' && currentRole === 'owner' && (
-                <AutonomousTaskManager />
-              )}
-
               {view === 'audit-log' && currentRole === 'owner' && (
                 <AuditLog />
               )}
@@ -1407,6 +1430,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                     <ProCareImport campusId={selectedCampusId} />
                   ) : subView === 'status' && currentRole === 'owner' ? (
                     <SystemStatus />
+                  ) : subView === 'ai-agent' && currentRole === 'owner' ? (
+                    <AutonomousTaskManager />
                   ) : (
                     <UserManagement />
                   )}
