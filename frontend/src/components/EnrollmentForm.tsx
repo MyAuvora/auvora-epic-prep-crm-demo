@@ -193,7 +193,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
       addEnrollmentSubmission(data);
     
       onSubmit?.(data);
-      alert('Enrollment form submitted successfully! The school will review your application. You can view your submission status in the Documents tab.');
+      alert('Enrollment application submitted successfully! The school will review your application. You can view your submission status in the Documents tab.');
     };
 
   const canProceed = () => {
@@ -219,7 +219,7 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
     <div className="max-w-4xl mx-auto">
       <Card className="border-blue-200">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-          <CardTitle className="text-2xl">EPIC Enrollment Form</CardTitle>
+          <CardTitle className="text-2xl">EPIC Enrollment Application</CardTitle>
           <p className="text-blue-100">Complete all sections to enroll your student(s)</p>
         </CardHeader>
         <CardContent className="p-6">
@@ -511,8 +511,8 @@ export function EnrollmentForm({ onSubmit, onCancel }: EnrollmentFormProps) {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select session</option>
-                          <option value="AM">AM</option>
-                          <option value="PM">PM</option>
+                          <option value="AM">AM (8:00am - 11:30am)</option>
+                          <option value="PM">PM (12:30pm - 4:00pm)</option>
                         </select>
                       </div>
                     </div>
