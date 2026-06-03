@@ -9,7 +9,7 @@ import {
   BookOpen, Plus, Edit2, Trash2, Filter,
   Layers, ChevronDown, ChevronUp, GripVertical,
   X, Save, Search, FileText, CheckCircle, Archive,
-  Clock,
+  Clock, Upload, Download, File as FileIcon, Image, Presentation,
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -42,6 +42,19 @@ interface CurriculumUnit {
   standards_alignment: string
   created_at: string
   updated_at: string
+}
+
+interface CurriculumFile {
+  file_id: string
+  curriculum_id: string
+  unit_id: string | null
+  file_name: string
+  file_key: string
+  file_url: string
+  file_size: number
+  file_type: string
+  uploaded_by: string
+  uploaded_at: string
 }
 
 const SUBJECTS = [
@@ -85,8 +98,11 @@ export function CurriculumBuilder({ selectedCampusId }: CurriculumBuilderProps) 
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null)
   const [expandedCurriculum, setExpandedCurriculum] = useState<string | null>(null)
   const [units, setUnits] = useState<Record<string, CurriculumUnit[]>>({})
+  const [files, setFiles] = useState<Record<string, CurriculumFile[]>>({})
   const [showUnitForm, setShowUnitForm] = useState<string | null>(null)
   const [editingUnit, setEditingUnit] = useState<CurriculumUnit | null>(null)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterSubject, setFilterSubject] = useState('all')
   const [filterGrade, setFilterGrade] = useState('all')
@@ -142,6 +158,68 @@ export function CurriculumBuilder({ selectedCampusId }: CurriculumBuilderProps) 
     } catch (err) {
       console.error('Error fetching units:', err)
     }
+  }
+
+  const fetchFiles = async (curriculumId: string) => {
+    try {
+      const resp = await fetch(`${API_URL}/api/curricula/${curriculumId}/files`)
+      const data = await resp.json()
+      setFiles(prev => ({ ...prev, [curriculumId]: data }))
+    } catch (err) {
+      console.error('Error fetching files:', err)
+    }
+  }
+
+  const handleFileUpload = async (curriculumId: string, fileList: FileList, unitId?: string) => {
+    setUploading(curriculumId)
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i]
+        const formData = new FormData()
+        formData.append('file', file)
+        const params = new URLSearchParams()
+        if (unitId) params.append('unit_id', unitId)
+        const url = `${API_URL}/api/curricula/${curriculumId}/files${params.toString() ? '?' + params.toString() : ''}`
+        const resp = await fetch(url, { method: 'POST', body: formData })
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}))
+          alert(err.detail || 'Upload failed')
+        }
+      }
+      await fetchFiles(curriculumId)
+    } catch (err) {
+      console.error('Error uploading file:', err)
+      alert('Failed to upload file')
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const handleDeleteFile = async (curriculumId: string, fileId: string) => {
+    try {
+      const resp = await fetch(`${API_URL}/api/curricula/${curriculumId}/files/${fileId}`, { method: 'DELETE' })
+      if (resp.ok) {
+        await fetchFiles(curriculumId)
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err)
+    }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const getFileIcon = (_fileType: string, fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || ''
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return <Image className="h-4 w-4 text-green-600" />
+    if (['ppt', 'pptx'].includes(ext)) return <Presentation className="h-4 w-4 text-orange-600" />
+    if (['pdf'].includes(ext)) return <FileText className="h-4 w-4 text-red-600" />
+    if (['doc', 'docx'].includes(ext)) return <FileIcon className="h-4 w-4 text-blue-600" />
+    if (['xls', 'xlsx'].includes(ext)) return <FileIcon className="h-4 w-4 text-green-700" />
+    return <FileIcon className="h-4 w-4 text-gray-500" />
   }
 
   const handleCreateCurriculum = async () => {
@@ -283,6 +361,7 @@ export function CurriculumBuilder({ selectedCampusId }: CurriculumBuilderProps) 
     } else {
       setExpandedCurriculum(id)
       if (!units[id]) fetchUnits(id)
+      if (!files[id]) fetchFiles(id)
     }
   }
 
@@ -707,6 +786,119 @@ export function CurriculumBuilder({ selectedCampusId }: CurriculumBuilderProps) 
                                     size="sm"
                                     className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
                                     onClick={() => handleDeleteUnit(c.curriculum_id, unit.unit_id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Files / Documents Section */}
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                            <Upload className="h-4 w-4" /> Files & Documents
+                          </h4>
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              multiple
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  handleFileUpload(c.curriculum_id, e.target.files)
+                                  e.target.value = ''
+                                }
+                              }}
+                            />
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+                              <Plus className="h-3.5 w-3.5" /> Browse Files
+                            </span>
+                          </label>
+                        </div>
+
+                        {/* Drag & Drop Zone */}
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                            dragOver === c.curriculum_id
+                              ? 'border-[#0A2463] bg-[#0A2463]/5'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          onDragOver={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setDragOver(c.curriculum_id)
+                          }}
+                          onDragLeave={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setDragOver(null)
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setDragOver(null)
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                              handleFileUpload(c.curriculum_id, e.dataTransfer.files)
+                            }
+                          }}
+                        >
+                          {uploading === c.curriculum_id ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0A2463]" />
+                              <p className="text-sm text-gray-500">Uploading...</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Upload className={`h-8 w-8 ${dragOver === c.curriculum_id ? 'text-[#0A2463]' : 'text-gray-400'}`} />
+                              <p className="text-sm text-gray-600 font-medium">
+                                {dragOver === c.curriculum_id ? 'Drop files here' : 'Drag & drop files here'}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                Worksheets, PowerPoints, PDFs, documents, images — up to 50 MB each
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* File List */}
+                        {(files[c.curriculum_id] || []).length > 0 && (
+                          <div className="mt-3 space-y-1.5">
+                            {(files[c.curriculum_id] || []).map(f => (
+                              <div
+                                key={f.file_id}
+                                className="flex items-center gap-3 p-2.5 bg-white rounded-lg border hover:border-blue-200 transition-colors group"
+                              >
+                                <div className="shrink-0">
+                                  {getFileIcon(f.file_type, f.file_name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-gray-800 truncate block">{f.file_name}</span>
+                                  <span className="text-xs text-gray-400">
+                                    {formatFileSize(f.file_size)}
+                                    {f.uploaded_at && ` • ${new Date(f.uploaded_at).toLocaleDateString()}`}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <a
+                                    href={f.file_url.startsWith('/') ? `${API_URL}${f.file_url}` : f.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                                    title="Download"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </a>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                                    onClick={() => handleDeleteFile(c.curriculum_id, f.file_id)}
+                                    title="Delete"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>

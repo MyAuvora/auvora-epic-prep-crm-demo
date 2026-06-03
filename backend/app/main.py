@@ -766,6 +766,18 @@ class CurriculumUnitItem(BaseModel):
     created_at: str = ""
     updated_at: str = ""
 
+class CurriculumFileItem(BaseModel):
+    file_id: str
+    curriculum_id: str
+    unit_id: Optional[str] = None
+    file_name: str
+    file_key: str
+    file_url: str
+    file_size: int = 0
+    file_type: str = ""
+    uploaded_by: str = ""
+    uploaded_at: str = ""
+
 class Conference(BaseModel):
     conference_id: str
     student_id: str
@@ -1522,6 +1534,7 @@ sufs_payment_allocations_db: List[SUFSPaymentAllocation] = []
 business_expenses_db: List[BusinessExpense] = []
 curricula_db: List[CurriculumItem] = []
 curriculum_units_db: List[CurriculumUnitItem] = []
+curriculum_files_db: List[CurriculumFileItem] = []
 time_clock_db: List[TimeClock] = []
 
 def _safe_load(model_class, records: list) -> list:
@@ -1631,6 +1644,7 @@ def load_data_from_db():
     business_expenses_db = _safe_load(BusinessExpense, data.get("business_expenses", []))
     curricula_db = _safe_load(CurriculumItem, data.get("curricula", []))
     curriculum_units_db = _safe_load(CurriculumUnitItem, data.get("curriculum_units", []))
+    curriculum_files_db = _safe_load(CurriculumFileItem, data.get("curriculum_files", []))
     time_clock_db = _safe_load(TimeClock, data.get("time_clock", []))
 
     print(f"Loaded data from database: {len(students_db)} students, {len(families_db)} families, {len(staff_db)} staff")
@@ -7768,6 +7782,74 @@ async def get_curricula_summary(campus_id: Optional[str] = None):
         "by_subject": by_subject,
         "total_units": len([u for u in curriculum_units_db if any(c.curriculum_id == u.curriculum_id for c in result)]),
     }
+
+
+# ======================== Curriculum Files ========================
+
+@app.get("/api/curricula/{curriculum_id}/files")
+async def get_curriculum_files(curriculum_id: str, unit_id: Optional[str] = None):
+    """Get files for a curriculum, optionally filtered by unit."""
+    files = [f for f in curriculum_files_db if f.curriculum_id == curriculum_id]
+    if unit_id:
+        files = [f for f in files if f.unit_id == unit_id]
+    return sorted(files, key=lambda f: f.uploaded_at or "", reverse=True)
+
+
+@app.post("/api/curricula/{curriculum_id}/files")
+async def upload_curriculum_file(
+    curriculum_id: str,
+    file: UploadFile = File(...),
+    unit_id: Optional[str] = Query(None),
+):
+    """Upload a file (worksheet, document, PowerPoint) to a curriculum or unit."""
+    curriculum = next((c for c in curricula_db if c.curriculum_id == curriculum_id), None)
+    if not curriculum:
+        raise HTTPException(status_code=404, detail="Curriculum not found")
+
+    content = await file.read()
+    max_size = 50 * 1024 * 1024  # 50 MB
+    if len(content) > max_size:
+        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
+
+    result = await file_storage.upload_file(
+        content=content,
+        filename=file.filename or "upload",
+        category=f"curriculum/{curriculum_id}",
+        content_type=file.content_type or "application/octet-stream",
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result.get("error", "Upload failed"))
+
+    now = datetime.now().isoformat()
+    file_item = CurriculumFileItem(
+        file_id=f"cfile_{uuid.uuid4().hex[:8]}",
+        curriculum_id=curriculum_id,
+        unit_id=unit_id,
+        file_name=file.filename or "upload",
+        file_key=result["key"],
+        file_url=result["url"],
+        file_size=result.get("size", len(content)),
+        file_type=file.content_type or "application/octet-stream",
+        uploaded_by="",
+        uploaded_at=now,
+    )
+    curriculum_files_db.append(file_item)
+    db_utils.save_curriculum_file(file_item)
+    return file_item
+
+
+@app.delete("/api/curricula/{curriculum_id}/files/{file_id}")
+async def delete_curriculum_file(curriculum_id: str, file_id: str):
+    """Delete a file from a curriculum."""
+    file_item = next(
+        (f for f in curriculum_files_db if f.file_id == file_id and f.curriculum_id == curriculum_id),
+        None,
+    )
+    if not file_item:
+        raise HTTPException(status_code=404, detail="File not found")
+    curriculum_files_db.remove(file_item)
+    db_utils.delete_curriculum_file(file_id)
+    return {"success": True, "message": "File deleted"}
 
 
 # ======================== Time Clock ========================
