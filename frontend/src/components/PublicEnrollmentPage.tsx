@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   User,
   Users,
-  UserCheck,
   FileText,
   ChevronRight,
   ChevronLeft,
@@ -87,18 +86,12 @@ const emptyParent: ParentInfo = {
   isPrimary: false
 };
 
-const emptyPickup: AuthorizedPickup = {
-  id: '',
-  name: '',
-  relationship: '',
-  phone: ''
-};
 
 export function PublicEnrollmentPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [students, setStudents] = useState<StudentInfo[]>([{ ...emptyStudent, id: `student_${Date.now()}` }]);
   const [parents, setParents] = useState<ParentInfo[]>([{ ...emptyParent, id: `parent_${Date.now()}`, isPrimary: true }]);
-  const [authorizedPickups, setAuthorizedPickups] = useState<AuthorizedPickup[]>([]);
+  const [authorizedPickups] = useState<AuthorizedPickup[]>([]);
   const [policyAgreements, setPolicyAgreements] = useState<{
     photoRelease: 'accept' | 'deny' | null;
     liabilityWaiver: boolean;
@@ -123,8 +116,7 @@ export function PublicEnrollmentPage() {
   const steps = [
     { number: 1, title: 'Student Info', icon: User },
     { number: 2, title: 'Parent Info', icon: Users },
-    { number: 3, title: 'Authorized Pickup', icon: UserCheck },
-    { number: 4, title: 'Policy & Waiver', icon: FileText }
+    { number: 3, title: 'Policy & Waiver', icon: FileText }
   ];
 
   const addStudent = () => {
@@ -159,17 +151,6 @@ export function PublicEnrollmentPage() {
     setParents(parents.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
-  const addPickup = () => {
-    setAuthorizedPickups([...authorizedPickups, { ...emptyPickup, id: `pickup_${Date.now()}` }]);
-  };
-
-  const removePickup = (id: string) => {
-    setAuthorizedPickups(authorizedPickups.filter(p => p.id !== id));
-  };
-
-  const updatePickup = (id: string, field: keyof AuthorizedPickup, value: string) => {
-    setAuthorizedPickups(authorizedPickups.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -208,8 +189,6 @@ export function PublicEnrollmentPage() {
       case 2:
         return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
       case 3:
-        return true;
-      case 4:
         return policyAgreements.photoRelease !== null &&
                policyAgreements.liabilityWaiver &&
                policyAgreements.medicalAuthorization &&
@@ -730,104 +709,8 @@ export function PublicEnrollmentPage() {
               </div>
             )}
 
-            {/* Step 3: Authorized Pickup */}
+            {/* Step 3: Policy & Waiver */}
             {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> Parents/Guardians listed in the previous section are automatically authorized for pickup.
-                    Add any additional people who are authorized to pick up your child(ren) below.
-                  </p>
-                </div>
-
-                {authorizedPickups.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <UserCheck className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>No additional authorized pickup persons added</p>
-                    <p className="text-sm">Click the button below to add someone</p>
-                  </div>
-                ) : (
-                  authorizedPickups.map((pickup, index) => (
-                    <Card key={pickup.id} className="border-gray-200">
-                      <CardHeader className="bg-gray-50 py-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Authorized Person #{index + 1}</CardTitle>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removePickup(pickup.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Remove
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4 space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Full Name <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={pickup.name}
-                            onChange={(e) => updatePickup(pickup.id, 'name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter full name"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Relationship to Student <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              value={pickup.relationship}
-                              onChange={(e) => updatePickup(pickup.id, 'relationship', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select relationship</option>
-                              <option value="grandparent">Grandparent</option>
-                              <option value="aunt_uncle">Aunt/Uncle</option>
-                              <option value="sibling">Sibling (18+)</option>
-                              <option value="family_friend">Family Friend</option>
-                              <option value="nanny">Nanny/Caregiver</option>
-                              <option value="neighbor">Neighbor</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Phone Number <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="tel"
-                              value={pickup.phone}
-                              onChange={(e) => updatePickup(pickup.id, 'phone', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="(555) 123-4567"
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-
-                <Button
-                  variant="outline"
-                  onClick={addPickup}
-                  className="w-full border-dashed border-2 text-blue-600 hover:bg-blue-50"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Authorized Pickup Person
-                </Button>
-              </div>
-            )}
-
-            {/* Step 4: Policy & Waiver */}
-            {currentStep === 4 && (
               <div className="space-y-6">
                 <Card className="border-gray-200">
                   <CardHeader className="bg-gray-50 py-3">
@@ -987,7 +870,7 @@ export function PublicEnrollmentPage() {
                 )}
               </div>
               <div>
-                {currentStep < 4 ? (
+                {currentStep < 3 ? (
                   <Button
                     onClick={() => setCurrentStep(currentStep + 1)}
                     disabled={!canProceed()}
