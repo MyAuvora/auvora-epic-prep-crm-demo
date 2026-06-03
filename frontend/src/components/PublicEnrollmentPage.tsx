@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   User,
   Users,
-  FileText,
+  ClipboardCheck,
   ChevronRight,
   ChevronLeft,
   Plus,
@@ -92,21 +92,6 @@ export function PublicEnrollmentPage() {
   const [students, setStudents] = useState<StudentInfo[]>([{ ...emptyStudent, id: `student_${Date.now()}` }]);
   const [parents, setParents] = useState<ParentInfo[]>([{ ...emptyParent, id: `parent_${Date.now()}`, isPrimary: true }]);
   const [authorizedPickups] = useState<AuthorizedPickup[]>([]);
-  const [policyAgreements, setPolicyAgreements] = useState<{
-    photoRelease: 'accept' | 'deny' | null;
-    liabilityWaiver: boolean;
-    medicalAuthorization: boolean;
-    parentHandbook: boolean;
-    electronicSignature: string;
-    signatureDate: string;
-  }>({
-    photoRelease: null,
-    liabilityWaiver: false,
-    medicalAuthorization: false,
-    parentHandbook: false,
-    electronicSignature: '',
-    signatureDate: new Date().toISOString().split('T')[0]
-  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedNames, setSubmittedNames] = useState('');
@@ -116,7 +101,7 @@ export function PublicEnrollmentPage() {
   const steps = [
     { number: 1, title: 'Student Info', icon: User },
     { number: 2, title: 'Parent Info', icon: Users },
-    { number: 3, title: 'Policy & Waiver', icon: FileText }
+    { number: 3, title: 'Review & Confirm', icon: ClipboardCheck }
   ];
 
   const addStudent = () => {
@@ -163,7 +148,14 @@ export function PublicEnrollmentPage() {
           students,
           parents,
           authorizedPickups,
-          policyAgreements,
+          policyAgreements: {
+            photoRelease: null,
+            liabilityWaiver: false,
+            medicalAuthorization: false,
+            parentHandbook: false,
+            electronicSignature: '',
+            signatureDate: new Date().toISOString().split('T')[0]
+          },
         }),
       });
       if (!response.ok) {
@@ -189,11 +181,7 @@ export function PublicEnrollmentPage() {
       case 2:
         return parents.every(p => p.firstName && p.lastName && p.email && p.phone);
       case 3:
-        return policyAgreements.photoRelease !== null &&
-               policyAgreements.liabilityWaiver &&
-               policyAgreements.medicalAuthorization &&
-               policyAgreements.parentHandbook &&
-               policyAgreements.electronicSignature;
+        return true;
       default:
         return false;
     }
@@ -709,147 +697,128 @@ export function PublicEnrollmentPage() {
               </div>
             )}
 
-            {/* Step 3: Policy & Waiver */}
+            {/* Step 3: Review & Confirm */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <Card className="border-gray-200">
-                  <CardHeader className="bg-gray-50 py-3">
-                    <CardTitle className="text-lg">Policies and Agreements</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="space-y-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800 font-medium">
+                    Please review all information below before submitting. Click &quot;Previous&quot; to go back and make changes.
+                  </p>
+                </div>
+
+                {/* Student Information Review */}
+                {students.map((student, index) => (
+                  <Card key={student.id} className="border-gray-200">
+                    <CardHeader className="bg-gray-50 py-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="w-5 h-5 text-blue-600" />
+                        Student #{index + 1}: {student.firstName} {student.lastName}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                         <div>
-                          <span className="font-medium text-sm text-gray-700">Photo/Video Release</span> <span className="text-red-500">*</span>
-                          <p className="text-gray-500 text-sm mt-1">
-                            I grant EPIC Prep Academy permission to use photographs and/or video of my child(ren)
-                            for educational, promotional, and marketing purposes including but not limited to
-                            the school website, social media, newsletters, and promotional materials.
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Full Name</span>
+                          <p className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Date of Birth</span>
+                          <p className="text-sm font-medium text-gray-900">{student.dateOfBirth ? new Date(student.dateOfBirth + 'T00:00:00').toLocaleDateString() : '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Grade Level</span>
+                          <p className="text-sm font-medium text-gray-900">{student.gradeLevel === 'K' ? 'Kindergarten' : student.gradeLevel ? `${student.gradeLevel}${['1','2','3'].includes(student.gradeLevel) ? ['st','nd','rd'][parseInt(student.gradeLevel)-1] : 'th'} Grade` : '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Campus Type</span>
+                          <p className="text-sm font-medium text-gray-900">{student.campusType === 'classroom' ? 'Classroom' : student.campusType === 'online_only' ? 'Online Only' : '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Session</span>
+                          <p className="text-sm font-medium text-gray-900">{student.sessionPreference === 'AM' ? 'AM (8:00am - 11:30am)' : student.sessionPreference === 'PM' ? 'PM (12:30pm - 4:00pm)' : '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Step-Up Scholarship</span>
+                          <p className="text-sm font-medium text-gray-900">
+                            {student.stepUpApplied === 'yes_approved' ? 'Applied & Approved' :
+                             student.stepUpApplied === 'yes_pending' ? 'Applied, Pending' :
+                             student.stepUpApplied === 'no_planning' ? 'Planning to Apply' :
+                             student.stepUpApplied === 'no_not_eligible' ? 'Not Eligible' :
+                             student.stepUpApplied === 'no_not_interested' ? 'Not Interested' : '-'}
+                            {student.stepUpAmount ? ` ($${student.stepUpAmount})` : ''}
                           </p>
                         </div>
-                        <div className="flex gap-4 mt-2">
-                          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
-                            policyAgreements.photoRelease === 'accept' 
-                              ? 'border-green-500 bg-green-50 text-green-700' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}>
-                            <input
-                              type="radio"
-                              name="photoRelease"
-                              value="accept"
-                              checked={policyAgreements.photoRelease === 'accept'}
-                              onChange={() => setPolicyAgreements({...policyAgreements, photoRelease: 'accept'})}
-                              className="w-4 h-4 text-green-600"
-                            />
-                            <span className="font-medium text-sm">Accept</span>
-                          </label>
-                          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
-                            policyAgreements.photoRelease === 'deny' 
-                              ? 'border-red-500 bg-red-50 text-red-700' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}>
-                            <input
-                              type="radio"
-                              name="photoRelease"
-                              value="deny"
-                              checked={policyAgreements.photoRelease === 'deny'}
-                              onChange={() => setPolicyAgreements({...policyAgreements, photoRelease: 'deny'})}
-                              className="w-4 h-4 text-red-600"
-                            />
-                            <span className="font-medium text-sm">Deny</span>
-                          </label>
+                        <div className="md:col-span-2">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Address</span>
+                          <p className="text-sm font-medium text-gray-900">{student.addressLine}, {student.city}, {student.state} {student.zipcode}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Allergies</span>
+                          <p className="text-sm font-medium text-gray-900">{student.allergies || '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Medication</span>
+                          <p className="text-sm font-medium text-gray-900">{student.medication || '-'}</p>
+                        </div>
+                        {student.iepInfo && (
+                          <div className="md:col-span-2">
+                            <span className="text-xs text-gray-500 uppercase tracking-wide">IEP / 504 Plan</span>
+                            <p className="text-sm font-medium text-gray-900">{student.iepInfo}</p>
+                          </div>
+                        )}
+                        <div className="md:col-span-2">
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Academic Information</span>
+                          <p className="text-sm font-medium text-gray-900">{student.academicInfo || '-'}</p>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                ))}
 
-                      <div className="flex items-start">
-                        <input
-                          type="checkbox"
-                          id="liabilityWaiver"
-                          checked={policyAgreements.liabilityWaiver}
-                          onChange={(e) => setPolicyAgreements({...policyAgreements, liabilityWaiver: e.target.checked})}
-                          className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="liabilityWaiver" className="ml-3 text-sm text-gray-700">
-                          <span className="font-medium">Liability Waiver</span> <span className="text-red-500">*</span>
-                          <p className="text-gray-500 mt-1">
-                            I understand that participation in school activities involves inherent risks.
-                            I agree to release and hold harmless EPIC Prep Academy, its staff, and volunteers
-                            from any claims arising from my child's participation in school activities.
-                          </p>
-                        </label>
+                {/* Parent/Guardian Information Review */}
+                {parents.map((parent, index) => (
+                  <Card key={parent.id} className="border-gray-200">
+                    <CardHeader className="bg-gray-50 py-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Users className="w-5 h-5 text-blue-600" />
+                        Parent/Guardian #{index + 1}: {parent.firstName} {parent.lastName}
+                        {parent.isPrimary && <Badge className="bg-blue-100 text-blue-700 text-xs ml-2">Primary Contact</Badge>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Full Name</span>
+                          <p className="text-sm font-medium text-gray-900">{parent.firstName} {parent.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Relationship</span>
+                          <p className="text-sm font-medium text-gray-900 capitalize">{parent.relationship || '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Email</span>
+                          <p className="text-sm font-medium text-gray-900">{parent.email || '-'}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 uppercase tracking-wide">Cell Phone</span>
+                          <p className="text-sm font-medium text-gray-900">{parent.phone || '-'}</p>
+                        </div>
+                        {parent.workPhone && (
+                          <div>
+                            <span className="text-xs text-gray-500 uppercase tracking-wide">Work Phone</span>
+                            <p className="text-sm font-medium text-gray-900">{parent.workPhone}</p>
+                          </div>
+                        )}
+                        {parent.employer && (
+                          <div>
+                            <span className="text-xs text-gray-500 uppercase tracking-wide">Employer</span>
+                            <p className="text-sm font-medium text-gray-900">{parent.employer}</p>
+                          </div>
+                        )}
                       </div>
-
-                      <div className="flex items-start">
-                        <input
-                          type="checkbox"
-                          id="medicalAuthorization"
-                          checked={policyAgreements.medicalAuthorization}
-                          onChange={(e) => setPolicyAgreements({...policyAgreements, medicalAuthorization: e.target.checked})}
-                          className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="medicalAuthorization" className="ml-3 text-sm text-gray-700">
-                          <span className="font-medium">Medical Authorization</span> <span className="text-red-500">*</span>
-                          <p className="text-gray-500 mt-1">
-                            In case of emergency, I authorize EPIC Prep Academy staff to seek emergency medical
-                            treatment for my child if I cannot be reached. I understand I am responsible for
-                            any medical expenses incurred.
-                          </p>
-                        </label>
-                      </div>
-
-                      <div className="flex items-start">
-                        <input
-                          type="checkbox"
-                          id="parentHandbook"
-                          checked={policyAgreements.parentHandbook}
-                          onChange={(e) => setPolicyAgreements({...policyAgreements, parentHandbook: e.target.checked})}
-                          className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="parentHandbook" className="ml-3 text-sm text-gray-700">
-                          <span className="font-medium">Parent Handbook Agreement</span> <span className="text-red-500">*</span>
-                          <p className="text-gray-500 mt-1">
-                            I have read and agree to abide by the policies and procedures outlined in the
-                            EPIC Prep Academy Parent Handbook, including attendance policies, dress code,
-                            discipline procedures, and tuition payment terms.
-                          </p>
-                        </label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200">
-                  <CardHeader className="bg-gray-50 py-3">
-                    <CardTitle className="text-lg">Electronic Signature</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Type Your Full Legal Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={policyAgreements.electronicSignature}
-                        onChange={(e) => setPolicyAgreements({...policyAgreements, electronicSignature: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter your full legal name as signature"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        By typing your name above, you are signing this form electronically and agree to all terms and conditions.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                      <input
-                        type="date"
-                        value={policyAgreements.signatureDate}
-                        onChange={(e) => setPolicyAgreements({...policyAgreements, signatureDate: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
 
@@ -890,7 +859,7 @@ export function PublicEnrollmentPage() {
                     ) : (
                       <>
                         <Check className="w-4 h-4 mr-2" />
-                        Submit Enrollment
+                        Submit Application
                       </>
                     )}
                   </Button>
