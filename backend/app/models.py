@@ -1088,6 +1088,22 @@ class CurriculumUnit(Base):
     updated_at = Column(String)
 
 
+class CurriculumFile(Base):
+    __tablename__ = "curriculum_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(String, unique=True, index=True)
+    curriculum_id = Column(String, index=True)
+    unit_id = Column(String, nullable=True, index=True)
+    file_name = Column(String, nullable=False)
+    file_key = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    file_size = Column(Integer, default=0)
+    file_type = Column(String, default="")
+    uploaded_by = Column(String, default="")
+    uploaded_at = Column(String)
+
+
 class AppMetadata(Base):
     __tablename__ = "app_metadata"
 

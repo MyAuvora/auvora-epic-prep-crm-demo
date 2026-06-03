@@ -382,6 +382,11 @@ def load_all_from_db() -> dict:
             _curriculum_unit_to_dict(r) for r in db.query(models.CurriculumUnit).all()
         ]
 
+        # Curriculum files
+        data["curriculum_files"] = [
+            _curriculum_file_to_dict(r) for r in db.query(models.CurriculumFile).all()
+        ]
+
         # Time clock entries
         data["time_clock"] = [
             _time_clock_to_dict(r) for r in db.query(models.TimeClock).all()
@@ -1505,6 +1510,42 @@ def delete_curriculum_unit(unit_id: str):
         db.close()
 
 
+def save_curriculum_file(pydantic_file):
+    """Persist a curriculum file record to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            file_id=pydantic_file.file_id,
+            curriculum_id=pydantic_file.curriculum_id,
+            unit_id=pydantic_file.unit_id,
+            file_name=pydantic_file.file_name,
+            file_key=pydantic_file.file_key,
+            file_url=pydantic_file.file_url,
+            file_size=pydantic_file.file_size,
+            file_type=pydantic_file.file_type,
+            uploaded_by=pydantic_file.uploaded_by,
+            uploaded_at=pydantic_file.uploaded_at,
+        )
+        _upsert(db, models.CurriculumFile, "file_id", pydantic_file.file_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_curriculum_file(file_id: str):
+    """Delete a curriculum file record from the database."""
+    db = SessionLocal()
+    try:
+        row = db.query(models.CurriculumFile).filter(
+            models.CurriculumFile.file_id == file_id
+        ).first()
+        if row:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+
+
 def get_oauth_connection(organization_id: str, provider: str) -> Optional[Dict]:
     """Load an OAuth connection from the database for a given org and provider."""
     db = SessionLocal()
@@ -1605,6 +1646,7 @@ def reset_all_data():
         # Delete in reverse dependency order
         db.query(models.OAuthConnection).delete()
         db.query(models.TimeClock).delete()
+        db.query(models.CurriculumFile).delete()
         db.query(models.CurriculumUnit).delete()
         db.query(models.Curriculum).delete()
         db.query(models.BusinessExpense).delete()
@@ -2394,6 +2436,21 @@ def _curriculum_unit_to_dict(r):
         "standards_alignment": r.standards_alignment or "",
         "created_at": r.created_at or "",
         "updated_at": r.updated_at or "",
+    }
+
+
+def _curriculum_file_to_dict(r):
+    return {
+        "file_id": r.file_id,
+        "curriculum_id": r.curriculum_id or "",
+        "unit_id": r.unit_id,
+        "file_name": r.file_name or "",
+        "file_key": r.file_key or "",
+        "file_url": r.file_url or "",
+        "file_size": r.file_size or 0,
+        "file_type": r.file_type or "",
+        "uploaded_by": r.uploaded_by or "",
+        "uploaded_at": r.uploaded_at or "",
     }
 
 
