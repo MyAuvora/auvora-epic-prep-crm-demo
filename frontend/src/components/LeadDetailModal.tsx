@@ -65,7 +65,8 @@ const getStageColor = (stage: string) => {
 
 export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: LeadDetailModalProps) {
   const [selectedStage, setSelectedStage] = useState(lead?.stage || '');
-  const [tourDate, setTourDate] = useState(lead?.tour_date || '');
+  const [tourDate, setTourDate] = useState(lead?.tour_date?.split('T')[0] || lead?.tour_date || '');
+  const [tourTime, setTourTime] = useState(lead?.tour_date?.includes('T') ? lead.tour_date.split('T')[1]?.slice(0, 5) : '');
   const [notes, setNotes] = useState(lead?.notes || '');
   const [loading, setLoading] = useState(false);
   const [campuses, setCampuses] = useState<Campus[]>([]);
@@ -77,7 +78,8 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   useEffect(() => {
     if (lead) {
       setSelectedStage(lead.stage);
-      setTourDate(lead.tour_date || '');
+      setTourDate(lead.tour_date?.split('T')[0] || lead.tour_date || '');
+      setTourTime(lead.tour_date?.includes('T') ? lead.tour_date.split('T')[1]?.slice(0, 5) : '');
       setNotes(lead.notes || '');
       setShowEnrollForm(false);
     }
@@ -104,10 +106,11 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   const handleUpdateStage = async () => {
     setLoading(true);
     try {
+      const combinedTourDate = tourDate ? (tourTime ? `${tourDate}T${tourTime}` : tourDate) : null;
       const updatedLead = {
         ...lead,
         stage: selectedStage,
-        tour_date: tourDate || null,
+        tour_date: combinedTourDate,
         notes: notes,
         last_contact_date: new Date().toISOString().split('T')[0]
       };
@@ -243,7 +246,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
               {lead.tour_date && !showEnrollForm && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Calendar className="h-4 w-4" />
-                  <span>Tour: {new Date(lead.tour_date).toLocaleDateString()}</span>
+                  <span>Tour: {new Date(lead.tour_date).toLocaleDateString()}{lead.tour_date.includes('T') ? ` at ${new Date(lead.tour_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
                 </div>
               )}
             </div>
@@ -276,12 +279,23 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
 
               <div className="space-y-2">
                 <Label htmlFor="tour_date">Tour Date (optional)</Label>
-                <Input
-                  id="tour_date"
-                  type="date"
-                  value={tourDate}
-                  onChange={(e) => setTourDate(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="tour_date"
+                    type="date"
+                    value={tourDate}
+                    onChange={(e) => setTourDate(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    id="tour_time"
+                    type="time"
+                    value={tourTime}
+                    onChange={(e) => setTourTime(e.target.value)}
+                    className="flex-1"
+                    placeholder="Time"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

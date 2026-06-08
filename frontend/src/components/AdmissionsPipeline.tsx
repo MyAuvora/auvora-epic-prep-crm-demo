@@ -213,7 +213,7 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
                             {lead.tour_date && (
                               <div className="flex items-center gap-2 text-sm text-blue-600">
                                 <Calendar className="h-4 w-4" />
-                                <span>Tour scheduled: {new Date(lead.tour_date).toLocaleDateString()}</span>
+                                <span>Tour scheduled: {new Date(lead.tour_date).toLocaleDateString()}{lead.tour_date.includes('T') ? ` at ${new Date(lead.tour_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
                               </div>
                             )}
 
