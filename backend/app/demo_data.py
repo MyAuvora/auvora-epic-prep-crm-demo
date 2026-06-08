@@ -1147,7 +1147,7 @@ def generate_all_demo_data():
             source=random.choice(list(LeadSource)),
             created_date=created,
             last_contact_date=last_contact,
-            tour_date=tour_date_val,
+            tour_date=tour_date_val.isoformat() if tour_date_val else None,
             notes=f"Interested in {campus.name}. {random.choice(['Referred by current parent.', 'Found us on social media.', 'Attended open house.', 'Looking for small class sizes.', 'Needs flexible schedule.'])}",
             assigned_to=random.choice([s.staff_id for s in staff_db if s.role in [StaffRole.DIRECTOR, StaffRole.OWNER]])
         )
