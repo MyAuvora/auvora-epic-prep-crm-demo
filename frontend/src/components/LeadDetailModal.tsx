@@ -123,7 +123,9 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Failed to update lead');
+        const detail = error.detail;
+        const message = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join(', ') : JSON.stringify(detail) || 'Failed to update lead';
+        throw new Error(message);
       }
 
       onLeadUpdated();

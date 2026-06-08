@@ -303,7 +303,7 @@ class Lead(Base):
     source = Column(String)
     created_date = Column(Date, default=date.today)
     last_contact_date = Column(Date)
-    tour_date = Column(Date)
+    tour_date = Column(String)
     notes = Column(Text)
     assigned_to = Column(String)
     family_id = Column(String, nullable=True)

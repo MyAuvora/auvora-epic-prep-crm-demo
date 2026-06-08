@@ -1023,7 +1023,7 @@ class Lead(BaseModel):
     source: LeadSource
     created_date: date
     last_contact_date: Optional[date] = None
-    tour_date: Optional[date] = None
+    tour_date: Optional[str] = None
     notes: str
     assigned_to: Optional[str] = None  # staff_id
     family_id: Optional[str] = None  # linked family when created from enrollment form
