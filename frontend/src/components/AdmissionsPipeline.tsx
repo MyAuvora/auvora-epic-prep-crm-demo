@@ -160,11 +160,11 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
         </CardHeader>
         <CardContent>
           <Tabs value={selectedStage} onValueChange={setSelectedStage}>
-            <TabsList className="grid grid-cols-4 lg:grid-cols-9 mb-4">
+            <TabsList className="flex flex-wrap gap-1 mb-4">
               <TabsTrigger value="all">All ({leads.length})</TabsTrigger>
               {stages.map(stage => (
                 <TabsTrigger key={stage} value={stage}>
-                  {stage.split(' ')[0]} ({summary?.stage_counts[stage] || 0})
+                  {stage} ({summary?.stage_counts[stage] || 0})
                 </TabsTrigger>
               ))}
             </TabsList>
