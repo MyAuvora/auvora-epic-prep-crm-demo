@@ -26,6 +26,7 @@ interface Lead {
   created_date: string;
   last_contact_date: string | null;
   tour_date: string | null;
+  tour_campus_id: string | null;
   notes: string;
   assigned_to: string | null;
 }

@@ -732,6 +732,7 @@ def save_lead(pydantic_lead):
             created_date=pydantic_lead.created_date,
             last_contact_date=getattr(pydantic_lead, 'last_contact_date', None),
             tour_date=getattr(pydantic_lead, 'tour_date', None),
+            tour_campus_id=getattr(pydantic_lead, 'tour_campus_id', None),
             notes=pydantic_lead.notes,
             assigned_to=getattr(pydantic_lead, 'assigned_to', None),
             family_id=getattr(pydantic_lead, 'family_id', None),
@@ -2080,8 +2081,8 @@ def _lead_to_dict(r):
         "stage": r.stage or "New", "source": r.source or "Website",
         "created_date": r.created_date or date.today(),
         "last_contact_date": r.last_contact_date,
-        "tour_date": r.tour_date, "notes": r.notes or "",
-        "assigned_to": r.assigned_to,
+        "tour_date": r.tour_date, "tour_campus_id": getattr(r, 'tour_campus_id', None),
+        "notes": r.notes or "", "assigned_to": r.assigned_to,
         "family_id": getattr(r, 'family_id', None),
         "enrollment_data": json.loads(r.enrollment_data) if getattr(r, 'enrollment_data', None) else None,
     }

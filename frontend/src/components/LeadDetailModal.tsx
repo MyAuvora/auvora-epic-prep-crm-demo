@@ -27,6 +27,7 @@ interface Lead {
   created_date: string;
   last_contact_date: string | null;
   tour_date: string | null;
+  tour_campus_id: string | null;
   notes: string;
   assigned_to: string | null;
   family_id?: string | null;
@@ -74,6 +75,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   const [enrollSession, setEnrollSession] = useState('Morning');
   const [enrollRoom, setEnrollRoom] = useState('');
   const [showEnrollForm, setShowEnrollForm] = useState(false);
+  const [tourCampusId, setTourCampusId] = useState(lead?.tour_campus_id || '');
 
   useEffect(() => {
     if (lead) {
@@ -81,6 +83,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
       setTourDate(lead.tour_date?.split('T')[0] || lead.tour_date || '');
       setTourTime(lead.tour_date?.includes('T') ? lead.tour_date.split('T')[1]?.slice(0, 5) : '');
       setNotes(lead.notes || '');
+      setTourCampusId(lead.tour_campus_id || '');
       setShowEnrollForm(false);
     }
   }, [lead]);
@@ -120,6 +123,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
         ...lead,
         stage: selectedStage,
         tour_date: combinedTourDate,
+        tour_campus_id: tourCampusId || null,
         notes: notes,
         last_contact_date: new Date().toISOString().split('T')[0]
       };
@@ -257,7 +261,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
               {lead.tour_date && !showEnrollForm && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Calendar className="h-4 w-4" />
-                  <span>Tour: {new Date(lead.tour_date).toLocaleDateString()}{lead.tour_date.includes('T') ? ` at ${new Date(lead.tour_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
+                  <span>Tour: {new Date(lead.tour_date).toLocaleDateString()}{lead.tour_date.includes('T') ? ` at ${new Date(lead.tour_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}{lead.tour_campus_id ? ` — ${campuses.find(c => c.campus_id === lead.tour_campus_id)?.name || lead.tour_campus_id}` : ''}</span>
                 </div>
               )}
             </div>
@@ -307,6 +311,20 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                     placeholder="Time"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tour Campus</Label>
+                <Select value={tourCampusId} onValueChange={setTourCampusId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select campus for tour..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campuses.map((c) => (
+                      <SelectItem key={c.campus_id} value={c.campus_id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

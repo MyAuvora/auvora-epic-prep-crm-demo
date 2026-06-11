@@ -387,7 +387,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
               )}
 
               {/* Notification Center */}
-              <NotificationCenter currentRole={currentRole} />
+              <NotificationCenter currentRole={currentRole} campusId={LOCATION_TO_CAMPUS_ID[selectedLocation] || null} />
               
               <div className="relative">
                 <button
