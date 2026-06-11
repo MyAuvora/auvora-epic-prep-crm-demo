@@ -85,6 +85,15 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     }
   }, [lead]);
 
+  const preScheduledStages = ['New', 'Contact', 'Contacted'];
+
+  // Auto-advance stage dropdown to "Tour Scheduled" when a tour date is entered
+  useEffect(() => {
+    if (tourDate && preScheduledStages.includes(selectedStage)) {
+      setSelectedStage('Tour Scheduled');
+    }
+  }, [tourDate]);
+
   useEffect(() => {
     const fetchCampuses = async () => {
       try {
@@ -107,14 +116,9 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     setLoading(true);
     try {
       const combinedTourDate = tourDate ? (tourTime ? `${tourDate}T${tourTime}` : tourDate) : null;
-      // Auto-advance to "Tour Scheduled" when a tour date is set and stage is before it
-      const preScheduledStages = ['New', 'Contact', 'Contacted'];
-      const effectiveStage = (combinedTourDate && preScheduledStages.includes(selectedStage))
-        ? 'Tour Scheduled'
-        : selectedStage;
       const updatedLead = {
         ...lead,
-        stage: effectiveStage,
+        stage: selectedStage,
         tour_date: combinedTourDate,
         notes: notes,
         last_contact_date: new Date().toISOString().split('T')[0]
