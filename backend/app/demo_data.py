@@ -163,7 +163,8 @@ def generate_all_demo_data():
     for fam_idx in range(num_families):
         family_id = f"family_{fam_idx + 1}"
         family_last_name = random.choice(last_names)
-        family_campus = random.choice(campuses_db)
+        # Distribute families evenly across campuses (round-robin)
+        family_campus = campuses_db[fam_idx % len(campuses_db)]
         
         num_children = random.choices([1, 2, 3], weights=[0.4, 0.45, 0.15])[0]
         
