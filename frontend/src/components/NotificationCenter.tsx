@@ -200,7 +200,10 @@ export function NotificationCenter({ currentRole, campusId }: NotificationCenter
         const res = await fetch(`${API_URL}/api/crm-notifications?${params}`)
         if (!res.ok) return
         const crmNotifs = await res.json()
-        if (crmNotifs.length === 0) return
+        if (crmNotifs.length === 0) {
+          setNotifications(prev => prev.filter(n => n.type !== 'tour'))
+          return
+        }
 
         const tourNotifications: Notification[] = crmNotifs.map((n: { notification_id: string; title: string; message: string; created_at: string; read: boolean; notification_type: string }) => ({
           id: n.notification_id,
@@ -247,6 +250,9 @@ export function NotificationCenter({ currentRole, campusId }: NotificationCenter
 
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    notifications.filter(n => n.id.startsWith('notif_') && !n.read).forEach(n => {
+      fetch(`${API_URL}/api/crm-notifications/${n.id}/read`, { method: 'PUT' }).catch(() => {})
+    })
   }
 
   const dismissNotification = (id: string) => {

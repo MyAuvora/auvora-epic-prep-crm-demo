@@ -1631,6 +1631,7 @@ def load_data_from_db():
     payment_plans_db = _safe_load(PaymentPlan, data.get("payment_plans", []))
     payment_schedules_db = _safe_load(PaymentSchedule, data.get("payment_schedules", []))
     leads_db = _safe_load(Lead, data.get("leads", []))
+    crm_notifications_db = _safe_load(CRMNotification, data.get("crm_notifications", []))
     campus_capacity_db = _safe_load(CampusCapacity, data.get("campus_capacity", []))
     message_templates_db = _safe_load(MessageTemplate, data.get("message_templates", []))
     broadcast_messages_db = _safe_load(BroadcastMessage, data.get("broadcast_messages", []))
@@ -3545,6 +3546,7 @@ async def update_lead(lead_id: str, lead: Lead):
                 created_at=dt.now().isoformat(),
             )
             crm_notifications_db.append(notif)
+            db_utils.save_crm_notification(notif)
 
     # Auto-notify Owner when CM marks tour as complete
     if lead.stage == LeadStage.TOUR_COMPLETE and old_lead.stage == LeadStage.TOUR_SCHEDULED:
@@ -3565,6 +3567,7 @@ async def update_lead(lead_id: str, lead: Lead):
             created_at=dt.now().isoformat(),
         )
         crm_notifications_db.append(notif)
+        db_utils.save_crm_notification(notif)
 
     return lead
 
@@ -3794,6 +3797,7 @@ async def mark_notification_read(notification_id: str):
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
     notif.read = True
+    db_utils.save_crm_notification(notif)
     return notif
 
 @app.get("/api/admissions/tours")
@@ -3835,6 +3839,7 @@ async def mark_tour_complete(lead_id: str):
         created_at=dt.now().isoformat(),
     )
     crm_notifications_db.append(notif)
+    db_utils.save_crm_notification(notif)
 
     return lead
 

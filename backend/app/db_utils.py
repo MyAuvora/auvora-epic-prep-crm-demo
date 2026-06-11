@@ -247,6 +247,11 @@ def load_all_from_db() -> dict:
             _lead_to_dict(r) for r in db.query(models.Lead).all()
         ]
 
+        # CRM Notifications
+        data["crm_notifications"] = [
+            _crm_notification_to_dict(r) for r in db.query(models.CRMNotification).all()
+        ]
+
         # Campus capacity
         data["campus_capacity"] = [
             _capacity_to_dict(r) for r in db.query(models.CampusCapacity).all()
@@ -739,6 +744,28 @@ def save_lead(pydantic_lead):
             enrollment_data=json.dumps(pydantic_lead.enrollment_data) if getattr(pydantic_lead, 'enrollment_data', None) else None,
         )
         _upsert(db, models.Lead, "lead_id", pydantic_lead.lead_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_crm_notification(pydantic_notif):
+    """Persist a CRM notification to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            notification_id=pydantic_notif.notification_id,
+            recipient_role=pydantic_notif.recipient_role,
+            recipient_campus_id=getattr(pydantic_notif, 'recipient_campus_id', None),
+            recipient_staff_id=getattr(pydantic_notif, 'recipient_staff_id', None),
+            notification_type=pydantic_notif.notification_type,
+            title=pydantic_notif.title,
+            message=pydantic_notif.message,
+            related_lead_id=getattr(pydantic_notif, 'related_lead_id', None),
+            read=pydantic_notif.read,
+            created_at=pydantic_notif.created_at,
+        )
+        _upsert(db, models.CRMNotification, "notification_id", pydantic_notif.notification_id, fields)
         db.commit()
     finally:
         db.close()
@@ -2085,6 +2112,21 @@ def _lead_to_dict(r):
         "notes": r.notes or "", "assigned_to": r.assigned_to,
         "family_id": getattr(r, 'family_id', None),
         "enrollment_data": json.loads(r.enrollment_data) if getattr(r, 'enrollment_data', None) else None,
+    }
+
+
+def _crm_notification_to_dict(r):
+    return {
+        "notification_id": r.notification_id,
+        "recipient_role": r.recipient_role or "admin",
+        "recipient_campus_id": r.recipient_campus_id,
+        "recipient_staff_id": r.recipient_staff_id,
+        "notification_type": r.notification_type or "tour_scheduled",
+        "title": r.title or "",
+        "message": r.message or "",
+        "related_lead_id": r.related_lead_id,
+        "read": bool(r.read),
+        "created_at": str(r.created_at) if r.created_at else "",
     }
 
 
