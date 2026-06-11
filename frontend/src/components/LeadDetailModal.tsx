@@ -192,7 +192,6 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     }
   };
 
-  const isEnrollingStage = lead.stage === 'Enrolling';
   const isEnrolledStage = lead.stage === 'Enrolled';
 
   return (
