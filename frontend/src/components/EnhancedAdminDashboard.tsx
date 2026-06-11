@@ -1251,7 +1251,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                         <TabsTrigger value="enrollments">Enrollment Applications</TabsTrigger>
                       </TabsList>
                       <TabsContent value="pipeline" className="mt-6">
-                        <AdmissionsPipeline selectedCampusId={selectedCampusId} />
+                        <AdmissionsPipeline selectedCampusId={selectedCampusId} onNavigateToFamily={(familyId) => setAccountView({ type: 'family', id: familyId })} />
                       </TabsContent>
                       <TabsContent value="enrollments" className="mt-6">
                         <AdminEnrollmentSubmissions />
