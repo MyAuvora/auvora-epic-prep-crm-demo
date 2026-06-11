@@ -240,7 +240,7 @@ export default function AdmissionsPipeline({ selectedCampusId, onNavigateToFamil
                                 }
                               }}
                             >
-                              {(lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id ? 'View Family Account' : 'View'}
+                              {(lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id && onNavigateToFamily ? 'View Family Account' : 'View'}
                             </Button>
                             <Button 
                               size="sm"
