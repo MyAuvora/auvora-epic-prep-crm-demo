@@ -192,7 +192,6 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     }
   };
 
-  const isEnrollingStage = lead.stage === 'Enrolling';
   const isEnrolledStage = lead.stage === 'Enrolled';
 
   return (
@@ -449,7 +448,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
               <Button onClick={handleUpdateStage} disabled={loading}>
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>
-              {(isEnrollingStage || isEnrolledStage) && (
+              {isEnrolledStage && (
                 <Button
                   onClick={() => setShowEnrollForm(true)}
                   className="bg-green-600 hover:bg-green-700"
@@ -461,7 +460,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
             </>
           )}
 
-          {mode === 'view' && (isEnrollingStage || isEnrolledStage) && (
+          {mode === 'view' && isEnrolledStage && (
             <Button
               onClick={() => setShowEnrollForm(true)}
               className="bg-green-600 hover:bg-green-700"
