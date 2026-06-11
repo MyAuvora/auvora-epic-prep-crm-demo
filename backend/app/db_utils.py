@@ -252,6 +252,11 @@ def load_all_from_db() -> dict:
             _crm_notification_to_dict(r) for r in db.query(models.CRMNotification).all()
         ]
 
+        # Enrollment Checklists
+        data["enrollment_checklists"] = [
+            _enrollment_checklist_to_dict(r) for r in db.query(models.EnrollmentChecklist).all()
+        ]
+
         # Campus capacity
         data["campus_capacity"] = [
             _capacity_to_dict(r) for r in db.query(models.CampusCapacity).all()
@@ -742,8 +747,35 @@ def save_lead(pydantic_lead):
             assigned_to=getattr(pydantic_lead, 'assigned_to', None),
             family_id=getattr(pydantic_lead, 'family_id', None),
             enrollment_data=json.dumps(pydantic_lead.enrollment_data) if getattr(pydantic_lead, 'enrollment_data', None) else None,
+            invitation_sent=getattr(pydantic_lead, 'invitation_sent', False),
+            invitation_token=getattr(pydantic_lead, 'invitation_token', None),
         )
         _upsert(db, models.Lead, "lead_id", pydantic_lead.lead_id, fields)
+        db.commit()
+    finally:
+        db.close()
+
+
+def save_enrollment_checklist(pydantic_cl):
+    """Persist an enrollment checklist to the database."""
+    db = SessionLocal()
+    try:
+        fields = dict(
+            checklist_id=pydantic_cl.checklist_id,
+            lead_id=pydantic_cl.lead_id,
+            family_id=getattr(pydantic_cl, 'family_id', None),
+            photo_release=pydantic_cl.photo_release,
+            liability_waiver=pydantic_cl.liability_waiver,
+            medical_authorization=pydantic_cl.medical_authorization,
+            parent_handbook=pydantic_cl.parent_handbook,
+            authorized_pickups=json.dumps(pydantic_cl.authorized_pickups) if pydantic_cl.authorized_pickups else None,
+            electronic_signature=pydantic_cl.electronic_signature,
+            signature_date=pydantic_cl.signature_date,
+            completed=pydantic_cl.completed,
+            completed_at=pydantic_cl.completed_at,
+            created_at=pydantic_cl.created_at,
+        )
+        _upsert(db, models.EnrollmentChecklist, "checklist_id", pydantic_cl.checklist_id, fields)
         db.commit()
     finally:
         db.close()
@@ -2112,6 +2144,26 @@ def _lead_to_dict(r):
         "notes": r.notes or "", "assigned_to": r.assigned_to,
         "family_id": getattr(r, 'family_id', None),
         "enrollment_data": json.loads(r.enrollment_data) if getattr(r, 'enrollment_data', None) else None,
+        "invitation_sent": bool(getattr(r, 'invitation_sent', False)),
+        "invitation_token": getattr(r, 'invitation_token', None),
+    }
+
+
+def _enrollment_checklist_to_dict(r):
+    return {
+        "checklist_id": r.checklist_id,
+        "lead_id": r.lead_id,
+        "family_id": r.family_id,
+        "photo_release": r.photo_release,
+        "liability_waiver": bool(r.liability_waiver),
+        "medical_authorization": bool(r.medical_authorization),
+        "parent_handbook": bool(r.parent_handbook),
+        "authorized_pickups": json.loads(r.authorized_pickups) if r.authorized_pickups else None,
+        "electronic_signature": r.electronic_signature,
+        "signature_date": r.signature_date,
+        "completed": bool(r.completed),
+        "completed_at": str(r.completed_at) if r.completed_at else None,
+        "created_at": str(r.created_at) if r.created_at else "",
     }
 
 

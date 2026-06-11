@@ -29,6 +29,8 @@ interface Lead {
   tour_campus_id: string | null;
   notes: string;
   assigned_to: string | null;
+  invitation_sent?: boolean;
+  invitation_token?: string | null;
 }
 
 interface PipelineSummary {
@@ -96,12 +98,13 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
       'Tour Complete': 'bg-orange-100 text-orange-800',
       'Enrolling': 'bg-indigo-100 text-indigo-800',
       'Enrolled': 'bg-emerald-100 text-emerald-800',
+      'Finalized': 'bg-green-100 text-green-800',
       'Lost': 'bg-red-100 text-red-800'
     };
     return colors[stage] || 'bg-gray-100 text-gray-800';
   };
 
-  const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Lost'];
+  const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Finalized', 'Lost'];
 
   if (loading) {
     return <div className="p-6">Loading admissions pipeline...</div>;
