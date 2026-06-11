@@ -85,6 +85,15 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     }
   }, [lead]);
 
+  const preScheduledStages = ['New', 'Contact', 'Contacted'];
+
+  // Auto-advance stage dropdown to "Tour Scheduled" when a tour date is entered
+  useEffect(() => {
+    if (tourDate && preScheduledStages.includes(selectedStage)) {
+      setSelectedStage('Tour Scheduled');
+    }
+  }, [tourDate]);
+
   useEffect(() => {
     const fetchCampuses = async () => {
       try {
