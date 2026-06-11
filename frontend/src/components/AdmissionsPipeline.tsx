@@ -150,7 +150,7 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
               <Users className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary.stage_counts['Enrolled'] || 0}</div>
+              <div className="text-2xl font-bold">{(summary.stage_counts['Enrolled'] || 0) + (summary.stage_counts['Finalized'] || 0)}</div>
               <p className="text-xs text-gray-500">Successfully enrolled</p>
             </CardContent>
           </Card>

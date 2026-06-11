@@ -1604,6 +1604,7 @@ def load_data_from_db():
     global business_expenses_db
     global curricula_db, curriculum_units_db, curriculum_files_db
     global time_clock_db
+    global crm_notifications_db, enrollment_checklists_db
 
     data = db_utils.load_all_from_db()
 
@@ -3852,7 +3853,7 @@ async def get_pipeline_summary(campus_id: Optional[str] = None):
     return {
         'total_leads': len(filtered_leads),
         'stage_counts': stage_counts,
-        'conversion_rate': round((stage_counts.get('Enrolled', 0) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
+        'conversion_rate': round(((stage_counts.get('Enrolled', 0) + stage_counts.get('Finalized', 0)) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
     }
 
 @app.get("/api/crm-notifications")
