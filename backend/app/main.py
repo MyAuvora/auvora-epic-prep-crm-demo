@@ -4076,6 +4076,13 @@ async def ensure_family_for_lead(lead_id: str):
     return {"family_id": family_id}
 
 
+@app.get("/api/admissions/leads/by-family/{family_id}")
+async def get_leads_by_family(family_id: str):
+    """Get all leads linked to a family (for enrollment review on family page)."""
+    family_leads = [l for l in leads_db if l.family_id == family_id]
+    return family_leads
+
+
 @app.get("/api/enrollment-checklist/{lead_id}")
 async def get_enrollment_checklist(lead_id: str):
     """Get enrollment checklist for a lead."""

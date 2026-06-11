@@ -149,6 +149,36 @@ interface FullAccountViewProps {
   role?: 'owner' | 'admin' | 'coach' | 'parent';
 }
 
+interface PendingLead {
+  lead_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_dob?: string;
+  desired_grade?: string;
+  stage: string;
+  enrollment_data?: {
+    students?: Array<{
+      firstName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+      gradeLevel?: string;
+      campus?: string;
+      session?: string;
+      allergies?: string;
+      medication?: string;
+      stepUpApplied?: string;
+      stepUpAmount?: string;
+    }>;
+    parents?: Array<{
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      relationship?: string;
+    }>;
+  };
+}
+
 export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClick, backLabel, onHome, role = 'owner' }: FullAccountViewProps) {
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState<Family | null>(null);
@@ -157,6 +187,9 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [grades, setGrades] = useState<Grade[]>([]);
   const [ixl, setIxl] = useState<IXLSummary | null>(null);
   const [acellus, setAcellus] = useState<AcellusSummary | null>(null);
+  const [pendingLeads, setPendingLeads] = useState<PendingLead[]>([]);
+  const [finalizeSettings, setFinalizeSettings] = useState<Record<string, { campus_id: string; session: string; room: string }>>({});
+  const [finalizing, setFinalizing] = useState(false);
   const [acellusCourses, setAcellusCourses] = useState<AcellusCourse[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
@@ -253,6 +286,23 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             }
           } catch (e) {
             console.log('Scholarships not available');
+          }
+
+          // Fetch linked leads for enrollment pending section
+          try {
+            const leadsRes = await fetch(`${API_URL}/api/admissions/leads/by-family/${id}`);
+            if (leadsRes.ok) {
+              const leadsData = await leadsRes.json();
+              const pending = leadsData.filter((l: PendingLead) => l.stage === 'Enrolled' || l.stage === 'Enrolling');
+              setPendingLeads(pending);
+              const settings: Record<string, { campus_id: string; session: string; room: string }> = {};
+              pending.forEach((l: PendingLead) => {
+                settings[l.lead_id] = { campus_id: '', session: 'Morning', room: '' };
+              });
+              setFinalizeSettings(settings);
+            }
+          } catch (e) {
+            console.log('Leads not available');
           }
         } else {
           // Fetch student data
@@ -796,12 +846,142 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 </CardContent>
               </Card>
 
+              {/* Enrollment Pending Section */}
+              {pendingLeads.length > 0 && role === 'owner' && (
+                <Card className="border-amber-200 bg-amber-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-800">
+                      <AlertTriangle className="h-5 w-5" />
+                      Enrollment Pending — Finalize Below
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {pendingLeads.map((lead) => {
+                      const studentData = lead.enrollment_data?.students?.find(
+                        s => s.firstName === lead.child_first_name && s.lastName === lead.child_last_name
+                      ) || lead.enrollment_data?.students?.[0];
+                      const settings = finalizeSettings[lead.lead_id] || { campus_id: '', session: 'Morning', room: '' };
+
+                      return (
+                        <div key={lead.lead_id} className="bg-white rounded-lg p-4 border border-amber-200 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-lg">{lead.child_first_name} {lead.child_last_name}</p>
+                              <p className="text-sm text-gray-500">
+                                Grade: {lead.desired_grade || studentData?.gradeLevel || 'N/A'} •
+                                DOB: {lead.child_dob ? new Date(lead.child_dob).toLocaleDateString() : 'N/A'} •
+                                Step-Up: {studentData?.stepUpApplied || 'N/A'}
+                              </p>
+                              {studentData?.allergies && <p className="text-sm text-red-600">Allergies: {studentData.allergies}</p>}
+                              {studentData?.medication && <p className="text-sm text-orange-600">Medication: {studentData.medication}</p>}
+                            </div>
+                            <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                              {lead.stage}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Campus *</label>
+                              <select
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                value={settings.campus_id}
+                                onChange={(e) => setFinalizeSettings(prev => ({
+                                  ...prev,
+                                  [lead.lead_id]: { ...prev[lead.lead_id], campus_id: e.target.value }
+                                }))}
+                              >
+                                <option value="">Select Campus</option>
+                                {campuses.map(c => (
+                                  <option key={c.campus_id} value={c.campus_id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Session *</label>
+                              <select
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                value={settings.session}
+                                onChange={(e) => setFinalizeSettings(prev => ({
+                                  ...prev,
+                                  [lead.lead_id]: { ...prev[lead.lead_id], session: e.target.value }
+                                }))}
+                              >
+                                <option value="Morning">AM (8:00am - 11:30am)</option>
+                                <option value="Afternoon">PM (12:30pm - 4:00pm)</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Room/Teacher</label>
+                              <input
+                                type="text"
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                placeholder="e.g. Room 1 - Mrs. Smith"
+                                value={settings.room}
+                                onChange={(e) => setFinalizeSettings(prev => ({
+                                  ...prev,
+                                  [lead.lead_id]: { ...prev[lead.lead_id], room: e.target.value }
+                                }))}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            className="bg-green-600 hover:bg-green-700 w-full"
+                            disabled={!settings.campus_id || finalizing}
+                            onClick={async () => {
+                              setFinalizing(true);
+                              try {
+                                const res = await fetch(`${API_URL}/api/admissions/leads/${lead.lead_id}/enroll`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    campus_id: settings.campus_id,
+                                    session: settings.session,
+                                    room: settings.room || 'Unassigned',
+                                  }),
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  alert(`${lead.child_first_name} ${lead.child_last_name} has been finalized! Student account created.`);
+                                  setPendingLeads(prev => prev.filter(l => l.lead_id !== lead.lead_id));
+                                  // Refresh students list
+                                  const studentsRes = await fetch(`${API_URL}/api/students?family_id=${id}`);
+                                  if (studentsRes.ok) {
+                                    const studentsData = await studentsRes.json();
+                                    setStudents(studentsData);
+                                  }
+                                } else {
+                                  const err = await res.json();
+                                  alert(`Error: ${err.detail || 'Failed to finalize'}`);
+                                }
+                              } catch (e) {
+                                alert('Failed to finalize enrollment');
+                              }
+                              setFinalizing(false);
+                            }}
+                          >
+                            {finalizing ? 'Finalizing...' : `Finalize Enrollment — ${lead.child_first_name} ${lead.child_last_name}`}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Students Quick View */}
               <Card>
                 <CardHeader>
                   <CardTitle>Students</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {students.length === 0 && pendingLeads.length === 0 && (
+                    <p className="text-gray-500 text-sm">No students enrolled yet.</p>
+                  )}
+                  {students.length === 0 && pendingLeads.length > 0 && (
+                    <p className="text-gray-500 text-sm">Student accounts will be created when enrollment is finalized above.</p>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {students.map((student) => (
                       <Card 
