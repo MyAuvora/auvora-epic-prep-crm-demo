@@ -1024,10 +1024,23 @@ class Lead(BaseModel):
     created_date: date
     last_contact_date: Optional[date] = None
     tour_date: Optional[str] = None
+    tour_campus_id: Optional[str] = None
     notes: str
     assigned_to: Optional[str] = None  # staff_id
     family_id: Optional[str] = None  # linked family when created from enrollment form
     enrollment_data: Optional[dict] = None  # full enrollment form data
+
+class CRMNotification(BaseModel):
+    notification_id: str
+    recipient_role: str = "admin"
+    recipient_campus_id: Optional[str] = None
+    recipient_staff_id: Optional[str] = None
+    notification_type: str = "tour_scheduled"
+    title: str
+    message: str
+    related_lead_id: Optional[str] = None
+    read: bool = False
+    created_at: str = ""
 
 class CampusCapacity(BaseModel):
     campus_id: str
@@ -1536,6 +1549,7 @@ curricula_db: List[CurriculumItem] = []
 curriculum_units_db: List[CurriculumUnitItem] = []
 curriculum_files_db: List[CurriculumFileItem] = []
 time_clock_db: List[TimeClock] = []
+crm_notifications_db: List[CRMNotification] = []
 
 def _safe_load(model_class, records: list) -> list:
     """Load records into Pydantic models, skipping any that fail validation."""
@@ -1617,6 +1631,7 @@ def load_data_from_db():
     payment_plans_db = _safe_load(PaymentPlan, data.get("payment_plans", []))
     payment_schedules_db = _safe_load(PaymentSchedule, data.get("payment_schedules", []))
     leads_db = _safe_load(Lead, data.get("leads", []))
+    crm_notifications_db = _safe_load(CRMNotification, data.get("crm_notifications", []))
     campus_capacity_db = _safe_load(CampusCapacity, data.get("campus_capacity", []))
     message_templates_db = _safe_load(MessageTemplate, data.get("message_templates", []))
     broadcast_messages_db = _safe_load(BroadcastMessage, data.get("broadcast_messages", []))
@@ -3510,8 +3525,50 @@ async def update_lead(lead_id: str, lead: Lead):
     index = next((i for i, l in enumerate(leads_db) if l.lead_id == lead_id), None)
     if index is None:
         raise HTTPException(status_code=404, detail="Lead not found")
+    old_lead = leads_db[index]
     leads_db[index] = lead
     db_utils.save_lead(lead)
+
+    # Auto-notify CM when tour is scheduled at their campus
+    if lead.tour_date and lead.tour_campus_id and lead.stage == LeadStage.TOUR_SCHEDULED:
+        if not old_lead.tour_date or old_lead.tour_campus_id != lead.tour_campus_id:
+            from datetime import datetime as dt
+            notif = CRMNotification(
+                notification_id=f"notif_{lead.lead_id}_{int(dt.now().timestamp())}",
+                recipient_role="admin",
+                recipient_campus_id=lead.tour_campus_id,
+                notification_type="tour_scheduled",
+                title="New Tour Scheduled",
+                message=f"Tour scheduled for {lead.parent_first_name} {lead.parent_last_name} "
+                        f"(child: {lead.child_first_name} {lead.child_last_name}) "
+                        f"on {lead.tour_date}",
+                related_lead_id=lead.lead_id,
+                created_at=dt.now().isoformat(),
+            )
+            crm_notifications_db.append(notif)
+            db_utils.save_crm_notification(notif)
+
+    # Auto-notify Owner when CM marks tour as complete
+    if lead.stage == LeadStage.TOUR_COMPLETE and old_lead.stage == LeadStage.TOUR_SCHEDULED:
+        from datetime import datetime as dt
+        campus_name = ""
+        if lead.tour_campus_id:
+            campus = next((c for c in campuses_db if c.campus_id == lead.tour_campus_id), None)
+            campus_name = f" at {campus.name}" if campus else ""
+        notif = CRMNotification(
+            notification_id=f"notif_toured_{lead.lead_id}_{int(dt.now().timestamp())}",
+            recipient_role="owner",
+            notification_type="tour_completed",
+            title="Tour Completed",
+            message=f"{lead.parent_first_name} {lead.parent_last_name} "
+                    f"(child: {lead.child_first_name} {lead.child_last_name}) "
+                    f"completed their tour{campus_name}",
+            related_lead_id=lead.lead_id,
+            created_at=dt.now().isoformat(),
+        )
+        crm_notifications_db.append(notif)
+        db_utils.save_crm_notification(notif)
+
     return lead
 
 class FinalizeEnrollmentRequest(BaseModel):
@@ -3716,6 +3773,75 @@ async def get_pipeline_summary(campus_id: Optional[str] = None):
         'stage_counts': stage_counts,
         'conversion_rate': round((stage_counts.get('Enrolled', 0) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
     }
+
+@app.get("/api/crm-notifications")
+async def get_crm_notifications(
+    role: Optional[str] = None,
+    campus_id: Optional[str] = None,
+    unread_only: bool = False
+):
+    """Get CRM notifications filtered by role and campus"""
+    results = crm_notifications_db
+    if role:
+        results = [n for n in results if n.recipient_role == role]
+    if campus_id:
+        results = [n for n in results if n.recipient_campus_id == campus_id or n.recipient_campus_id is None]
+    if unread_only:
+        results = [n for n in results if not n.read]
+    return sorted(results, key=lambda n: n.created_at, reverse=True)
+
+@app.put("/api/crm-notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str):
+    """Mark a notification as read"""
+    notif = next((n for n in crm_notifications_db if n.notification_id == notification_id), None)
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notif.read = True
+    db_utils.save_crm_notification(notif)
+    return notif
+
+@app.get("/api/admissions/tours")
+async def get_tours(campus_id: Optional[str] = None):
+    """Get leads with scheduled tours, optionally filtered by tour campus"""
+    tour_leads = [l for l in leads_db if l.stage in (LeadStage.TOUR_SCHEDULED, LeadStage.TOUR_COMPLETE) and l.tour_date]
+    if campus_id:
+        tour_leads = [l for l in tour_leads if l.tour_campus_id == campus_id]
+    return tour_leads
+
+@app.put("/api/admissions/tours/{lead_id}/complete")
+async def mark_tour_complete(lead_id: str):
+    """Mark a tour as complete — moves lead to Tour Complete stage"""
+    lead = next((l for l in leads_db if l.lead_id == lead_id), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if lead.stage != LeadStage.TOUR_SCHEDULED:
+        raise HTTPException(status_code=400, detail="Lead is not in Tour Scheduled stage")
+
+    old_stage = lead.stage
+    lead.stage = LeadStage.TOUR_COMPLETE
+    db_utils.save_lead(lead)
+
+    # Notify owner that tour was completed
+    from datetime import datetime as dt
+    campus_name = ""
+    if lead.tour_campus_id:
+        campus = next((c for c in campuses_db if c.campus_id == lead.tour_campus_id), None)
+        campus_name = f" at {campus.name}" if campus else ""
+    notif = CRMNotification(
+        notification_id=f"notif_toured_{lead.lead_id}_{int(dt.now().timestamp())}",
+        recipient_role="owner",
+        notification_type="tour_completed",
+        title="Tour Completed",
+        message=f"{lead.parent_first_name} {lead.parent_last_name} "
+                f"(child: {lead.child_first_name} {lead.child_last_name}) "
+                f"completed their tour{campus_name}",
+        related_lead_id=lead.lead_id,
+        created_at=dt.now().isoformat(),
+    )
+    crm_notifications_db.append(notif)
+    db_utils.save_crm_notification(notif)
+
+    return lead
 
 @app.get("/api/communications/templates")
 async def get_message_templates():

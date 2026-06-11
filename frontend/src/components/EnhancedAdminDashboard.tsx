@@ -46,6 +46,7 @@ import { AuditLog } from './AuditLog'
 import { DashboardWidgets } from './DashboardWidgets'
 import { AutonomousTaskManager } from './AutonomousTaskManager'
 import { PermissionSlipTracker } from './PermissionSlipTracker'
+import { ToursWidget } from './ToursWidget'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -739,6 +740,8 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                 </CardContent>
               </Card>
             </div>}
+
+            {currentRole === 'admin' && <ToursWidget campusId={selectedCampusId} />}
 
             {visibleWidgets.includes('billing-overview') && <Card>
               <CardHeader>

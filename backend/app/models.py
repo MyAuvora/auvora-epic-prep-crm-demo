@@ -304,10 +304,27 @@ class Lead(Base):
     created_date = Column(Date, default=date.today)
     last_contact_date = Column(Date)
     tour_date = Column(String)
+    tour_campus_id = Column(String, nullable=True)
     notes = Column(Text)
     assigned_to = Column(String)
     family_id = Column(String, nullable=True)
     enrollment_data = Column(Text, nullable=True)  # JSON string of enrollment form data
+
+
+class CRMNotification(Base):
+    __tablename__ = "crm_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    notification_id = Column(String, unique=True, index=True)
+    recipient_role = Column(String)  # 'admin' for CM, 'owner', etc.
+    recipient_campus_id = Column(String, nullable=True)
+    recipient_staff_id = Column(String, nullable=True)
+    notification_type = Column(String)  # 'tour_scheduled', 'tour_completed', etc.
+    title = Column(String)
+    message = Column(Text)
+    related_lead_id = Column(String, nullable=True)
+    read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Event(Base):

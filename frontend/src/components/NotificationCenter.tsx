@@ -3,7 +3,7 @@ import { Bell, X, AlertTriangle, UserPlus, DollarSign, FileWarning, Package, Cal
 
 interface Notification {
   id: string
-  type: 'enrollment' | 'payment' | 'incident' | 'inventory' | 'attendance' | 'event' | 'system' | 'permission_slip'
+  type: 'enrollment' | 'payment' | 'incident' | 'inventory' | 'attendance' | 'event' | 'system' | 'permission_slip' | 'tour'
   title: string
   message: string
   timestamp: Date
@@ -14,6 +14,7 @@ interface Notification {
 
 interface NotificationCenterProps {
   currentRole: 'owner' | 'admin' | 'coach' | 'parent'
+  campusId?: string | null
 }
 
 const DEMO_NOTIFICATIONS: Notification[] = [
@@ -141,13 +142,14 @@ function getNotificationIcon(type: Notification['type']) {
     case 'attendance': return <AlertTriangle className="w-4 h-4 text-yellow-600" />
     case 'event': return <Calendar className="w-4 h-4 text-purple-600" />
     case 'permission_slip': return <FileSignature className="w-4 h-4 text-indigo-600" />
+    case 'tour': return <Calendar className="w-4 h-4 text-blue-600" />
     case 'system': return <Bell className="w-4 h-4 text-gray-600" />
   }
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-export function NotificationCenter({ currentRole }: NotificationCenterProps) {
+export function NotificationCenter({ currentRole, campusId }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(
     currentRole === 'parent' ? PARENT_NOTIFICATIONS : DEMO_NOTIFICATIONS
@@ -188,7 +190,43 @@ export function NotificationCenter({ currentRole }: NotificationCenterProps) {
       }
     }
     fetchPermissionSlipAlerts()
-  }, [currentRole])
+
+    async function fetchCRMNotifications() {
+      try {
+        const role = currentRole === 'owner' ? 'owner' : currentRole === 'admin' ? 'admin' : null
+        if (!role) return
+        const params = new URLSearchParams({ role })
+        if (campusId) params.append('campus_id', campusId)
+        const res = await fetch(`${API_URL}/api/crm-notifications?${params}`)
+        if (!res.ok) return
+        const crmNotifs = await res.json()
+        if (crmNotifs.length === 0) {
+          setNotifications(prev => prev.filter(n => n.type !== 'tour'))
+          return
+        }
+
+        const tourNotifications: Notification[] = crmNotifs.map((n: { notification_id: string; title: string; message: string; created_at: string; read: boolean; notification_type: string }) => ({
+          id: n.notification_id,
+          type: 'tour' as const,
+          title: n.title,
+          message: n.message,
+          timestamp: new Date(n.created_at),
+          read: n.read,
+          priority: 'high' as const,
+        }))
+
+        setNotifications(prev => [
+          ...tourNotifications,
+          ...prev.filter(n => n.type !== 'tour'),
+        ])
+      } catch {
+        // CRM notifications are optional
+      }
+    }
+    fetchCRMNotifications()
+    const interval = setInterval(fetchCRMNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [currentRole, campusId])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.read).length
@@ -205,10 +243,16 @@ export function NotificationCenter({ currentRole }: NotificationCenterProps) {
 
   const markAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    if (id.startsWith('notif_')) {
+      fetch(`${API_URL}/api/crm-notifications/${id}/read`, { method: 'PUT' }).catch(() => {})
+    }
   }
 
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    notifications.filter(n => n.id.startsWith('notif_') && !n.read).forEach(n => {
+      fetch(`${API_URL}/api/crm-notifications/${n.id}/read`, { method: 'PUT' }).catch(() => {})
+    })
   }
 
   const dismissNotification = (id: string) => {
