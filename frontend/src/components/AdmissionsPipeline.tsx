@@ -31,6 +31,7 @@ interface Lead {
   assigned_to: string | null;
   invitation_sent?: boolean;
   invitation_token?: string | null;
+  family_id?: string | null;
 }
 
 interface PipelineSummary {
@@ -41,9 +42,10 @@ interface PipelineSummary {
 
 interface AdmissionsPipelineProps {
   selectedCampusId: string | null;
+  onNavigateToFamily?: (familyId: string) => void;
 }
 
-export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipelineProps) {
+export default function AdmissionsPipeline({ selectedCampusId, onNavigateToFamily }: AdmissionsPipelineProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState<PipelineSummary | null>(null);
   const [selectedStage, setSelectedStage] = useState<string>('all');
@@ -229,12 +231,16 @@ export default function AdmissionsPipeline({ selectedCampusId }: AdmissionsPipel
                               variant="outline" 
                               size="sm"
                               onClick={() => {
-                                setSelectedLead(lead);
-                                setLeadModalMode('view');
-                                setShowLeadDetailModal(true);
+                                if ((lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id && onNavigateToFamily) {
+                                  onNavigateToFamily(lead.family_id);
+                                } else {
+                                  setSelectedLead(lead);
+                                  setLeadModalMode('view');
+                                  setShowLeadDetailModal(true);
+                                }
                               }}
                             >
-                              View
+                              {(lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id && onNavigateToFamily ? 'View Family Account' : 'View'}
                             </Button>
                             <Button 
                               size="sm"

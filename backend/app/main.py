@@ -4078,6 +4078,69 @@ async def update_enrollment_checklist(checklist_id: str, data: dict):
 
             # Auto-move lead to Enrolled
             lead.stage = LeadStage.ENROLLED
+
+            # Auto-create family + parent records from enrollment data
+            import time as _time
+            if not lead.family_id or not next((f for f in families_db if f.family_id == lead.family_id), None):
+                enrollment_data = lead.enrollment_data or {}
+                parents_data = enrollment_data.get("parents", [])
+
+                family_id = f"family_{int(_time.time() * 1000)}"
+                family = Family(
+                    family_id=family_id,
+                    family_name=f"The {lead.parent_last_name} Family",
+                    primary_parent_id="",
+                    parent_ids=[],
+                    student_ids=[],
+                    monthly_tuition_amount=0,
+                    current_balance=0,
+                    billing_status=BillingStatus.GREEN,
+                    last_payment_date=None,
+                    last_payment_amount=None,
+                )
+                families_db.append(family)
+
+                for i, p in enumerate(parents_data):
+                    parent_id = f"parent_{int(_time.time() * 1000)}_{i}"
+                    parent = Parent(
+                        parent_id=parent_id,
+                        first_name=p.get("firstName", lead.parent_first_name),
+                        last_name=p.get("lastName", lead.parent_last_name),
+                        email=p.get("email", lead.email),
+                        phone=p.get("phone", lead.phone),
+                        relationship=p.get("relationship", "parent") or "parent",
+                        primary_guardian=p.get("isPrimary", i == 0),
+                        preferred_contact_method="email",
+                        student_ids=[],
+                    )
+                    parents_db.append(parent)
+                    db_utils.save_parent(parent)
+                    family.parent_ids.append(parent_id)
+                    if p.get("isPrimary", i == 0):
+                        family.primary_parent_id = parent_id
+
+                if not parents_data:
+                    parent_id = f"parent_{int(_time.time() * 1000)}_0"
+                    parent = Parent(
+                        parent_id=parent_id,
+                        first_name=lead.parent_first_name,
+                        last_name=lead.parent_last_name,
+                        email=lead.email,
+                        phone=lead.phone,
+                        relationship="parent",
+                        primary_guardian=True,
+                        preferred_contact_method="email",
+                        student_ids=[],
+                    )
+                    parents_db.append(parent)
+                    db_utils.save_parent(parent)
+                    family.parent_ids.append(parent_id)
+                    family.primary_parent_id = parent_id
+
+                db_utils.save_family(family)
+                lead.family_id = family_id
+                checklist.family_id = family_id
+
             db_utils.save_lead(lead)
 
     db_utils.save_enrollment_checklist(checklist)
