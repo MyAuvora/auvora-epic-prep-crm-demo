@@ -230,9 +230,22 @@ export default function AdmissionsPipeline({ selectedCampusId, onNavigateToFamil
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => {
-                                if ((lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id && onNavigateToFamily) {
-                                  onNavigateToFamily(lead.family_id);
+                              onClick={async () => {
+                                if ((lead.stage === 'Enrolled' || lead.stage === 'Finalized') && onNavigateToFamily) {
+                                  if (lead.family_id) {
+                                    onNavigateToFamily(lead.family_id);
+                                  } else {
+                                    try {
+                                      const res = await fetch(`${API_URL}/api/admissions/leads/${lead.lead_id}/ensure-family`, { method: 'POST' });
+                                      if (res.ok) {
+                                        const data = await res.json();
+                                        lead.family_id = data.family_id;
+                                        onNavigateToFamily(data.family_id);
+                                      }
+                                    } catch (e) {
+                                      console.error('Failed to create family:', e);
+                                    }
+                                  }
                                 } else {
                                   setSelectedLead(lead);
                                   setLeadModalMode('view');
@@ -240,7 +253,7 @@ export default function AdmissionsPipeline({ selectedCampusId, onNavigateToFamil
                                 }
                               }}
                             >
-                              {(lead.stage === 'Enrolled' || lead.stage === 'Finalized') && lead.family_id && onNavigateToFamily ? 'View Family Account' : 'View'}
+                              {(lead.stage === 'Enrolled' || lead.stage === 'Finalized') && onNavigateToFamily ? 'View Family Account' : 'View'}
                             </Button>
                             <Button 
                               size="sm"
