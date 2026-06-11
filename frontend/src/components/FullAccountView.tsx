@@ -942,7 +942,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                   }),
                                 });
                                 if (res.ok) {
-                                  const data = await res.json();
+                                  await res.json();
                                   alert(`${lead.child_first_name} ${lead.child_last_name} has been finalized! Student account created.`);
                                   setPendingLeads(prev => prev.filter(l => l.lead_id !== lead.lead_id));
                                   // Refresh students list
