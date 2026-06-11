@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Users, Mail, Phone, Calendar, GraduationCap, MapPin, CheckCircle } from 'lucide-react';
+import { Users, Mail, Phone, Calendar, GraduationCap, MapPin, CheckCircle, Send } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -32,6 +32,8 @@ interface Lead {
   assigned_to: string | null;
   family_id?: string | null;
   enrollment_data?: Record<string, unknown> | null;
+  invitation_sent?: boolean;
+  invitation_token?: string | null;
 }
 
 interface Campus {
@@ -48,7 +50,7 @@ interface LeadDetailModalProps {
   onLeadUpdated: () => void;
 }
 
-const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Lost'];
+const stages = ['New', 'Contact', 'Contacted', 'Tour Scheduled', 'Tour Complete', 'Enrolling', 'Enrolled', 'Finalized', 'Lost'];
 
 const getStageColor = (stage: string) => {
   const colors: Record<string, string> = {
@@ -59,6 +61,7 @@ const getStageColor = (stage: string) => {
     'Tour Complete': 'bg-orange-100 text-orange-800',
     'Enrolling': 'bg-indigo-100 text-indigo-800',
     'Enrolled': 'bg-emerald-100 text-emerald-800',
+    'Finalized': 'bg-green-100 text-green-800',
     'Lost': 'bg-red-100 text-red-800'
   };
   return colors[stage] || 'bg-gray-100 text-gray-800';
@@ -76,6 +79,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   const [enrollRoom, setEnrollRoom] = useState('');
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [tourCampusId, setTourCampusId] = useState(lead?.tour_campus_id || '');
+  const [sendInvitation, setSendInvitation] = useState(false);
 
   useEffect(() => {
     if (lead) {
@@ -84,6 +88,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
       setTourTime(lead.tour_date?.includes('T') ? lead.tour_date.split('T')[1]?.slice(0, 5) : '');
       setNotes(lead.notes || '');
       setTourCampusId(lead.tour_campus_id || '');
+      setSendInvitation(false);
       setShowEnrollForm(false);
     }
   }, [lead]);
@@ -119,13 +124,15 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
     setLoading(true);
     try {
       const combinedTourDate = tourDate ? (tourTime ? `${tourDate}T${tourTime}` : tourDate) : null;
+      const finalStage = sendInvitation ? 'Enrolling' : selectedStage;
       const updatedLead = {
         ...lead,
-        stage: selectedStage,
+        stage: finalStage,
         tour_date: combinedTourDate,
         tour_campus_id: tourCampusId || null,
         notes: notes,
-        last_contact_date: new Date().toISOString().split('T')[0]
+        last_contact_date: new Date().toISOString().split('T')[0],
+        invitation_sent: sendInvitation ? true : (lead.invitation_sent || false),
       };
 
       const response = await fetch(`${API_URL}/api/admissions/leads/${lead.lead_id}`, {
@@ -186,6 +193,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
   };
 
   const isEnrollingStage = lead.stage === 'Enrolling';
+  const isEnrolledStage = lead.stage === 'Enrolled';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -285,7 +293,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {stages.filter(s => s !== 'Enrolled').map((stage) => (
+                    {stages.filter(s => s !== 'Enrolled' && s !== 'Finalized').map((stage) => (
                       <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                     ))}
                   </SelectContent>
@@ -326,6 +334,38 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                   </SelectContent>
                 </Select>
               </div>
+
+              {(selectedStage === 'Tour Complete' || lead.stage === 'Tour Complete') && !lead.invitation_sent && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendInvitation}
+                      onChange={(e) => setSendInvitation(e.target.checked)}
+                      className="w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Send className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-800">Send Enrollment Invitation</span>
+                      </div>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Send an email invite to {lead.parent_first_name} to create their account and complete enrollment forms.
+                        This will automatically move the lead to the "Enrolling" stage.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              {lead.invitation_sent && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Enrollment invitation already sent to {lead.email}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
@@ -409,7 +449,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
               <Button onClick={handleUpdateStage} disabled={loading}>
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>
-              {isEnrollingStage && (
+              {(isEnrollingStage || isEnrolledStage) && (
                 <Button
                   onClick={() => setShowEnrollForm(true)}
                   className="bg-green-600 hover:bg-green-700"
@@ -421,7 +461,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
             </>
           )}
 
-          {mode === 'view' && isEnrollingStage && (
+          {mode === 'view' && (isEnrollingStage || isEnrolledStage) && (
             <Button
               onClick={() => setShowEnrollForm(true)}
               className="bg-green-600 hover:bg-green-700"

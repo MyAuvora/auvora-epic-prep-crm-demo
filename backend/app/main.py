@@ -997,6 +997,7 @@ class LeadStage(str, Enum):
     TOUR_COMPLETE = "Tour Complete"
     ENROLLING = "Enrolling"
     ENROLLED = "Enrolled"
+    FINALIZED = "Finalized"
     LOST = "Lost"
 
 class LeadSource(str, Enum):
@@ -1029,6 +1030,23 @@ class Lead(BaseModel):
     assigned_to: Optional[str] = None  # staff_id
     family_id: Optional[str] = None  # linked family when created from enrollment form
     enrollment_data: Optional[dict] = None  # full enrollment form data
+    invitation_sent: bool = False
+    invitation_token: Optional[str] = None
+
+class EnrollmentChecklist(BaseModel):
+    checklist_id: str
+    lead_id: str
+    family_id: Optional[str] = None
+    photo_release: Optional[str] = None  # 'accept' or 'deny'
+    liability_waiver: bool = False
+    medical_authorization: bool = False
+    parent_handbook: bool = False
+    authorized_pickups: Optional[list] = None  # list of {name, relationship, phone}
+    electronic_signature: Optional[str] = None
+    signature_date: Optional[str] = None
+    completed: bool = False
+    completed_at: Optional[str] = None
+    created_at: str = ""
 
 class CRMNotification(BaseModel):
     notification_id: str
@@ -1550,6 +1568,7 @@ curriculum_units_db: List[CurriculumUnitItem] = []
 curriculum_files_db: List[CurriculumFileItem] = []
 time_clock_db: List[TimeClock] = []
 crm_notifications_db: List[CRMNotification] = []
+enrollment_checklists_db: List[EnrollmentChecklist] = []
 
 def _safe_load(model_class, records: list) -> list:
     """Load records into Pydantic models, skipping any that fail validation."""
@@ -1585,6 +1604,7 @@ def load_data_from_db():
     global business_expenses_db
     global curricula_db, curriculum_units_db, curriculum_files_db
     global time_clock_db
+    global crm_notifications_db, enrollment_checklists_db
 
     data = db_utils.load_all_from_db()
 
@@ -1632,6 +1652,7 @@ def load_data_from_db():
     payment_schedules_db = _safe_load(PaymentSchedule, data.get("payment_schedules", []))
     leads_db = _safe_load(Lead, data.get("leads", []))
     crm_notifications_db = _safe_load(CRMNotification, data.get("crm_notifications", []))
+    enrollment_checklists_db = _safe_load(EnrollmentChecklist, data.get("enrollment_checklists", []))
     campus_capacity_db = _safe_load(CampusCapacity, data.get("campus_capacity", []))
     message_templates_db = _safe_load(MessageTemplate, data.get("message_templates", []))
     broadcast_messages_db = _safe_load(BroadcastMessage, data.get("broadcast_messages", []))
@@ -3569,6 +3590,67 @@ async def update_lead(lead_id: str, lead: Lead):
         crm_notifications_db.append(notif)
         db_utils.save_crm_notification(notif)
 
+    # Auto-send invitation when invitation_sent flag is set
+    if lead.invitation_sent and not old_lead.invitation_sent:
+        import uuid
+        from datetime import datetime as dt
+        token = str(uuid.uuid4())
+        lead.invitation_token = token
+        lead.stage = LeadStage.ENROLLING
+        leads_db[index] = lead
+        db_utils.save_lead(lead)
+
+        # Create enrollment checklist
+        checklist = EnrollmentChecklist(
+            checklist_id=f"checklist_{lead_id}",
+            lead_id=lead_id,
+            family_id=lead.family_id,
+            created_at=dt.now().isoformat(),
+        )
+        existing_cl = next((c for c in enrollment_checklists_db if c.lead_id == lead_id), None)
+        if not existing_cl:
+            enrollment_checklists_db.append(checklist)
+            db_utils.save_enrollment_checklist(checklist)
+
+        # Send invitation email
+        from app.email_service import send_email
+        invite_url = f"https://epic.myauvora.com/#/enroll-complete?token={token}"
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0;">EPIC Prep Academy</h1>
+                <p style="margin: 5px 0 0;">Enrollment Invitation</p>
+            </div>
+            <div style="padding: 20px;">
+                <p>Hi {lead.parent_first_name},</p>
+                <p>Great news! Your child <strong>{lead.child_first_name} {lead.child_last_name}</strong>
+                has been approved to move forward in the enrollment process at EPIC Prep Academy.</p>
+                <p>To complete enrollment, please create your parent account and fill out the required forms:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{invite_url}"
+                       style="background: #1e40af; color: white; padding: 14px 28px; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; display: inline-block;">
+                        Complete Enrollment
+                    </a>
+                </div>
+                <p style="color: #666; font-size: 14px;">
+                    If the button doesn't work, copy and paste this link:<br>
+                    <a href="{invite_url}">{invite_url}</a>
+                </p>
+                <p>Thank you,<br><strong>EPIC Prep Academy</strong></p>
+            </div>
+            <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+                EPIC Prep Academy | This email was sent from EPIC CRM
+            </div>
+        </div>
+        """
+        await send_email(
+            to_email=lead.email,
+            subject="Complete Your Enrollment - EPIC Prep Academy",
+            html_content=html_content,
+            from_name="EPIC CRM",
+        )
+
     return lead
 
 class FinalizeEnrollmentRequest(BaseModel):
@@ -3736,8 +3818,8 @@ async def finalize_enrollment(lead_id: str, req: FinalizeEnrollmentRequest):
         health_records_db.append(health_record)
         db_utils.save_health_record(health_record)
 
-    # Mark lead as Enrolled and link family
-    lead.stage = LeadStage.ENROLLED
+    # Mark lead as Finalized and link family
+    lead.stage = LeadStage.FINALIZED
     lead.family_id = family_id
     db_utils.save_lead(lead)
 
@@ -3771,7 +3853,7 @@ async def get_pipeline_summary(campus_id: Optional[str] = None):
     return {
         'total_leads': len(filtered_leads),
         'stage_counts': stage_counts,
-        'conversion_rate': round((stage_counts.get('Enrolled', 0) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
+        'conversion_rate': round(((stage_counts.get('Enrolled', 0) + stage_counts.get('Finalized', 0)) / len(filtered_leads) * 100) if len(filtered_leads) > 0 else 0, 2)
     }
 
 @app.get("/api/crm-notifications")
@@ -3842,6 +3924,165 @@ async def mark_tour_complete(lead_id: str):
     db_utils.save_crm_notification(notif)
 
     return lead
+
+
+# ─── Enrollment Invitation & Checklist ───────────────────────────────────────
+
+@app.post("/api/admissions/leads/{lead_id}/send-invitation")
+async def send_enrollment_invitation(lead_id: str):
+    """Send enrollment invitation email and move lead to Enrolling stage."""
+    lead = next((l for l in leads_db if l.lead_id == lead_id), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    import uuid
+    from datetime import datetime as dt
+    token = str(uuid.uuid4())
+    lead.invitation_token = token
+    lead.invitation_sent = True
+    lead.stage = LeadStage.ENROLLING
+    db_utils.save_lead(lead)
+
+    # Create enrollment checklist for this lead
+    checklist = EnrollmentChecklist(
+        checklist_id=f"checklist_{lead_id}",
+        lead_id=lead_id,
+        family_id=lead.family_id,
+        created_at=dt.now().isoformat(),
+    )
+    existing = next((c for c in enrollment_checklists_db if c.lead_id == lead_id), None)
+    if not existing:
+        enrollment_checklists_db.append(checklist)
+        db_utils.save_enrollment_checklist(checklist)
+
+    # Send invitation email (uses SendGrid when configured, logs otherwise)
+    from app.email_service import send_email
+    invite_url = f"https://epic.myauvora.com/#/enroll-complete?token={token}"
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0;">EPIC Prep Academy</h1>
+            <p style="margin: 5px 0 0;">Enrollment Invitation</p>
+        </div>
+        <div style="padding: 20px;">
+            <p>Hi {lead.parent_first_name},</p>
+            <p>Great news! Your child <strong>{lead.child_first_name} {lead.child_last_name}</strong>
+            has been approved to move forward in the enrollment process at EPIC Prep Academy.</p>
+            <p>To complete enrollment, please create your parent account and fill out the required forms:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{invite_url}"
+                   style="background: #1e40af; color: white; padding: 14px 28px; text-decoration: none;
+                          border-radius: 8px; font-weight: bold; display: inline-block;">
+                    Complete Enrollment
+                </a>
+            </div>
+            <p style="color: #666; font-size: 14px;">
+                If the button doesn't work, copy and paste this link into your browser:<br>
+                <a href="{invite_url}">{invite_url}</a>
+            </p>
+            <p>Thank you,<br><strong>EPIC Prep Academy</strong></p>
+        </div>
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+            EPIC Prep Academy | This email was sent from EPIC CRM
+        </div>
+    </div>
+    """
+    await send_email(
+        to_email=lead.email,
+        subject="Complete Your Enrollment - EPIC Prep Academy",
+        html_content=html_content,
+        from_name="EPIC CRM",
+    )
+
+    return {"message": "Invitation sent", "token": token, "stage": "Enrolling"}
+
+
+@app.get("/api/enrollment-checklist/{lead_id}")
+async def get_enrollment_checklist(lead_id: str):
+    """Get enrollment checklist for a lead."""
+    checklist = next((c for c in enrollment_checklists_db if c.lead_id == lead_id), None)
+    if not checklist:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    return checklist
+
+
+@app.get("/api/enrollment-checklist/by-token/{token}")
+async def get_checklist_by_token(token: str):
+    """Get enrollment checklist by invitation token (for parent access)."""
+    lead = next((l for l in leads_db if l.invitation_token == token), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Invalid invitation token")
+    checklist = next((c for c in enrollment_checklists_db if c.lead_id == lead.lead_id), None)
+    if not checklist:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    return {"checklist": checklist, "lead": lead}
+
+
+@app.get("/api/enrollment-checklist/by-family/{family_id}")
+async def get_checklist_by_family(family_id: str):
+    """Get enrollment checklist by family ID (for logged-in parent)."""
+    checklists = [c for c in enrollment_checklists_db if c.family_id == family_id and not c.completed]
+    return checklists
+
+
+@app.put("/api/enrollment-checklist/{checklist_id}")
+async def update_enrollment_checklist(checklist_id: str, data: dict):
+    """Update enrollment checklist items."""
+    checklist = next((c for c in enrollment_checklists_db if c.checklist_id == checklist_id), None)
+    if not checklist:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+
+    if "photo_release" in data:
+        checklist.photo_release = data["photo_release"]
+    if "liability_waiver" in data:
+        checklist.liability_waiver = data["liability_waiver"]
+    if "medical_authorization" in data:
+        checklist.medical_authorization = data["medical_authorization"]
+    if "parent_handbook" in data:
+        checklist.parent_handbook = data["parent_handbook"]
+    if "authorized_pickups" in data:
+        checklist.authorized_pickups = data["authorized_pickups"]
+    if "electronic_signature" in data:
+        checklist.electronic_signature = data["electronic_signature"]
+    if "signature_date" in data:
+        checklist.signature_date = data["signature_date"]
+
+    # Check if all items are completed
+    from datetime import datetime as dt
+    all_done = (
+        checklist.photo_release is not None and
+        checklist.liability_waiver and
+        checklist.medical_authorization and
+        checklist.parent_handbook and
+        checklist.electronic_signature
+    )
+    if all_done and not checklist.completed:
+        checklist.completed = True
+        checklist.completed_at = dt.now().isoformat()
+        # Notify owner that checklist is complete
+        lead = next((l for l in leads_db if l.lead_id == checklist.lead_id), None)
+        if lead:
+            notif = CRMNotification(
+                notification_id=f"notif_checklist_{checklist.lead_id}_{int(dt.now().timestamp())}",
+                recipient_role="owner",
+                notification_type="checklist_completed",
+                title="Enrollment Checklist Completed",
+                message=f"{lead.parent_first_name} {lead.parent_last_name} "
+                        f"(child: {lead.child_first_name} {lead.child_last_name}) "
+                        f"has completed their enrollment checklist.",
+                related_lead_id=lead.lead_id,
+                created_at=dt.now().isoformat(),
+            )
+            crm_notifications_db.append(notif)
+            db_utils.save_crm_notification(notif)
+
+            # Auto-move lead to Enrolled
+            lead.stage = LeadStage.ENROLLED
+            db_utils.save_lead(lead)
+
+    db_utils.save_enrollment_checklist(checklist)
+    return checklist
+
 
 @app.get("/api/communications/templates")
 async def get_message_templates():

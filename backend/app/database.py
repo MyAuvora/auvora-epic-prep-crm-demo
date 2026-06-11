@@ -100,6 +100,10 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE leads ADD COLUMN enrollment_data TEXT DEFAULT NULL"))
             if "tour_campus_id" not in existing:
                 conn.execute(text("ALTER TABLE leads ADD COLUMN tour_campus_id VARCHAR DEFAULT NULL"))
+            if "invitation_sent" not in existing:
+                conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_sent BOOLEAN DEFAULT 0"))
+            if "invitation_token" not in existing:
+                conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_token VARCHAR DEFAULT NULL"))
         conn.commit()
     finally:
         conn.close()

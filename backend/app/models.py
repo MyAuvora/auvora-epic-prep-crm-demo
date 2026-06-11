@@ -309,6 +309,27 @@ class Lead(Base):
     assigned_to = Column(String)
     family_id = Column(String, nullable=True)
     enrollment_data = Column(Text, nullable=True)  # JSON string of enrollment form data
+    invitation_sent = Column(Boolean, default=False)
+    invitation_token = Column(String, nullable=True)
+
+
+class EnrollmentChecklist(Base):
+    __tablename__ = "enrollment_checklists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    checklist_id = Column(String, unique=True, index=True)
+    lead_id = Column(String, index=True)
+    family_id = Column(String, nullable=True, index=True)
+    photo_release = Column(String, nullable=True)  # 'accept' or 'deny'
+    liability_waiver = Column(Boolean, default=False)
+    medical_authorization = Column(Boolean, default=False)
+    parent_handbook = Column(Boolean, default=False)
+    authorized_pickups = Column(Text, nullable=True)  # JSON array
+    electronic_signature = Column(String, nullable=True)
+    signature_date = Column(String, nullable=True)
+    completed = Column(Boolean, default=False)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class CRMNotification(Base):

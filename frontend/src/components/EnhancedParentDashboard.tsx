@@ -22,6 +22,7 @@ import { ParentPermissionSlipAlert } from './ParentPermissionSlipAlert'
 import { EnrollmentForm } from './EnrollmentForm'
 import { ParentEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { SimplifiedBillingSummary } from './SimplifiedBillingSummary'
+import { EnrollmentChecklist } from './EnrollmentChecklist'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -382,6 +383,10 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
               </h2>
               <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Parent Dashboard</p>
             </div>
+
+                        <div className="mb-6">
+                          <EnrollmentChecklist familyId={parentData.family.family_id} />
+                        </div>
 
                         <ParentPermissionSlipAlert
                           familyId={parentData.family.family_id}
