@@ -1129,7 +1129,7 @@ def generate_all_demo_data():
         stage = random.choice(stages)
         
         created = today - timedelta(days=random.randint(1, 90))
-        last_contact = created + timedelta(days=random.randint(1, 7)) if stage != LeadStage.NEW else None
+        last_contact = created + timedelta(days=random.randint(1, 7)) if stage not in [LeadStage.NEW, LeadStage.CONTACT] else None
         tour_date_val = created + timedelta(days=random.randint(7, 21)) if stage in [LeadStage.TOUR_SCHEDULED, LeadStage.TOUR_COMPLETE, LeadStage.ENROLLING, LeadStage.ENROLLED] else None
         
         lead = Lead(
