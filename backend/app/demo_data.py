@@ -1125,12 +1125,12 @@ def generate_all_demo_data():
         parent_first = random.choice(parent_first_names)
         parent_last = child_last
         
-        stages = [LeadStage.NEW_INQUIRY, LeadStage.CONTACTED, LeadStage.TOUR_SCHEDULED, LeadStage.TOURED, LeadStage.APPLICATION_SUBMITTED, LeadStage.ACCEPTED, LeadStage.LOST]
+        stages = [LeadStage.NEW, LeadStage.CONTACT, LeadStage.CONTACTED, LeadStage.TOUR_SCHEDULED, LeadStage.TOUR_COMPLETE, LeadStage.ENROLLING, LeadStage.ENROLLED, LeadStage.LOST]
         stage = random.choice(stages)
         
         created = today - timedelta(days=random.randint(1, 90))
-        last_contact = created + timedelta(days=random.randint(1, 7)) if stage != LeadStage.NEW_INQUIRY else None
-        tour_date_val = created + timedelta(days=random.randint(7, 21)) if stage in [LeadStage.TOUR_SCHEDULED, LeadStage.TOURED, LeadStage.APPLICATION_SUBMITTED, LeadStage.ACCEPTED] else None
+        last_contact = created + timedelta(days=random.randint(1, 7)) if stage not in [LeadStage.NEW, LeadStage.CONTACT] else None
+        tour_date_val = created + timedelta(days=random.randint(7, 21)) if stage in [LeadStage.TOUR_SCHEDULED, LeadStage.TOUR_COMPLETE, LeadStage.ENROLLING, LeadStage.ENROLLED] else None
         
         lead = Lead(
             lead_id=f"lead_{i+1}",
