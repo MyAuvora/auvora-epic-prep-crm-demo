@@ -171,7 +171,7 @@ def generate_all_demo_data():
         relationship="Father",
         primary_guardian=True,
         preferred_contact_method="Email",
-        student_ids=["student_1"],
+        student_ids=[],
     )
     parents_db.append(metzger_parent)
     parent_counter = 2  # next parent starts at parent_2
@@ -181,42 +181,20 @@ def generate_all_demo_data():
         family_name="Metzger Family",
         primary_parent_id="parent_1",
         parent_ids=["parent_1"],
-        student_ids=["student_1"],
-        monthly_tuition_amount=round(10000.00 / 12, 2),
+        student_ids=[],
+        monthly_tuition_amount=0.0,
         current_balance=0.0,
         billing_status=BillingStatus.GREEN,
-        last_payment_date=date.today() - timedelta(days=5),
-        last_payment_amount=round(10000.00 / 12, 2),
+        last_payment_date=None,
+        last_payment_amount=None,
     )
     families_db.append(metzger_family)
 
-    metzger_student = Student(
-        student_id="student_1",
-        campus_id=metzger_campus.campus_id,
-        first_name="Leia",
-        last_name="Metzger",
-        date_of_birth=date(2019, 6, 15),
-        grade="2",
-        session=Session.MORNING,
-        room=Room.ROOM_1,
-        status=StudentStatus.ACTIVE,
-        family_id="family_1",
-        enrollment_start_date=date.today(),
-        enrollment_end_date=None,
-        funding_source=FundingSource.OUT_OF_POCKET,
-        step_up_percentage=0,
-        attendance_present_count=0,
-        attendance_absent_count=0,
-        attendance_tardy_count=0,
-        overall_grade_flag=GradeFlag.ON_TRACK,
-        ixl_status_flag=IXLStatus.ON_TRACK,
-        overall_risk_flag=RiskFlag.NONE,
-    )
-    students_db.append(metzger_student)
-    student_counter = 2  # next student starts at student_2
-
-    # No historical records for Leia — she is still enrolling (no attendance,
-    # grades, billing, behavior, or IXL data until enrollment is finalized).
+    # Leia is still enrolling — do NOT create a Student record yet.
+    # Her student record will be created when the Lead is finalized through
+    # the admissions pipeline. We only pre-create Parent + Family so the
+    # Parent View defaults to Patrick's account.
+    student_counter = 2  # reserve student_1 for Leia when she finalizes
     # --- End Metzger family ---
 
     for fam_idx in range(1, num_families):
@@ -994,8 +972,10 @@ def generate_all_demo_data():
     invoice_counter = 1
     
     for family in families_db:
-        campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
         family_students = [s for s in students_db if s.family_id == family.family_id]
+        if not family_students:
+            continue  # skip families with no enrolled students (e.g. still enrolling)
+        campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in family_students))
         
         for month_offset in range(6):
             invoice_date = date.today().replace(day=1) - timedelta(days=30 * month_offset)
@@ -1106,7 +1086,10 @@ def generate_all_demo_data():
     payment_plan_counter = 1
     for family in families_db:
         if family.billing_status == BillingStatus.RED and family.current_balance > 200:
-            campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in students_db if s.family_id == family.family_id))
+            family_students = [s for s in students_db if s.family_id == family.family_id]
+            if not family_students:
+                continue
+            campus = next(c for c in campuses_db if any(s.campus_id == c.campus_id for s in family_students))
             
             plan_amount = family.current_balance
             num_installments = random.choice([3, 6, 12])
