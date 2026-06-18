@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
 from .database import get_db
-from . import models
+from . import models, db_utils
 
 router = APIRouter(prefix="/api/import", tags=["ProCare Import"])
 
@@ -131,6 +131,31 @@ STUDENT_COLUMN_MAP = {
     "centername": "campus_name", "center name": "campus_name", "center": "campus_name",
     "campus": "campus_name", "campus_name": "campus_name", "school": "campus_name",
     "location": "campus_name", "site": "campus_name",
+}
+
+# Parent columns commonly found alongside student data in ProCare exports.
+# These use prefixed names to avoid conflicts with student columns.
+INLINE_PARENT_COLUMN_MAP = {
+    "parent first name": "parent_first_name", "parentfirstname": "parent_first_name",
+    "parent_first_name": "parent_first_name", "guardian first name": "parent_first_name",
+    "parent1 first name": "parent_first_name", "parent 1 first name": "parent_first_name",
+    "parent last name": "parent_last_name", "parentlastname": "parent_last_name",
+    "parent_last_name": "parent_last_name", "guardian last name": "parent_last_name",
+    "parent1 last name": "parent_last_name", "parent 1 last name": "parent_last_name",
+    "parent name": "parent_full_name", "parentname": "parent_full_name",
+    "guardian name": "parent_full_name", "guardian": "parent_full_name",
+    "parent1 name": "parent_full_name", "parent 1 name": "parent_full_name",
+    "mother's name": "parent_full_name", "father's name": "parent_full_name",
+    "parent email": "parent_email", "parent1 email": "parent_email",
+    "parent 1 email": "parent_email", "guardian email": "parent_email",
+    "parent_email": "parent_email",
+    "email": "parent_email", "email address": "parent_email",
+    "parent phone": "parent_phone", "parent1 phone": "parent_phone",
+    "parent 1 phone": "parent_phone", "guardian phone": "parent_phone",
+    "parent_phone": "parent_phone",
+    "phone": "parent_phone", "phone number": "parent_phone",
+    "home phone": "parent_phone", "cell phone": "parent_phone", "mobile": "parent_phone",
+    "relationship": "parent_relationship", "relation": "parent_relationship",
 }
 
 FAMILY_COLUMN_MAP = {
@@ -260,6 +285,8 @@ class ImportResult(BaseModel):
     imported: int
     skipped: int
     errors: List[str]
+    parents_created: int = 0
+    checklists_created: int = 0
 
 
 # --- API Endpoints ---
@@ -297,12 +324,19 @@ async def preview_csv(
 
     col_mapping = normalize_columns(headers, column_maps[data_type])
 
+    # For student imports, also detect inline parent columns
+    parent_col_mapping: Dict[int, str] = {}
+    if data_type == "students":
+        parent_col_mapping = normalize_columns(headers, INLINE_PARENT_COLUMN_MAP)
+
     # Build detected columns and unmapped
     detected_columns = {}
     unmapped_columns = []
     for i, header in enumerate(headers):
         if i in col_mapping:
             detected_columns[header] = col_mapping[i]
+        elif i in parent_col_mapping:
+            detected_columns[header] = parent_col_mapping[i]
         else:
             unmapped_columns.append(header)
 
@@ -310,6 +344,8 @@ async def preview_csv(
     sample_rows = []
     for row in rows[1:6]:
         parsed = parse_row(row, col_mapping)
+        if parent_col_mapping:
+            parsed.update(parse_row(row, parent_col_mapping))
         if parsed:
             sample_rows.append(parsed)
 
@@ -328,7 +364,13 @@ async def import_students(
     campus_id: str = Query(None, description="Campus ID to assign students to (auto-creates if not provided)"),
     db: DBSession = Depends(get_db)
 ):
-    """Import students from a ProCare CSV or Excel export."""
+    """Import students from a ProCare CSV or Excel export.
+    
+    Automatically creates Parent records when parent columns are detected in
+    the same file, and generates an EnrollmentChecklist (all items unchecked)
+    for every imported student.  Checklists are not sent to parents until an
+    Owner/CM verifies the imported accounts.
+    """
     content = await file.read()
     rows = _read_file_to_rows(content, file.filename or 'upload.csv')
 
@@ -336,8 +378,13 @@ async def import_students(
         raise HTTPException(status_code=400, detail="CSV must have header + data rows")
 
     col_mapping = normalize_columns(rows[0], STUDENT_COLUMN_MAP)
+    parent_col_mapping = normalize_columns(rows[0], INLINE_PARENT_COLUMN_MAP)
+    has_parent_cols = bool(parent_col_mapping)
+
     imported = 0
     skipped = 0
+    parents_created = 0
+    checklists_created = 0
     errors = []
 
     # Ensure we have a campus
@@ -365,20 +412,22 @@ async def import_students(
             db.commit()
         campus_id = campus.campus_id
 
-    # Track families we create to avoid duplicates
+    # Track families and parents we create to avoid duplicates
     family_cache: Dict[str, str] = {}  # procare_family_id -> our_family_id
+    parent_cache: Dict[str, str] = {}  # family_id -> parent_id (one primary per family)
 
     for i, row in enumerate(rows[1:], start=2):
         newly_cached_fid = ""
         savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
+            parent_data = parse_row(row, parent_col_mapping) if has_parent_cols else {}
             if not data:
                 savepoint.rollback()
                 skipped += 1
                 continue
 
-            # Get name
+            # Get student name
             first_name = data.get("first_name", "")
             last_name = data.get("last_name", "")
             if not first_name and "full_name" in data:
@@ -411,12 +460,40 @@ async def import_students(
                     family_cache[procare_family_id] = family_id
                     newly_cached_fid = procare_family_id
 
+            # Create parent from inline parent columns (once per family)
+            if has_parent_cols and family_id not in parent_cache:
+                p_first = parent_data.get("parent_first_name", "")
+                p_last = parent_data.get("parent_last_name", "")
+                if not p_first and "parent_full_name" in parent_data:
+                    p_first, p_last = split_full_name(parent_data["parent_full_name"])
+                # Fall back to student last name for parent last name
+                if not p_last:
+                    p_last = last_name or ""
+                if p_first:
+                    parent_id = generate_id("par_")
+                    parent = models.Parent(
+                        parent_id=parent_id,
+                        family_id=family_id,
+                        first_name=p_first,
+                        last_name=p_last,
+                        email=parent_data.get("parent_email", ""),
+                        phone=parent_data.get("parent_phone", ""),
+                        relationship_type=parent_data.get("parent_relationship", "Parent/Guardian"),
+                        primary_guardian=True,
+                        preferred_contact_method="Email",
+                    )
+                    db.add(parent)
+                    db.flush()
+                    parent_cache[family_id] = parent_id
+                    parents_created += 1
+
             # Parse dates
             dob = parse_date(data.get("date_of_birth", ""))
             enrollment_date = parse_date(data.get("enrollment_start_date", ""))
 
+            student_id = generate_id("stu_")
             student = models.Student(
-                student_id=generate_id("stu_"),
+                student_id=student_id,
                 campus_id=campus_id,
                 first_name=first_name,
                 last_name=last_name or "",
@@ -431,8 +508,28 @@ async def import_students(
                 step_up_percentage=0
             )
             db.add(student)
+
+            # Auto-generate enrollment checklist (all items unchecked)
+            checklist = models.EnrollmentChecklist(
+                checklist_id=f"checklist_import_{student_id}",
+                lead_id=f"import_{student_id}",
+                family_id=family_id,
+                photo_release=None,
+                liability_waiver=False,
+                medical_authorization=False,
+                parent_handbook=False,
+                authorized_pickups=None,
+                electronic_signature=None,
+                signature_date=None,
+                completed=False,
+                completed_at=None,
+                created_at=datetime.utcnow(),
+            )
+            db.add(checklist)
+
             savepoint.commit()
             imported += 1
+            checklists_created += 1
 
         except Exception as e:
             savepoint.rollback()
@@ -450,7 +547,9 @@ async def import_students(
         total_rows=len(rows) - 1,
         imported=imported,
         skipped=skipped,
-        errors=errors[:20]  # Limit error messages
+        errors=errors[:20],
+        parents_created=parents_created,
+        checklists_created=checklists_created,
     )
 
 
