@@ -12,6 +12,8 @@ import { SignInPage } from './components/SignInPage'
 import { SignUpPage } from './components/SignUpPage'
 import { PublicEnrollmentPage } from './components/PublicEnrollmentPage'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 type Role = 'owner' | 'admin' | 'coach' | 'parent'
 type Page = 'dashboard' | 'terms' | 'privacy'
 
@@ -43,13 +45,32 @@ function AuthenticatedApp() {
         } else if (userRole === 'coach') {
           setSelectedUserId('staff_4')
         } else {
-          setSelectedUserId('parent_1')
+          // Look up parent_id by email for real parent accounts
+          const email = user.primaryEmailAddress?.emailAddress
+          if (email) {
+            fetch(`${API_URL}/api/parents/by-email?email=${encodeURIComponent(email)}`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data?.parent_id) {
+                  setSelectedUserId(data.parent_id)
+                } else {
+                  setSelectedUserId('parent_1')
+                }
+              })
+              .catch(() => setSelectedUserId('parent_1'))
+          } else {
+            setSelectedUserId('parent_1')
+          }
         }
       }
     }
   }, [user])
 
   const handleRoleChange = (role: Role) => {
+    // Parent users are locked to parent view — no role switching allowed
+    const userRole = user?.publicMetadata?.role as Role
+    if (userRole === 'parent') return
+
     setCurrentRole(role)
     setSearchNavigation(null)
     setNotificationNavigation(null)

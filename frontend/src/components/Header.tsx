@@ -29,9 +29,9 @@ interface HeaderProps {
 const LOCATION_TO_CAMPUS_ID: Record<string, string | null> = {
   'All Locations': null,
   'Pace': 'campus_1',
-  'Navarre': 'campus_3',
   'Crestview North': 'campus_2',
-  'Crestview Main Street': 'campus_2',
+  'Navarre': 'campus_3',
+  'Crestview Main Street': 'campus_4',
 }
 
 export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange, selectedUserId, onNotificationNavigate }: HeaderProps) {

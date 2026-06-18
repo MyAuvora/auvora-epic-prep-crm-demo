@@ -1975,6 +1975,14 @@ async def restore_family(family_id: str):
 async def get_parents():
     return parents_db
 
+@app.get("/api/parents/by-email")
+async def get_parent_by_email(email: str):
+    """Look up a parent record by email address (used for Clerk login mapping)."""
+    parent = next((p for p in parents_db if p.email and p.email.lower() == email.lower()), None)
+    if not parent:
+        raise HTTPException(status_code=404, detail="No parent found with that email")
+    return parent
+
 @app.get("/api/parents/{parent_id}", response_model=Parent)
 async def get_parent(parent_id: str):
     parent = next((p for p in parents_db if p.parent_id == parent_id), None)
