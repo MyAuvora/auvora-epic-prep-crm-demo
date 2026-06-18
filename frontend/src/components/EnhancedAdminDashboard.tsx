@@ -104,6 +104,8 @@ interface EnhancedAdminDashboardProps {
   onClearSearch?: () => void
   selectedCampusId?: string | null
   currentRole?: 'owner' | 'admin' | 'coach' | 'parent'
+  notificationNavigation?: { view: string; subView?: string } | null
+  onClearNotification?: () => void
 }
 
 function EnrollmentLinkButton() {
@@ -144,7 +146,7 @@ function EnrollmentLinkButton() {
   );
 }
 
-export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner' }: EnhancedAdminDashboardProps) {
+export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, selectedCampusId = null, currentRole = 'owner', notificationNavigation, onClearNotification }: EnhancedAdminDashboardProps) {
   const [view, setView] = useState<'dashboard' | 'students' | 'families-finance' | 'admissions' | 'academics' | 'communications' | 'operations' | 'documents' | 'analytics' | 'settings' | 'expenses' | 'curriculum' | 'events' | 'audit-log'>('dashboard')
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
   const settingsDropdownRef = useRef<HTMLDivElement>(null)
@@ -184,6 +186,16 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
       if (onClearSearch) onClearSearch()
     }
   }, [searchNavigation, onClearSearch])
+
+  // Handle notification navigation
+  useEffect(() => {
+    if (notificationNavigation) {
+      const targetView = notificationNavigation.view as typeof view
+      setView(targetView)
+      setSubView(notificationNavigation.subView || 'main')
+      if (onClearNotification) onClearNotification()
+    }
+  }, [notificationNavigation, onClearNotification])
 
   useEffect(() => {
     if (view === 'dashboard') {

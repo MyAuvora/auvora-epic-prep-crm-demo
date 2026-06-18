@@ -22,6 +22,7 @@ interface HeaderProps {
   onSearchSelect?: (type: 'student' | 'family', id: string) => void
   onLocationChange?: (campusId: string | null) => void
   selectedUserId?: string
+  onNotificationNavigate?: (nav: { view: string; subView?: string }) => void
 }
 
 // Map location names to campus IDs from the backend
@@ -33,7 +34,7 @@ const LOCATION_TO_CAMPUS_ID: Record<string, string | null> = {
   'Crestview Main Street': 'campus_2',
 }
 
-export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange, selectedUserId }: HeaderProps) {
+export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange, selectedUserId, onNotificationNavigate }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -387,7 +388,7 @@ export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationCh
               )}
 
               {/* Notification Center */}
-              <NotificationCenter currentRole={currentRole} campusId={LOCATION_TO_CAMPUS_ID[selectedLocation] || null} />
+              <NotificationCenter currentRole={currentRole} campusId={LOCATION_TO_CAMPUS_ID[selectedLocation] || null} onNavigate={onNotificationNavigate} />
               
               <div className="relative">
                 <button

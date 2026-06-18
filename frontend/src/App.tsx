@@ -30,6 +30,7 @@ function AuthenticatedApp() {
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [notificationNavigation, setNotificationNavigation] = useState<{ view: string; subView?: string } | null>(null)
 
   // Get role from Clerk user metadata or default to owner for demo
   useEffect(() => {
@@ -51,6 +52,7 @@ function AuthenticatedApp() {
   const handleRoleChange = (role: Role) => {
     setCurrentRole(role)
     setSearchNavigation(null)
+    setNotificationNavigation(null)
     if (role === 'owner' || role === 'admin') {
       setSelectedUserId('staff_1')
     } else if (role === 'coach') {
@@ -91,12 +93,13 @@ function AuthenticatedApp() {
           onSearchSelect={handleSearchSelect}
           onLocationChange={setSelectedCampusId}
           selectedUserId={selectedUserId}
+          onNotificationNavigate={setNotificationNavigation}
         />
         
         <main className="flex-1">
-          {(currentRole === 'owner' || currentRole === 'admin') && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} currentRole={currentRole} />}
+          {(currentRole === 'owner' || currentRole === 'admin') && <EnhancedAdminDashboard searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} selectedCampusId={selectedCampusId} currentRole={currentRole} notificationNavigation={notificationNavigation} onClearNotification={() => setNotificationNavigation(null)} />}
           {currentRole === 'coach' && <TeacherDashboard staffId={selectedUserId} searchNavigation={searchNavigation} onClearSearch={() => setSearchNavigation(null)} />}
-          {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} />}
+          {currentRole === 'parent' && <EnhancedParentDashboard parentId={selectedUserId} notificationNavigation={notificationNavigation} onClearNotification={() => setNotificationNavigation(null)} />}
         </main>
 
         {/* Footer with Terms and Privacy links */}
