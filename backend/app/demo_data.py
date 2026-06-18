@@ -205,8 +205,8 @@ def generate_all_demo_data():
         enrollment_end_date=None,
         funding_source=FundingSource.OUT_OF_POCKET,
         step_up_percentage=0,
-        attendance_present_count=19,
-        attendance_absent_count=1,
+        attendance_present_count=0,
+        attendance_absent_count=0,
         attendance_tardy_count=0,
         overall_grade_flag=GradeFlag.ON_TRACK,
         ixl_status_flag=IXLStatus.ON_TRACK,
@@ -215,98 +215,8 @@ def generate_all_demo_data():
     students_db.append(metzger_student)
     student_counter = 2  # next student starts at student_2
 
-    # Grade records for Leia
-    for subject, gv in [("Math", "A"), ("ELA", "A"), ("Science", "B"), ("Social Studies", "A")]:
-        grade_records_db.append(GradeRecord(
-            grade_record_id=f"grade_{len(grade_records_db) + 1}",
-            campus_id=metzger_campus.campus_id,
-            student_id="student_1",
-            subject=subject,
-            term="Current Term",
-            grade_value=gv,
-            is_failing=False,
-        ))
-
-    # Behavior notes for Leia
-    behavior_notes_db.append(BehaviorNote(
-        behavior_note_id=f"behavior_{len(behavior_notes_db) + 1}",
-        campus_id=metzger_campus.campus_id,
-        student_id="student_1",
-        date=date.today() - timedelta(days=3),
-        type=BehaviorType.POSITIVE,
-        summary="Excellent work on project presentation",
-        flag_for_followup=False,
-    ))
-    behavior_notes_db.append(BehaviorNote(
-        behavior_note_id=f"behavior_{len(behavior_notes_db) + 1}",
-        campus_id=metzger_campus.campus_id,
-        student_id="student_1",
-        date=date.today() - timedelta(days=7),
-        type=BehaviorType.POSITIVE,
-        summary="Helped another student with assignment",
-        flag_for_followup=False,
-    ))
-
-    # Attendance records for Leia (last 20 weekdays)
-    for day_offset in range(20):
-        att_date = date.today() - timedelta(days=day_offset)
-        if att_date.weekday() < 5:
-            attendance_records_db.append(AttendanceRecord(
-                attendance_id=f"attendance_{len(attendance_records_db) + 1}",
-                campus_id=metzger_campus.campus_id,
-                student_id="student_1",
-                date=att_date,
-                status=AttendanceStatus.PRESENT if day_offset != 8 else AttendanceStatus.ABSENT,
-                session=Session.MORNING,
-            ))
-
-    # Billing records for Metzger family
-    metzger_monthly = round(10000.00 / 12, 2)
-    for month_offset in range(6):
-        charge_date = date.today() - timedelta(days=30 * month_offset)
-        period_month = charge_date.strftime('%Y-%m')
-        billing_records_db.append(BillingRecord(
-            billing_record_id=f"billing_{len(billing_records_db) + 1}",
-            campus_id=metzger_campus.campus_id,
-            family_id="family_1",
-            date=charge_date,
-            type="Charge",
-            description=f"{charge_date.strftime('%B')} Tuition - Leia",
-            amount=metzger_monthly,
-            source=None,
-            period_month=period_month,
-            category=BillingCategory.TUITION,
-            student_id="student_1",
-        ))
-        payment_date = charge_date + timedelta(days=random.randint(1, 5))
-        billing_records_db.append(BillingRecord(
-            billing_record_id=f"billing_{len(billing_records_db) + 1}",
-            campus_id=metzger_campus.campus_id,
-            family_id="family_1",
-            date=payment_date,
-            type="Payment",
-            description=f"Payment - {charge_date.strftime('%B')} Tuition",
-            amount=-metzger_monthly,
-            source=PaymentSource.OUT_OF_POCKET,
-            period_month=period_month,
-            category=BillingCategory.TUITION,
-            student_id="student_1",
-        ))
-
-    # IXL summary for Leia
-    ixl_summaries_db.append(IXLSummary(
-        ixl_summary_id="ixl_student_1",
-        campus_id=metzger_campus.campus_id,
-        student_id="student_1",
-        week_start_date=date.today() - timedelta(days=date.today().weekday()),
-        weekly_hours=4.2,
-        skills_practiced_this_week=15,
-        skills_mastered_total=120,
-        math_proficiency=IXLStatus.ON_TRACK,
-        ela_proficiency=IXLStatus.ON_TRACK,
-        last_active_date=date.today() - timedelta(days=1),
-        recent_skills=["Multiplying fractions", "Main idea in nonfiction", "Context clues"],
-    ))
+    # No historical records for Leia — she is still enrolling (no attendance,
+    # grades, billing, behavior, or IXL data until enrollment is finalized).
     # --- End Metzger family ---
 
     for fam_idx in range(1, num_families):
