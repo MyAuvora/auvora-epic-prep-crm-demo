@@ -149,13 +149,9 @@ INLINE_PARENT_COLUMN_MAP = {
     "parent email": "parent_email", "parent1 email": "parent_email",
     "parent 1 email": "parent_email", "guardian email": "parent_email",
     "parent_email": "parent_email",
-    "email": "parent_email", "email address": "parent_email",
     "parent phone": "parent_phone", "parent1 phone": "parent_phone",
     "parent 1 phone": "parent_phone", "guardian phone": "parent_phone",
     "parent_phone": "parent_phone",
-    "phone": "parent_phone", "phone number": "parent_phone",
-    "home phone": "parent_phone", "cell phone": "parent_phone", "mobile": "parent_phone",
-    "relationship": "parent_relationship", "relation": "parent_relationship",
 }
 
 FAMILY_COLUMN_MAP = {
@@ -418,6 +414,8 @@ async def import_students(
 
     for i, row in enumerate(rows[1:], start=2):
         newly_cached_fid = ""
+        newly_cached_parent_fid = ""
+        parent_created_this_row = False
         savepoint = db.begin_nested()
         try:
             data = parse_row(row, col_mapping)
@@ -485,6 +483,8 @@ async def import_students(
                     db.add(parent)
                     db.flush()
                     parent_cache[family_id] = parent_id
+                    newly_cached_parent_fid = family_id
+                    parent_created_this_row = True
                     parents_created += 1
 
             # Parse dates
@@ -533,9 +533,13 @@ async def import_students(
 
         except Exception as e:
             savepoint.rollback()
-            # Only clear family_cache if the family was newly created in this savepoint
+            # Clean up caches for records rolled back in this savepoint
             if newly_cached_fid and newly_cached_fid in family_cache:
                 del family_cache[newly_cached_fid]
+            if newly_cached_parent_fid and newly_cached_parent_fid in parent_cache:
+                del parent_cache[newly_cached_parent_fid]
+            if parent_created_this_row:
+                parents_created -= 1
             skipped += 1
             errors.append(f"Row {i}: {str(e)}")
 
