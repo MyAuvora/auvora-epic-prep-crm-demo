@@ -21,6 +21,7 @@ interface NotificationNavigation {
 interface NotificationCenterProps {
   currentRole: 'owner' | 'admin' | 'coach' | 'parent'
   campusId?: string | null
+  parentId?: string | null
   onNavigate?: (nav: NotificationNavigation) => void
 }
 
@@ -183,7 +184,7 @@ function getNavigationTarget(type: Notification['type'], currentRole: string): N
   }
 }
 
-export function NotificationCenter({ currentRole, campusId, onNavigate }: NotificationCenterProps) {
+export function NotificationCenter({ currentRole, campusId, parentId, onNavigate }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(
     currentRole === 'parent' ? PARENT_NOTIFICATIONS : DEMO_NOTIFICATIONS
@@ -258,9 +259,46 @@ export function NotificationCenter({ currentRole, campusId, onNavigate }: Notifi
       }
     }
     fetchCRMNotifications()
-    const interval = setInterval(fetchCRMNotifications, 30000)
-    return () => clearInterval(interval)
-  }, [currentRole, campusId])
+
+    async function fetchParentNotifications() {
+      if (currentRole !== 'parent') return
+      try {
+        const params = new URLSearchParams()
+        if (parentId) params.append('parent_id', parentId)
+        const res = await fetch(`${API_URL}/api/parent-notifications?${params}`)
+        if (!res.ok) return
+        const parentNotifs = await res.json()
+        if (parentNotifs.length === 0) return
+
+        const mapped: Notification[] = parentNotifs.map((n: { notification_id: string; title: string; message: string; created_at: string; read: boolean; notification_type: string }) => ({
+          id: n.notification_id,
+          type: (n.notification_type === 'permission_slip_reminder' ? 'permission_slip' :
+                 n.notification_type === 'document_reminder' ? 'system' :
+                 n.notification_type === 'enrollment_checklist_reminder' ? 'system' : 'system') as Notification['type'],
+          title: n.title,
+          message: n.message,
+          timestamp: new Date(n.created_at),
+          read: n.read,
+          priority: 'high' as const,
+        }))
+
+        setNotifications(prev => [
+          ...mapped,
+          ...prev.filter(n => !n.id.startsWith('notif_')),
+        ])
+      } catch {
+        // Parent notifications are optional
+      }
+    }
+    fetchParentNotifications()
+
+    const crmInterval = setInterval(fetchCRMNotifications, 30000)
+    const parentInterval = currentRole === 'parent' ? setInterval(fetchParentNotifications, 15000) : null
+    return () => {
+      clearInterval(crmInterval)
+      if (parentInterval) clearInterval(parentInterval)
+    }
+  }, [currentRole, campusId, parentId])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.read).length

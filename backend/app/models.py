@@ -337,13 +337,17 @@ class CRMNotification(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     notification_id = Column(String, unique=True, index=True)
-    recipient_role = Column(String)  # 'admin' for CM, 'owner', etc.
+    recipient_role = Column(String)  # 'admin' for CM, 'owner', 'parent', etc.
     recipient_campus_id = Column(String, nullable=True)
     recipient_staff_id = Column(String, nullable=True)
-    notification_type = Column(String)  # 'tour_scheduled', 'tour_completed', etc.
+    recipient_family_id = Column(String, nullable=True)
+    recipient_parent_id = Column(String, nullable=True)
+    notification_type = Column(String)  # 'tour_scheduled', 'tour_completed', 'document_reminder', etc.
     title = Column(String)
     message = Column(Text)
     related_lead_id = Column(String, nullable=True)
+    related_document_id = Column(String, nullable=True)
+    related_event_id = Column(String, nullable=True)
     read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
