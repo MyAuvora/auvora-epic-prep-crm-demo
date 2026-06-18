@@ -1368,7 +1368,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <TabsContent value="events" className="mt-6">
                 {(currentRole === 'owner' || currentRole === 'admin') && (
                   <div className="mb-6">
-                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} />
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} onNavigateToAccount={(type, id) => setAccountView({ type, id })} />
                   </div>
                 )}
                 <EventsCalendar role="admin" />
@@ -1432,7 +1432,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                     <h2 className="text-3xl font-bold text-gray-900">Events</h2>
                   </div>
                   {(currentRole === 'owner' || currentRole === 'admin') && (
-                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} />
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} onNavigateToAccount={(type, id) => setAccountView({ type, id })} />
                   )}
                   <EventsCalendar role="admin" />
                 </div>
