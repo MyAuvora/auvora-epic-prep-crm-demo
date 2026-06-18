@@ -268,7 +268,10 @@ export function NotificationCenter({ currentRole, campusId, parentId, onNavigate
         const res = await fetch(`${API_URL}/api/parent-notifications?${params}`)
         if (!res.ok) return
         const parentNotifs = await res.json()
-        if (parentNotifs.length === 0) return
+        if (parentNotifs.length === 0) {
+          setNotifications(prev => prev.filter(n => !n.id.startsWith('notif_')))
+          return
+        }
 
         const mapped: Notification[] = parentNotifs.map((n: { notification_id: string; title: string; message: string; created_at: string; read: boolean; notification_type: string }) => ({
           id: n.notification_id,

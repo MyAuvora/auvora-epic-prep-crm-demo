@@ -5154,14 +5154,22 @@ async def get_parent_notifications(
 
 @app.get("/api/documents/{document_id}/unsigned-families")
 async def get_unsigned_families(document_id: str):
-    """Get families that have not signed a specific document."""
+    """Get families that have not signed a specific document.
+    
+    Scopes families by the document's campus_id so only relevant families are included.
+    """
     doc = next((d for d in documents_db if d.document_id == document_id), None)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
     signed_parent_ids = {s.parent_id for s in document_signatures_db if s.document_id == document_id}
+
+    scoped_families = families_db
+    if doc.campus_id:
+        scoped_families = [f for f in families_db if f.campus_id == doc.campus_id]
+
     unsigned = []
-    for family in families_db:
+    for family in scoped_families:
         family_parents = [p for p in parents_db if p.family_id == family.family_id]
         family_signed = any(p.parent_id in signed_parent_ids for p in family_parents)
         if not family_signed:

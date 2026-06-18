@@ -104,6 +104,17 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_sent BOOLEAN DEFAULT 0"))
             if "invitation_token" not in existing:
                 conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_token VARCHAR DEFAULT NULL"))
+        # CRM Notifications table: add parent recipient and related fields if missing
+        if "crm_notifications" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("crm_notifications")]
+            if "recipient_family_id" not in existing:
+                conn.execute(text("ALTER TABLE crm_notifications ADD COLUMN recipient_family_id VARCHAR DEFAULT NULL"))
+            if "recipient_parent_id" not in existing:
+                conn.execute(text("ALTER TABLE crm_notifications ADD COLUMN recipient_parent_id VARCHAR DEFAULT NULL"))
+            if "related_document_id" not in existing:
+                conn.execute(text("ALTER TABLE crm_notifications ADD COLUMN related_document_id VARCHAR DEFAULT NULL"))
+            if "related_event_id" not in existing:
+                conn.execute(text("ALTER TABLE crm_notifications ADD COLUMN related_event_id VARCHAR DEFAULT NULL"))
         conn.commit()
     finally:
         conn.close()
