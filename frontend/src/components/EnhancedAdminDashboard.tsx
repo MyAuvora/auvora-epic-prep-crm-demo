@@ -104,7 +104,7 @@ interface EnhancedAdminDashboardProps {
   onClearSearch?: () => void
   selectedCampusId?: string | null
   currentRole?: 'owner' | 'admin' | 'coach' | 'parent'
-  notificationNavigation?: { view: string; subView?: string } | null
+  notificationNavigation?: { view: string; subView?: string; eventId?: string } | null
   onClearNotification?: () => void
 }
 
@@ -187,12 +187,15 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     }
   }, [searchNavigation, onClearSearch])
 
+  const [permissionSlipEventId, setPermissionSlipEventId] = useState<string | null>(null)
+
   // Handle notification navigation
   useEffect(() => {
     if (notificationNavigation) {
       const targetView = notificationNavigation.view as typeof view
       setView(targetView)
       setSubView(notificationNavigation.subView || 'main')
+      setPermissionSlipEventId(notificationNavigation.eventId || null)
       if (onClearNotification) onClearNotification()
     }
   }, [notificationNavigation, onClearNotification])
@@ -1365,7 +1368,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
               <TabsContent value="events" className="mt-6">
                 {(currentRole === 'owner' || currentRole === 'admin') && (
                   <div className="mb-6">
-                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} />
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} />
                   </div>
                 )}
                 <EventsCalendar role="admin" />
@@ -1429,7 +1432,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
                     <h2 className="text-3xl font-bold text-gray-900">Events</h2>
                   </div>
                   {(currentRole === 'owner' || currentRole === 'admin') && (
-                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} />
+                    <PermissionSlipTracker currentRole={currentRole} campusId={selectedCampusId} autoExpandEventId={permissionSlipEventId} onClearAutoExpand={() => setPermissionSlipEventId(null)} />
                   )}
                   <EventsCalendar role="admin" />
                 </div>

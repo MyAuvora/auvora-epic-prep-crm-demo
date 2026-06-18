@@ -30,7 +30,7 @@ function AuthenticatedApp() {
   const [searchNavigation, setSearchNavigation] = useState<{ type: 'student' | 'family'; id: string } | null>(null)
   const [selectedCampusId, setSelectedCampusId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
-  const [notificationNavigation, setNotificationNavigation] = useState<{ view: string; subView?: string } | null>(null)
+  const [notificationNavigation, setNotificationNavigation] = useState<{ view: string; subView?: string; eventId?: string } | null>(null)
 
   // Get role from Clerk user metadata or default to owner for demo
   useEffect(() => {

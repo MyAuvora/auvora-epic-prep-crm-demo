@@ -22,7 +22,7 @@ interface HeaderProps {
   onSearchSelect?: (type: 'student' | 'family', id: string) => void
   onLocationChange?: (campusId: string | null) => void
   selectedUserId?: string
-  onNotificationNavigate?: (nav: { view: string; subView?: string }) => void
+  onNotificationNavigate?: (nav: { view: string; subView?: string; eventId?: string }) => void
 }
 
 // Map location names to campus IDs from the backend
