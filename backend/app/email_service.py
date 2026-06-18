@@ -238,6 +238,76 @@ async def send_permission_slip_reminder(
     )
 
 
+async def send_document_reminder(
+    to_email: str,
+    parent_name: str,
+    student_name: str,
+    document_title: str,
+    document_type: str,
+) -> Dict[str, Any]:
+    """Send a general document signing reminder email."""
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0;">EPIC Prep Academy</h1>
+            <p style="margin: 5px 0 0;">Document Signing Reminder</p>
+        </div>
+        <div style="padding: 20px;">
+            <p>Hi {parent_name},</p>
+            <p>This is a friendly reminder that the following document requires your signature{' for ' + student_name if student_name else ''}:</p>
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p style="margin: 0;"><strong>Document:</strong> {document_title}</p>
+                <p style="margin: 5px 0 0;"><strong>Type:</strong> {document_type}</p>
+            </div>
+            <p>Please log in to your parent portal to review and sign this document, or contact the front office for assistance.</p>
+        </div>
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
+            EPIC Prep Academy &mdash; Empowering Students Through Excellence
+        </div>
+    </div>
+    """
+    return await send_email(
+        to_email=to_email,
+        subject=f"Document Signing Reminder - {document_title}",
+        html_content=html,
+    )
+
+
+async def send_enrollment_checklist_reminder(
+    to_email: str,
+    parent_name: str,
+    child_name: str,
+    pending_items: list,
+) -> Dict[str, Any]:
+    """Send an enrollment checklist completion reminder email."""
+    items_html = "".join(f"<li>{item}</li>" for item in pending_items)
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e40af; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0;">EPIC Prep Academy</h1>
+            <p style="margin: 5px 0 0;">Enrollment Checklist Reminder</p>
+        </div>
+        <div style="padding: 20px;">
+            <p>Hi {parent_name},</p>
+            <p>This is a friendly reminder that {child_name}'s enrollment checklist has outstanding items that need to be completed:</p>
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p style="margin: 0 0 8px;"><strong>Pending Items:</strong></p>
+                <ul style="margin: 0; padding-left: 20px;">{items_html}</ul>
+            </div>
+            <p>Please log in to your parent portal to complete the enrollment checklist, or contact the front office for assistance.</p>
+        </div>
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
+            EPIC Prep Academy &mdash; Empowering Students Through Excellence
+        </div>
+    </div>
+    """
+    return await send_email(
+        to_email=to_email,
+        subject=f"Enrollment Checklist Reminder - {child_name}",
+        html_content=html,
+    )
+
+
 async def send_incident_notification(
     to_email: str,
     parent_name: str,

@@ -1053,10 +1053,14 @@ class CRMNotification(BaseModel):
     recipient_role: str = "admin"
     recipient_campus_id: Optional[str] = None
     recipient_staff_id: Optional[str] = None
+    recipient_family_id: Optional[str] = None
+    recipient_parent_id: Optional[str] = None
     notification_type: str = "tour_scheduled"
     title: str
     message: str
     related_lead_id: Optional[str] = None
+    related_document_id: Optional[str] = None
+    related_event_id: Optional[str] = None
     read: bool = False
     created_at: str = ""
 
@@ -4941,6 +4945,244 @@ async def get_permission_slip_alerts(
     # Sort by urgency (closest events first)
     alerts.sort(key=lambda a: a["days_until"])
     return alerts
+
+
+class DocumentReminderRequest(BaseModel):
+    reminder_type: str  # 'permission_slip', 'document', 'enrollment_checklist'
+    family_id: str
+    student_id: Optional[str] = None
+    event_id: Optional[str] = None
+    document_id: Optional[str] = None
+    checklist_id: Optional[str] = None
+
+
+@app.post("/api/document-reminders")
+async def send_document_reminder_endpoint(request: DocumentReminderRequest):
+    """Send a document signing reminder to a parent — creates an in-app notification and sends an email."""
+    family = next((f for f in families_db if f.family_id == request.family_id), None)
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+
+    primary_parent = next(
+        (p for p in parents_db if p.family_id == request.family_id and p.primary_guardian),
+        next((p for p in parents_db if p.family_id == request.family_id), None)
+    )
+    if not primary_parent:
+        raise HTTPException(status_code=404, detail="No parent found for family")
+
+    parent_name = f"{primary_parent.first_name} {primary_parent.last_name}"
+    parent_email = primary_parent.email
+
+    student = None
+    if request.student_id:
+        student = next((s for s in students_db if s.student_id == request.student_id), None)
+    student_name = f"{student.first_name} {student.last_name}" if student else ""
+
+    email_result = None
+    notif_title = ""
+    notif_message = ""
+    notif_type = "document_reminder"
+    related_event_id = None
+    related_document_id = None
+
+    if request.reminder_type == "permission_slip" and request.event_id:
+        event = next((e for e in events_db if e.event_id == request.event_id), None)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        event_date = event.date if isinstance(event.date, date) else date.fromisoformat(str(event.date))
+        days_until = (event_date - date.today()).days
+        notif_title = f"Permission Slip Reminder: {event.title}"
+        notif_message = f"Please sign the permission slip for {student_name} for {event.title} ({event.date}). {days_until} day(s) remaining."
+        notif_type = "permission_slip_reminder"
+        related_event_id = request.event_id
+
+        if parent_email:
+            email_result = await email_service.send_permission_slip_reminder(
+                to_email=parent_email,
+                parent_name=parent_name,
+                student_name=student_name,
+                event_name=event.title,
+                event_date=str(event.date),
+                days_until=days_until,
+            )
+
+    elif request.reminder_type == "document" and request.document_id:
+        doc = next((d for d in documents_db if d.document_id == request.document_id), None)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        notif_title = f"Document Signing Reminder: {doc.title}"
+        notif_message = f"Please review and sign \"{doc.title}\"{' for ' + student_name if student_name else ''}."
+        notif_type = "document_reminder"
+        related_document_id = request.document_id
+
+        if parent_email:
+            email_result = await email_service.send_document_reminder(
+                to_email=parent_email,
+                parent_name=parent_name,
+                student_name=student_name,
+                document_title=doc.title,
+                document_type=doc.document_type,
+            )
+
+    elif request.reminder_type == "enrollment_checklist" and request.checklist_id:
+        checklist = next((c for c in enrollment_checklists_db if c.checklist_id == request.checklist_id), None)
+        if not checklist:
+            raise HTTPException(status_code=404, detail="Checklist not found")
+        pending_items = []
+        if not checklist.liability_waiver:
+            pending_items.append("Liability Waiver")
+        if not checklist.medical_authorization:
+            pending_items.append("Medical Authorization")
+        if not checklist.parent_handbook:
+            pending_items.append("Parent Handbook Acknowledgment")
+        if not checklist.photo_release:
+            pending_items.append("Photo Release")
+        if not checklist.electronic_signature:
+            pending_items.append("Electronic Signature")
+        notif_title = f"Enrollment Checklist Reminder"
+        notif_message = f"Please complete the enrollment checklist{' for ' + student_name if student_name else ''}. Pending: {', '.join(pending_items) if pending_items else 'signature required'}."
+        notif_type = "enrollment_checklist_reminder"
+
+        if parent_email:
+            email_result = await email_service.send_enrollment_checklist_reminder(
+                to_email=parent_email,
+                parent_name=parent_name,
+                child_name=student_name or family.family_name,
+                pending_items=pending_items if pending_items else ["Complete and sign the enrollment checklist"],
+            )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid reminder_type or missing required fields")
+
+    notif = CRMNotification(
+        notification_id=f"notif_{datetime.now().strftime('%Y%m%d%H%M%S')}_{request.family_id}_{request.reminder_type}",
+        recipient_role="parent",
+        recipient_family_id=request.family_id,
+        recipient_parent_id=primary_parent.parent_id,
+        notification_type=notif_type,
+        title=notif_title,
+        message=notif_message,
+        related_event_id=related_event_id,
+        related_document_id=related_document_id,
+        read=False,
+        created_at=datetime.now().isoformat(),
+    )
+    crm_notifications_db.append(notif)
+    db_utils.save_crm_notification(notif)
+
+    return {
+        "success": True,
+        "notification_id": notif.notification_id,
+        "email_sent": email_result.get("success", False) if email_result else False,
+        "email_provider": email_result.get("provider", "none") if email_result else "none",
+        "message": f"Reminder sent to {parent_name}" + (f" ({parent_email})" if parent_email else ""),
+    }
+
+
+@app.post("/api/document-reminders/bulk")
+async def send_bulk_document_reminders(
+    reminder_type: str,
+    event_id: Optional[str] = None,
+    document_id: Optional[str] = None,
+):
+    """Send reminders to all families with unsigned documents for an event or document."""
+    results = []
+
+    if reminder_type == "permission_slip" and event_id:
+        unsigned_workflows = [
+            w for w in event_workflows_db
+            if w.event_id == event_id and not w.permission_slip_signed
+        ]
+        seen_families = set()
+        for w in unsigned_workflows:
+            if w.family_id in seen_families:
+                continue
+            seen_families.add(w.family_id)
+            try:
+                req = DocumentReminderRequest(
+                    reminder_type="permission_slip",
+                    family_id=w.family_id,
+                    student_id=w.student_id,
+                    event_id=event_id,
+                )
+                result = await send_document_reminder_endpoint(req)
+                results.append(result)
+            except Exception as e:
+                results.append({"success": False, "family_id": w.family_id, "error": str(e)})
+
+    elif reminder_type == "document" and document_id:
+        all_families = families_db
+        for family in all_families:
+            has_signature = any(
+                s.document_id == document_id and any(
+                    p.parent_id == s.parent_id for p in parents_db if p.family_id == family.family_id
+                )
+                for s in document_signatures_db
+            )
+            if not has_signature:
+                students = [s for s in students_db if s.family_id == family.family_id]
+                try:
+                    req = DocumentReminderRequest(
+                        reminder_type="document",
+                        family_id=family.family_id,
+                        student_id=students[0].student_id if students else None,
+                        document_id=document_id,
+                    )
+                    result = await send_document_reminder_endpoint(req)
+                    results.append(result)
+                except Exception as e:
+                    results.append({"success": False, "family_id": family.family_id, "error": str(e)})
+
+    return {"sent_count": len([r for r in results if r.get("success")]), "results": results}
+
+
+@app.get("/api/parent-notifications")
+async def get_parent_notifications(
+    family_id: Optional[str] = None,
+    parent_id: Optional[str] = None,
+    unread_only: bool = False,
+):
+    """Get notifications for a parent user."""
+    results = [n for n in crm_notifications_db if n.recipient_role == "parent"]
+    if family_id:
+        results = [n for n in results if n.recipient_family_id == family_id]
+    if parent_id:
+        results = [n for n in results if n.recipient_parent_id == parent_id]
+    if unread_only:
+        results = [n for n in results if not n.read]
+    return sorted(results, key=lambda n: n.created_at, reverse=True)
+
+
+@app.get("/api/documents/{document_id}/unsigned-families")
+async def get_unsigned_families(document_id: str):
+    """Get families that have not signed a specific document.
+    
+    Scopes families by the document's campus_id so only relevant families are included.
+    """
+    doc = next((d for d in documents_db if d.document_id == document_id), None)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    signed_parent_ids = {s.parent_id for s in document_signatures_db if s.document_id == document_id}
+
+    scoped_families = families_db
+    if doc.campus_id:
+        scoped_families = [f for f in families_db if f.campus_id == doc.campus_id]
+
+    unsigned = []
+    for family in scoped_families:
+        family_parents = [p for p in parents_db if p.family_id == family.family_id]
+        family_signed = any(p.parent_id in signed_parent_ids for p in family_parents)
+        if not family_signed:
+            family_students = [s for s in students_db if s.family_id == family.family_id]
+            primary = next((p for p in family_parents if p.primary_guardian), family_parents[0] if family_parents else None)
+            unsigned.append({
+                "family_id": family.family_id,
+                "family_name": family.family_name,
+                "parent_name": f"{primary.first_name} {primary.last_name}" if primary else "Unknown",
+                "parent_email": primary.email if primary else None,
+                "students": [{"student_id": s.student_id, "student_name": f"{s.first_name} {s.last_name}"} for s in family_students],
+            })
+    return unsigned
 
 
 @app.post("/api/event-workflows/{workflow_id}/complete-payment")

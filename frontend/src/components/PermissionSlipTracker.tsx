@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   FileSignature, AlertTriangle, CheckCircle, Clock, RefreshCw,
-  ChevronDown, ChevronUp, Send, Users, Calendar
+  ChevronDown, ChevronUp, Send, Users, Calendar, Bell
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,7 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
   const [loading, setLoading] = useState(true)
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [sendingReminder, setSendingReminder] = useState<string | null>(null)
+  const [sendingStudentReminder, setSendingStudentReminder] = useState<string | null>(null)
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -71,9 +72,36 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
 
   const sendReminder = async (eventId: string) => {
     setSendingReminder(eventId)
-    // Simulate sending reminders
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setSendingReminder(null)
+    try {
+      await fetch(`${API_URL}/api/document-reminders/bulk?reminder_type=permission_slip&event_id=${eventId}`, {
+        method: 'POST',
+      })
+    } catch (err) {
+      console.error('Failed to send bulk reminders:', err)
+    } finally {
+      setSendingReminder(null)
+    }
+  }
+
+  const sendStudentReminder = async (eventId: string, studentId: string, familyId: string) => {
+    const key = `${eventId}_${studentId}`
+    setSendingStudentReminder(key)
+    try {
+      await fetch(`${API_URL}/api/document-reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reminder_type: 'permission_slip',
+          family_id: familyId,
+          student_id: studentId,
+          event_id: eventId,
+        }),
+      })
+    } catch (err) {
+      console.error('Failed to send student reminder:', err)
+    } finally {
+      setSendingStudentReminder(null)
+    }
   }
 
   const totalUnsigned = alerts.reduce((sum, a) => sum + a.unsigned_count, 0)
@@ -289,6 +317,21 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
                               <p className="text-sm font-medium text-gray-800 truncate">{student.student_name}</p>
                               <p className="text-xs text-gray-500">Family: {student.family_name}</p>
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                sendStudentReminder(alert.event_id, student.student_id, student.family_id)
+                              }}
+                              disabled={sendingStudentReminder === `${alert.event_id}_${student.student_id}`}
+                              className="p-1.5 rounded-full hover:bg-amber-100 text-amber-600 transition-colors disabled:opacity-50"
+                              title={`Send reminder to ${student.family_name}`}
+                            >
+                              {sendingStudentReminder === `${alert.event_id}_${student.student_id}` ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Bell className="w-4 h-4" />
+                              )}
+                            </button>
                             <span className="px-2 py-0.5 bg-red-50 text-red-600 text-xs font-medium rounded-full">Unsigned</span>
                           </div>
                         ))}

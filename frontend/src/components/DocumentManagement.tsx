@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FileText, Download, CheckCircle, Clock, AlertCircle, Bell, RefreshCw, Send, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,14 @@ interface DocumentSignature {
   signature_data: string;
 }
 
+interface UnsignedFamily {
+  family_id: string;
+  family_name: string;
+  parent_name: string;
+  parent_email: string | null;
+  students: { student_id: string; student_name: string }[];
+}
+
 interface DocumentManagementProps {
   role: 'owner' | 'admin' | 'coach' | 'parent';
   parentId?: string;
@@ -46,12 +54,62 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const [unsignedFamilies, setUnsignedFamilies] = useState<Record<string, UnsignedFamily[]>>({});
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null);
   const [newDocument, setNewDocument] = useState({
     title: '',
     document_type: 'Permission Slip',
     description: '',
     required_for: 'All Students'
   });
+
+  const fetchUnsignedFamilies = useCallback(async (documentId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/documents/${documentId}/unsigned-families`);
+      if (res.ok) {
+        const data = await res.json();
+        setUnsignedFamilies(prev => ({ ...prev, [documentId]: data }));
+      }
+    } catch (err) {
+      console.error('Error fetching unsigned families:', err);
+    }
+  }, []);
+
+  const sendDocReminder = async (documentId: string, familyId: string, studentId?: string) => {
+    const key = `${documentId}_${familyId}`;
+    setSendingReminder(key);
+    try {
+      await fetch(`${API_URL}/api/document-reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reminder_type: 'document',
+          family_id: familyId,
+          student_id: studentId || null,
+          document_id: documentId,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to send reminder:', err);
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
+  const sendBulkDocReminder = async (documentId: string) => {
+    setSendingBulkReminder(documentId);
+    try {
+      await fetch(`${API_URL}/api/document-reminders/bulk?reminder_type=document&document_id=${documentId}`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.error('Failed to send bulk reminders:', err);
+    } finally {
+      setSendingBulkReminder(null);
+    }
+  };
 
   useEffect(() => {
     fetchDocuments();
@@ -184,6 +242,17 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
   const pendingDocuments = documents.filter(d => role === 'parent' ? !isDocumentSigned(d.document_id) : d.status === 'Pending');
   const completedDocuments = documents.filter(d => role === 'parent' ? isDocumentSigned(d.document_id) : d.status === 'Signed');
 
+  const toggleUnsigned = (docId: string) => {
+    if (expandedDocId === docId) {
+      setExpandedDocId(null);
+    } else {
+      setExpandedDocId(docId);
+      if (!unsignedFamilies[docId]) {
+        fetchUnsignedFamilies(docId);
+      }
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Loading documents...</div>;
   }
@@ -210,8 +279,8 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {pendingDocuments.map((doc) => (
-              <Card key={doc.document_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedDocument(doc)}>
-                <CardHeader>
+              <Card key={doc.document_id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="cursor-pointer" onClick={() => setSelectedDocument(doc)}>
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">{doc.title}</CardTitle>
                     <Badge className={getDocumentTypeColor(doc.document_type)}>{doc.document_type}</Badge>
@@ -245,7 +314,77 @@ export const DocumentManagement: React.FC<DocumentManagementProps> = ({ role, pa
                         </Badge>
                       </div>
                     )}
+                    {(role === 'owner' || role === 'admin') && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); toggleUnsigned(doc.document_id); }}
+                        >
+                          <Users className="w-4 h-4 mr-1" />
+                          Unsigned
+                          {expandedDocId === doc.document_id ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={sendingBulkReminder === doc.document_id}
+                          onClick={(e) => { e.stopPropagation(); sendBulkDocReminder(doc.document_id); }}
+                        >
+                          {sendingBulkReminder === doc.document_id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <><Send className="w-4 h-4 mr-1" /> Remind All</>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
+                  {expandedDocId === doc.document_id && (role === 'owner' || role === 'admin') && (
+                    <div className="mt-3 border-t pt-3">
+                      <h4 className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        Families That Haven't Signed
+                      </h4>
+                      {!unsignedFamilies[doc.document_id] ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
+                          <span className="text-xs text-gray-400">Loading...</span>
+                        </div>
+                      ) : unsignedFamilies[doc.document_id].length === 0 ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          <span className="text-xs text-green-600">All families have signed</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {unsignedFamilies[doc.document_id].map(family => (
+                            <div key={family.family_id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1.5">
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-gray-800 truncate">{family.family_name}</p>
+                                <p className="text-[10px] text-gray-500 truncate">{family.parent_name}</p>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  sendDocReminder(doc.document_id, family.family_id, family.students[0]?.student_id);
+                                }}
+                                disabled={sendingReminder === `${doc.document_id}_${family.family_id}`}
+                                className="p-1 rounded-full hover:bg-amber-100 text-amber-600 transition-colors disabled:opacity-50 flex-shrink-0"
+                                title={`Send reminder to ${family.parent_name}`}
+                              >
+                                {sendingReminder === `${doc.document_id}_${family.family_id}` ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Bell className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
