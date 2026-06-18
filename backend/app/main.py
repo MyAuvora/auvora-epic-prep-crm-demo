@@ -3660,7 +3660,7 @@ async def update_lead(lead_id: str, lead: Lead):
             to_email=lead.email,
             subject="Complete Your Enrollment - EPIC Prep Academy",
             html_content=html_content,
-            from_name="EPIC CRM",
+            from_name="EPIC Prep Academy",
         )
 
     return lead
