@@ -195,9 +195,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
       const targetView = notificationNavigation.view as typeof view
       setView(targetView)
       setSubView(notificationNavigation.subView || 'main')
-      if (notificationNavigation.eventId) {
-        setPermissionSlipEventId(notificationNavigation.eventId)
-      }
+      setPermissionSlipEventId(notificationNavigation.eventId || null)
       if (onClearNotification) onClearNotification()
     }
   }, [notificationNavigation, onClearNotification])

@@ -39,8 +39,7 @@ interface PermissionSlipTrackerProps {
 export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId, onClearAutoExpand }: PermissionSlipTrackerProps) {
   const [alerts, setAlerts] = useState<PermissionSlipAlert[]>([])
   const [loading, setLoading] = useState(true)
-  const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
-  const [expandAll, setExpandAll] = useState(false)
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [sendingReminder, setSendingReminder] = useState<string | null>(null)
 
   const fetchAlerts = useCallback(async () => {
@@ -65,8 +64,7 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
 
   useEffect(() => {
     if (autoExpandEventId && alerts.length > 0) {
-      setExpandedEvent(autoExpandEventId)
-      setExpandAll(false)
+      setExpandedEvents(new Set([autoExpandEventId]))
       if (onClearAutoExpand) onClearAutoExpand()
     }
   }, [autoExpandEventId, alerts, onClearAutoExpand])
@@ -124,9 +122,10 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
-            setExpandAll(!expandAll)
-            if (!expandAll) {
-              setExpandedEvent(null)
+            if (expandedEvents.size === alerts.length) {
+              setExpandedEvents(new Set())
+            } else {
+              setExpandedEvents(new Set(alerts.map(a => a.event_id)))
             }
           }}
         >
@@ -169,7 +168,7 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
       ) : (
         <div className="space-y-3">
           {alerts.map(alert => {
-            const isExpanded = expandAll || expandedEvent === alert.event_id
+            const isExpanded = expandedEvents.has(alert.event_id)
             const progress = alert.total_enrolled > 0
               ? Math.round((alert.signed_count / alert.total_enrolled) * 100)
               : 0
@@ -183,12 +182,15 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
                   <div
                     className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50"
                     onClick={() => {
-                      if (expandAll) {
-                        setExpandAll(false)
-                        setExpandedEvent(isExpanded ? null : alert.event_id)
-                      } else {
-                        setExpandedEvent(isExpanded ? null : alert.event_id)
-                      }
+                      setExpandedEvents(prev => {
+                        const next = new Set(prev)
+                        if (next.has(alert.event_id)) {
+                          next.delete(alert.event_id)
+                        } else {
+                          next.add(alert.event_id)
+                        }
+                        return next
+                      })
                     }}
                   >
                     <div className={`p-2 rounded-lg ${
