@@ -52,6 +52,7 @@ function AuthenticatedApp() {
   const handleRoleChange = (role: Role) => {
     setCurrentRole(role)
     setSearchNavigation(null)
+    setNotificationNavigation(null)
     if (role === 'owner' || role === 'admin') {
       setSelectedUserId('staff_1')
     } else if (role === 'coach') {

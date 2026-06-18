@@ -165,6 +165,9 @@ function getNavigationTarget(type: Notification['type'], currentRole: string): N
       default: return { view: 'home' }
     }
   }
+  if (currentRole === 'coach') {
+    return null
+  }
   switch (type) {
     case 'enrollment': return { view: 'admissions', subView: 'pipeline' }
     case 'payment': return { view: 'families-finance', subView: 'billing' }

@@ -192,9 +192,7 @@ export function EnhancedAdminDashboard({ searchNavigation, onClearSearch, select
     if (notificationNavigation) {
       const targetView = notificationNavigation.view as typeof view
       setView(targetView)
-      if (notificationNavigation.subView) {
-        setSubView(notificationNavigation.subView)
-      }
+      setSubView(notificationNavigation.subView || 'main')
       if (onClearNotification) onClearNotification()
     }
   }, [notificationNavigation, onClearNotification])
