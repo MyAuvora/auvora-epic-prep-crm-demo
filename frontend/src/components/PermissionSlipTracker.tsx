@@ -34,9 +34,10 @@ interface PermissionSlipTrackerProps {
   campusId?: string | null
   autoExpandEventId?: string | null
   onClearAutoExpand?: () => void
+  onNavigateToAccount?: (type: 'student' | 'family', id: string) => void
 }
 
-export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId, onClearAutoExpand }: PermissionSlipTrackerProps) {
+export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId, onClearAutoExpand, onNavigateToAccount }: PermissionSlipTrackerProps) {
   const [alerts, setAlerts] = useState<PermissionSlipAlert[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
@@ -314,8 +315,26 @@ export function PermissionSlipTracker({ currentRole, campusId, autoExpandEventId
                               <FileSignature className="w-4 h-4 text-red-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">{student.student_name}</p>
-                              <p className="text-xs text-gray-500">Family: {student.family_name}</p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (onNavigateToAccount) onNavigateToAccount('student', student.student_id)
+                                }}
+                                className="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline truncate block text-left"
+                                title={`View ${student.student_name}'s account`}
+                              >
+                                {student.student_name}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (onNavigateToAccount) onNavigateToAccount('family', student.family_id)
+                                }}
+                                className="text-xs text-gray-500 hover:text-blue-600 hover:underline block text-left"
+                                title={`View ${student.family_name}'s account`}
+                              >
+                                Family: {student.family_name}
+                              </button>
                             </div>
                             <button
                               onClick={(e) => {
