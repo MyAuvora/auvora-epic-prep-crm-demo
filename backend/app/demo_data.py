@@ -1202,7 +1202,7 @@ def generate_all_demo_data():
             child_last_name=child_last,
             child_dob=date(2015 + random.randint(0, 7), random.randint(1, 12), random.randint(1, 28)),
             desired_grade=random.choice(["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]),
-            desired_start_date=date(2025, 8, 15),
+            desired_start_date=today + timedelta(days=random.randint(14, 60)) if stage in [LeadStage.NEW, LeadStage.CONTACT, LeadStage.CONTACTED, LeadStage.TOUR_SCHEDULED, LeadStage.TOUR_COMPLETE, LeadStage.ENROLLING, LeadStage.ENROLLED] else today - timedelta(days=random.randint(30, 90)),
             stage=stage,
             source=random.choice(list(LeadSource)),
             created_date=created,
