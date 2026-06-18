@@ -12,9 +12,15 @@ interface Notification {
   actionUrl?: string
 }
 
+interface NotificationNavigation {
+  view: string
+  subView?: string
+}
+
 interface NotificationCenterProps {
   currentRole: 'owner' | 'admin' | 'coach' | 'parent'
   campusId?: string | null
+  onNavigate?: (nav: NotificationNavigation) => void
 }
 
 const DEMO_NOTIFICATIONS: Notification[] = [
@@ -149,7 +155,31 @@ function getNotificationIcon(type: Notification['type']) {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-export function NotificationCenter({ currentRole, campusId }: NotificationCenterProps) {
+function getNavigationTarget(type: Notification['type'], currentRole: string): NotificationNavigation | null {
+  if (currentRole === 'parent') {
+    switch (type) {
+      case 'event': return { view: 'events' }
+      case 'payment': return { view: 'billing' }
+      case 'system': return { view: 'home' }
+      case 'permission_slip': return { view: 'events' }
+      default: return { view: 'home' }
+    }
+  }
+  switch (type) {
+    case 'enrollment': return { view: 'admissions', subView: 'pipeline' }
+    case 'payment': return { view: 'families-finance', subView: 'billing' }
+    case 'incident': return { view: 'operations', subView: 'incidents' }
+    case 'inventory': return { view: 'operations', subView: 'store' }
+    case 'attendance': return { view: 'students' }
+    case 'event': return { view: 'operations', subView: 'events' }
+    case 'permission_slip': return { view: 'operations', subView: 'events' }
+    case 'tour': return { view: 'admissions', subView: 'pipeline' }
+    case 'system': return { view: 'dashboard' }
+    default: return null
+  }
+}
+
+export function NotificationCenter({ currentRole, campusId, onNavigate }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(
     currentRole === 'parent' ? PARENT_NOTIFICATIONS : DEMO_NOTIFICATIONS
@@ -304,7 +334,14 @@ export function NotificationCenter({ currentRole, campusId }: NotificationCenter
                     className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                       !notification.read ? 'bg-blue-50/50' : ''
                     }`}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => {
+                      markAsRead(notification.id)
+                      const target = getNavigationTarget(notification.type, currentRole)
+                      if (target && onNavigate) {
+                        onNavigate(target)
+                        setIsOpen(false)
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${

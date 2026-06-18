@@ -65,9 +65,11 @@ interface ParentData {
 
 interface EnhancedParentDashboardProps {
   parentId: string
+  notificationNavigation?: { view: string; subView?: string } | null
+  onClearNotification?: () => void
 }
 
-export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardProps) {
+export function EnhancedParentDashboard({ parentId, notificationNavigation, onClearNotification }: EnhancedParentDashboardProps) {
   const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health' | 'enrollment'>('home')
   const [parentData, setParentData] = useState<ParentData | null>(null)
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
@@ -119,6 +121,15 @@ export function EnhancedParentDashboard({ parentId }: EnhancedParentDashboardPro
     const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
     const [unreadMessageCount, setUnreadMessageCount] = useState(0)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Handle notification navigation
+  useEffect(() => {
+    if (notificationNavigation) {
+      const targetView = notificationNavigation.view as typeof view
+      setView(targetView)
+      if (onClearNotification) onClearNotification()
+    }
+  }, [notificationNavigation, onClearNotification])
 
   useEffect(() => {
     fetchParentData()
