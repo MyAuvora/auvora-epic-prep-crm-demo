@@ -3942,7 +3942,7 @@ async def mark_tour_complete(lead_id: str):
 
 @app.post("/api/admissions/leads/{lead_id}/send-invitation")
 async def send_enrollment_invitation(lead_id: str):
-    """Send enrollment invitation email and move lead to Enrolling stage."""
+    """Send enrollment invitation email, create Clerk parent account, and move lead to Enrolling stage."""
     lead = next((l for l in leads_db if l.lead_id == lead_id), None)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -3967,7 +3967,48 @@ async def send_enrollment_invitation(lead_id: str):
         enrollment_checklists_db.append(checklist)
         db_utils.save_enrollment_checklist(checklist)
 
-    # Send invitation email (uses SendGrid when configured, logs otherwise)
+    # Create Clerk parent account (if CLERK_SECRET_KEY is configured)
+    clerk_user_created = False
+    clerk_secret = os.getenv("CLERK_SECRET_KEY", "")
+    if clerk_secret and lead.email:
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                # Check if user already exists
+                check_resp = await client.get(
+                    "https://api.clerk.com/v1/users",
+                    headers={"Authorization": f"Bearer {clerk_secret}", "Content-Type": "application/json"},
+                    params={"email_address": [lead.email]},
+                    timeout=10.0,
+                )
+                existing_users = check_resp.json() if check_resp.status_code == 200 else []
+
+                if not existing_users:
+                    # Create new Clerk user with parent role
+                    create_resp = await client.post(
+                        "https://api.clerk.com/v1/users",
+                        headers={"Authorization": f"Bearer {clerk_secret}", "Content-Type": "application/json"},
+                        json={
+                            "email_address": [lead.email],
+                            "first_name": lead.parent_first_name,
+                            "last_name": lead.parent_last_name,
+                            "public_metadata": {"role": "parent"},
+                            "skip_password_requirement": True,
+                        },
+                        timeout=10.0,
+                    )
+                    if create_resp.status_code == 200:
+                        clerk_user_created = True
+                        logger.info(f"Created Clerk parent account for {lead.email}")
+                    else:
+                        logger.warning(f"Failed to create Clerk user for {lead.email}: {create_resp.text}")
+                else:
+                    logger.info(f"Clerk user already exists for {lead.email}")
+                    clerk_user_created = True
+        except Exception as e:
+            logger.error(f"Clerk API error during invitation: {e}")
+
+    # Send branded invitation email (uses SendGrid when configured, logs otherwise)
     from app.email_service import send_email
     invite_url = f"https://epic.myauvora.com/#/enroll-complete?token={token}"
     html_content = f"""
@@ -4003,10 +4044,10 @@ async def send_enrollment_invitation(lead_id: str):
         to_email=lead.email,
         subject="Complete Your Enrollment - EPIC Prep Academy",
         html_content=html_content,
-        from_name="EPIC CRM",
+        from_name="EPIC Prep Academy",
     )
 
-    return {"message": "Invitation sent", "token": token, "stage": "Enrolling"}
+    return {"message": "Invitation sent", "token": token, "stage": "Enrolling", "clerk_account_created": clerk_user_created}
 
 
 @app.post("/api/admissions/leads/{lead_id}/ensure-family")
