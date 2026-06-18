@@ -201,7 +201,7 @@ def generate_all_demo_data():
         room=Room.ROOM_1,
         status=StudentStatus.ACTIVE,
         family_id="family_1",
-        enrollment_start_date=date(2026, 6, 18),
+        enrollment_start_date=date.today(),
         enrollment_end_date=None,
         funding_source=FundingSource.OUT_OF_POCKET,
         step_up_percentage=0,
