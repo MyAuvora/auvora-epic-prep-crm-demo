@@ -15,6 +15,7 @@ interface Notification {
 interface NotificationNavigation {
   view: string
   subView?: string
+  eventId?: string
 }
 
 interface NotificationCenterProps {
@@ -175,7 +176,7 @@ function getNavigationTarget(type: Notification['type'], currentRole: string): N
     case 'inventory': return { view: 'operations', subView: 'store' }
     case 'attendance': return { view: 'students' }
     case 'event': return { view: 'operations', subView: 'events' }
-    case 'permission_slip': return { view: 'operations', subView: 'events' }
+    case 'permission_slip': return { view: 'operations', subView: 'events' } // eventId added at call site
     case 'tour': return { view: 'admissions', subView: 'pipeline' }
     case 'system': return { view: 'dashboard' }
     default: return null
@@ -341,6 +342,10 @@ export function NotificationCenter({ currentRole, campusId, onNavigate }: Notifi
                       markAsRead(notification.id)
                       const target = getNavigationTarget(notification.type, currentRole)
                       if (target && onNavigate) {
+                        if (notification.type === 'permission_slip' && notification.id.startsWith('perm_')) {
+                          const eventId = notification.id.split('_').slice(1, -1).join('_')
+                          target.eventId = eventId
+                        }
                         onNavigate(target)
                         setIsOpen(false)
                       }
