@@ -32,6 +32,7 @@ const LOCATION_TO_CAMPUS_ID: Record<string, string | null> = {
   'Crestview North': 'campus_2',
   'Navarre': 'campus_3',
   'Crestview Main Street': 'campus_4',
+  'Virtual': 'campus_5',
 }
 
 export function Header({ currentRole, onRoleChange, onSearchSelect, onLocationChange, selectedUserId, onNotificationNavigate }: HeaderProps) {
