@@ -53,6 +53,7 @@ def generate_all_demo_data():
         {"name": "Crestview North", "location": "Crestview, FL", "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200"},
         {"name": "Navarre", "location": "Navarre, FL", "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300"},
         {"name": "Crestview Main Street", "location": "Crestview, FL", "address": "101 Main St, Crestview, FL 32536", "phone": "850-555-0400"},
+        {"name": "Virtual", "location": "Online", "address": "Online", "phone": "850-555-0500"},
     ]
     
     for i, campus_info in enumerate(campus_data):
@@ -86,6 +87,7 @@ def generate_all_demo_data():
         ("Brittany", "Kilcrease"),
         ("Pam", "Riffle"),
         ("Sarah", "Williams"),
+        ("Michelle", "Carter"),
     ]
     for i, (first, last) in enumerate(campus_admin_names):
         users_db.append(User(
