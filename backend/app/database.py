@@ -1,26 +1,36 @@
 """
 Database configuration for EPIC CRM
-Uses SQLite with async support for data persistence
+Supports PostgreSQL (production) and SQLite (development/current Fly.io)
+Set DATABASE_URL env var to a postgres:// URL to use Postgres.
 """
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Use /data/app.db for Fly.io persistent volume, fallback to local for development
-DATABASE_PATH = os.getenv("DATABASE_PATH", "/data/app.db")
+# If DATABASE_URL is explicitly set (e.g. Postgres), use it directly
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-# Check if we're in production (Fly.io) or development
-if os.path.exists("/data"):
-    DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
-else:
-    # Local development - use local file, respecting DATABASE_PATH env var
-    local_path = os.getenv("DATABASE_PATH", "./app.db")
-    DATABASE_URL = f"sqlite:///{local_path}"
+if not DATABASE_URL:
+    # Fall back to SQLite
+    DATABASE_PATH = os.getenv("DATABASE_PATH", "/data/app.db")
+    if os.path.exists("/data"):
+        DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+    else:
+        local_path = os.getenv("DATABASE_PATH", "./app.db")
+        DATABASE_URL = f"sqlite:///{local_path}"
+
+# SQLAlchemy needs postgresql:// not postgres://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

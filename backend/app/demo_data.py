@@ -49,9 +49,10 @@ def generate_all_demo_data():
     organizations_db.append(org)
     
     campus_data = [
-        {"name": "Pace Campus", "location": "Pace, FL", "address": "123 School St, Pace, FL 32571", "phone": "850-555-0100"},
-        {"name": "Crestview Campus", "location": "Crestview, FL", "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200"},
-        {"name": "Navarre Campus", "location": "Navarre, FL", "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300"}
+        {"name": "Pace", "location": "Pace, FL", "address": "123 School St, Pace, FL 32571", "phone": "850-555-0100"},
+        {"name": "Crestview North", "location": "Crestview, FL", "address": "456 Education Ave, Crestview, FL 32536", "phone": "850-555-0200"},
+        {"name": "Navarre", "location": "Navarre, FL", "address": "789 Learning Ln, Navarre, FL 32566", "phone": "850-555-0300"},
+        {"name": "Crestview Main Street", "location": "Crestview, FL", "address": "101 Main St, Crestview, FL 32536", "phone": "850-555-0400"},
     ]
     
     for i, campus_info in enumerate(campus_data):
@@ -83,7 +84,8 @@ def generate_all_demo_data():
     campus_admin_names = [
         ("Jennifer", "Kilgore"),
         ("Brittany", "Kilcrease"),
-        ("Pam", "Riffle")
+        ("Pam", "Riffle"),
+        ("Sarah", "Williams"),
     ]
     for i, (first, last) in enumerate(campus_admin_names):
         users_db.append(User(
@@ -1005,29 +1007,40 @@ def generate_all_demo_data():
             line_items = []
             
             for student in family_students:
-                monthly_tuition = family.monthly_tuition_amount / len(family_students)
-                
-                payment_source = None
-                if student.funding_source == FundingSource.STEP_UP:
+                full_monthly = family.monthly_tuition_amount / len(family_students)
+
+                # SUFS billing: parents only see out-of-pocket costs
+                # $10k/year tuition; SUFS scholarship covers step_up_percentage
+                if student.step_up_percentage == 100:
+                    # Fully covered by SUFS — $0 parent invoice
+                    out_of_pocket = 0.0
                     payment_source = PaymentSource.STEP_UP
-                elif student.funding_source == FundingSource.OUT_OF_POCKET:
+                elif student.step_up_percentage > 0:
+                    # Partial SUFS — parent pays the remainder
+                    out_of_pocket = round(full_monthly * (100 - student.step_up_percentage) / 100, 2)
                     payment_source = PaymentSource.OUT_OF_POCKET
-                elif student.funding_source == FundingSource.MIXED:
-                    payment_source = None
-                
-                line_item = InvoiceLineItem(
-                    line_item_id=f"line_{invoice_counter}_{student.student_id}",
-                    invoice_id=invoice_id,
-                    description=f"Monthly Tuition - {student.first_name} {student.last_name}",
-                    category=BillingCategory.TUITION,
-                    student_id=student.student_id,
-                    quantity=1,
-                    unit_price=monthly_tuition,
-                    total=monthly_tuition,
-                    funding_source=payment_source
-                )
-                line_items.append(line_item)
-                subtotal += monthly_tuition
+                else:
+                    # No SUFS — parent pays full tuition
+                    out_of_pocket = full_monthly
+                    payment_source = PaymentSource.OUT_OF_POCKET
+
+                if out_of_pocket > 0:
+                    desc = f"Monthly Tuition - {student.first_name} {student.last_name}"
+                    if student.step_up_percentage > 0:
+                        desc += f" (after SUFS {student.step_up_percentage}%)"
+                    line_item = InvoiceLineItem(
+                        line_item_id=f"line_{invoice_counter}_{student.student_id}",
+                        invoice_id=invoice_id,
+                        description=desc,
+                        category=BillingCategory.TUITION,
+                        student_id=student.student_id,
+                        quantity=1,
+                        unit_price=out_of_pocket,
+                        total=out_of_pocket,
+                        funding_source=payment_source
+                    )
+                    line_items.append(line_item)
+                    subtotal += out_of_pocket
             
             if random.random() < 0.2:
                 fee_amount = random.choice([25.0, 50.0, 75.0])
