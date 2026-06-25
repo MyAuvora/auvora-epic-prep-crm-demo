@@ -201,6 +201,7 @@ def generate_all_demo_data():
     student_counter = 2  # reserve student_1 for Leia when she finalizes
 
     # Create a hardcoded Lead for Leia at "Enrolled" stage so she persists across deploys
+    today = date.today()
     leia_lead = Lead(
         lead_id="lead_metzger",
         campus_id=metzger_campus.campus_id,
