@@ -19,7 +19,6 @@ import { PaymentMethodStorage } from './PaymentMethodStorage'
 import { AttendanceCalendarModal } from './AttendanceCalendarModal'
 import { DailyBibleVerse } from './DailyBibleVerse'
 import { ParentPermissionSlipAlert } from './ParentPermissionSlipAlert'
-import { EnrollmentForm } from './EnrollmentForm'
 import { ParentEnrollmentSubmissions } from './EnrollmentSubmissions'
 import { SimplifiedBillingSummary } from './SimplifiedBillingSummary'
 import { EnrollmentChecklist } from './EnrollmentChecklist'
@@ -81,7 +80,7 @@ interface EnhancedParentDashboardProps {
 }
 
 export function EnhancedParentDashboard({ parentId, notificationNavigation, onClearNotification }: EnhancedParentDashboardProps) {
-  const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health' | 'enrollment'>('home')
+  const [view, setView] = useState<'home' | 'announcements' | 'billing' | 'conferences' | 'events' | 'documents' | 'store' | 'photos' | 'messages' | 'health'>('home')
   const [parentData, setParentData] = useState<ParentData | null>(null)
   const [selectedChild, setSelectedChild] = useState<Student | null>(null)
   const [childGrades, setChildGrades] = useState<any[]>([])
@@ -152,7 +151,6 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
     fetchParentData()
     fetchEnrollmentFee()
     fetchUnreadMessages()
-    checkMessagingAccess()
   }, [parentId])
 
   // Fetch enrollment fee from admin-configured products
@@ -190,29 +188,7 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
     }
   }
 
-  const checkMessagingAccess = async () => {
-    try {
-      // Check if parent has enrolled students (past Finalized)
-      const parentResponse = await fetch(`${API_URL}/api/parents/${parentId}`)
-      const parentInfo = await parentResponse.json()
-      if (parentInfo.student_ids && parentInfo.student_ids.length > 0) {
-        setMessagingEnabled(true)
-        return
-      }
-      // Check if parent has a lead at Enrolled or Finalized stage
-      const leadsResponse = await fetch(`${API_URL}/api/leads`)
-      const leads = await leadsResponse.json()
-      const enrolledStages = ['Enrolled', 'Finalized']
-      const hasEnrolledLead = leads.some(
-        (l: { parent_email?: string; email?: string; stage?: string }) =>
-          (l.parent_email === parentInfo.email || l.email === parentInfo.email) &&
-          enrolledStages.includes(l.stage || '')
-      )
-      setMessagingEnabled(hasEnrolledLead)
-    } catch (error) {
-      console.error('Error checking messaging access:', error)
-    }
-  }
+
 
   useEffect(() => {
     if (selectedChild) {
@@ -236,6 +212,12 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
       if (data.children && data.children.length > 0) {
         setSelectedChild(data.children[0])
       }
+      // Enable messaging if parent has enrolled students OR enrolling children at Enrolled+ stage
+      const hasStudents = data.children && data.children.length > 0
+      const hasEnrolledChildren = data.enrolling_children && data.enrolling_children.some(
+        (c: EnrollingChild) => c.stage === 'Enrolled' || c.stage === 'Finalized'
+      )
+      setMessagingEnabled(hasStudents || hasEnrolledChildren)
     } catch (error) {
       console.error('Error fetching parent data:', error)
     }
@@ -344,7 +326,6 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
       { id: 'photos', label: 'Photos' },
       ...(messagingEnabled ? [{ id: 'messages', label: 'Messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined }] : []),
       { id: 'health', label: 'Health' },
-      { id: 'enrollment', label: 'Enrollment' },
     ]
 
     const handleParentNavClick = (itemId: string) => {
@@ -862,15 +843,7 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
                 <HealthRecords role="parent" userId={parentId} />
               )}
 
-              {view === 'enrollment' && (
-                <EnrollmentForm 
-                  onSubmit={(data) => {
-                    console.log('Enrollment submitted:', data);
-                    setView('home');
-                  }}
-                  onCancel={() => setView('home')}
-                />
-              )}
+
             </div>
 
       {/* Quick Actions FAB */}
