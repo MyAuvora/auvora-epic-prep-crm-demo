@@ -199,6 +199,30 @@ def generate_all_demo_data():
     # the admissions pipeline. We only pre-create Parent + Family so the
     # Parent View defaults to Patrick's account.
     student_counter = 2  # reserve student_1 for Leia when she finalizes
+
+    # Create a hardcoded Lead for Leia at "Enrolled" stage so she persists across deploys
+    leia_lead = Lead(
+        lead_id="lead_metzger",
+        campus_id=metzger_campus.campus_id,
+        parent_first_name="Patrick",
+        parent_last_name="Metzger",
+        email="myauvora@gmail.com",
+        phone="8508196553",
+        child_first_name="Leia",
+        child_last_name="Metzger",
+        child_dob=date(2018, 6, 15),
+        desired_grade="2",
+        desired_start_date=today + timedelta(days=14),
+        stage=LeadStage.ENROLLED,
+        source=LeadSource.WALK_IN,
+        created_date=today - timedelta(days=30),
+        last_contact_date=today - timedelta(days=7),
+        tour_date=(today - timedelta(days=14)).isoformat(),
+        tour_campus_id=metzger_campus.campus_id,
+        notes="Interested in Pace campus. Attended open house.",
+        assigned_to=next((s.staff_id for s in staff_db if s.role == StaffRole.OWNER), None),
+        family_id="family_1",
+    )
     # --- End Metzger family ---
 
     for fam_idx in range(1, num_families):
@@ -1203,7 +1227,7 @@ def generate_all_demo_data():
             
             payment_plan_counter += 1
     
-    leads_db = []
+    leads_db = [leia_lead]
     campus_capacity_db = []
     message_templates_db = []
     broadcast_messages_db = []
