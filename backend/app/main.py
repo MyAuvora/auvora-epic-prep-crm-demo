@@ -193,6 +193,48 @@ def _ensure_metzger_lead():
         db.close()
 
 
+def _ensure_patrick_coach():
+    """Ensure Patrick Metzger exists as a Coach staff member at Pace campus."""
+    db = SessionLocal()
+    try:
+        existing = db.query(models.Staff).filter(
+            models.Staff.staff_id == "staff_8"
+        ).first()
+        if existing:
+            changed = False
+            if existing.first_name != "Patrick" or existing.last_name != "Metzger":
+                existing.first_name = "Patrick"
+                existing.last_name = "Metzger"
+                changed = True
+            if existing.role != "Coach":
+                existing.role = "Coach"
+                changed = True
+            if changed:
+                db.commit()
+                print("Updated staff_8 to Patrick Metzger (Coach)")
+        else:
+            staff = models.Staff(
+                staff_id="staff_8",
+                campus_id="campus_1",
+                campus_ids=json.dumps(["campus_1"]),
+                first_name="Patrick",
+                last_name="Metzger",
+                role="Coach",
+                email="patrick.metzger@epicprepacademy.com",
+                assigned_rooms=json.dumps(["Room 1 - Morning"]),
+                permissions="Coach",
+                active=True,
+            )
+            db.add(staff)
+            db.commit()
+            print("Created staff_8: Patrick Metzger (Coach at Pace)")
+    except Exception as e:
+        db.rollback()
+        print(f"Error ensuring Patrick Coach: {e}")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def startup_db():
     """Initialize database on startup and seed with demo data if empty"""
@@ -212,6 +254,7 @@ def startup_db():
             # These are real school locations, not demo data
             _seed_essential_infrastructure()
             _ensure_metzger_lead()
+            _ensure_patrick_coach()
             load_data_from_db()
             return
         db.close()
@@ -247,6 +290,8 @@ def startup_db():
 
     # Ensure Leia's lead exists at Enrolled stage (persists across deploys)
     _ensure_metzger_lead()
+    # Ensure Patrick's Coach account exists for messaging testing
+    _ensure_patrick_coach()
     # Reload in-memory data to pick up any changes
     load_data_from_db()
 

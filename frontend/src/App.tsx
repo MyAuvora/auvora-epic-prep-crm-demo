@@ -43,7 +43,7 @@ function AuthenticatedApp() {
         if (userRole === 'owner' || userRole === 'admin') {
           setSelectedUserId('staff_1')
         } else if (userRole === 'coach') {
-          setSelectedUserId('staff_4')
+          setSelectedUserId('staff_8')
         } else {
           // Look up parent_id by email for real parent accounts
           const email = user.primaryEmailAddress?.emailAddress
@@ -77,7 +77,7 @@ function AuthenticatedApp() {
     if (role === 'owner' || role === 'admin') {
       setSelectedUserId('staff_1')
     } else if (role === 'coach') {
-      setSelectedUserId('staff_4')
+      setSelectedUserId('staff_8')
     } else {
       setSelectedUserId('parent_1')
     }

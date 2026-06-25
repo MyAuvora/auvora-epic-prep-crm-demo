@@ -143,6 +143,7 @@ def generate_all_demo_data():
         {"first_name": "Sami", "last_name": "Flores", "role": StaffRole.COACH, "rooms": ["Room 3 - Morning", "Room 3 - Afternoon"], "campus_idx": 1},
         {"first_name": "Jewel", "last_name": "Brooks", "role": StaffRole.COACH, "rooms": ["Room 1 - Morning"], "campus_idx": 2},
         {"first_name": "Crislynn", "last_name": "Giles", "role": StaffRole.COACH, "rooms": ["Room 4 - Afternoon"], "campus_idx": 2},
+        {"first_name": "Patrick", "last_name": "Metzger", "role": StaffRole.COACH, "rooms": ["Room 1 - Morning"], "campus_idx": 0},
     ]
     
     for i, staff_info in enumerate(staff_data):
