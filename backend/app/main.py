@@ -2308,11 +2308,35 @@ async def get_parent_dashboard(parent_id: str):
     
     children = [s for s in students_db if s.student_id in parent.student_ids]
     family = next((f for f in families_db if parent_id in f.parent_ids), None)
-    
+
+    # Include children from leads that are in Enrolling/Enrolled stages
+    enrolling_children = []
+    enrolling_stages = ["Enrolling", "Enrolled"]
+    for lead in leads_db:
+        if lead.stage and lead.stage.value in enrolling_stages:
+            family_match = family and lead.family_id and lead.family_id == family.family_id
+            email_match = lead.email == parent.email or (hasattr(lead, 'parent_email') and lead.parent_email == parent.email)
+            if family_match or email_match:
+                already_student = any(
+                    s.first_name == lead.child_first_name and s.last_name == lead.child_last_name
+                    for s in children
+                )
+                if not already_student:
+                    enrolling_children.append({
+                        "lead_id": lead.lead_id,
+                        "first_name": lead.child_first_name,
+                        "last_name": lead.child_last_name,
+                        "grade": lead.desired_grade or "TBD",
+                        "stage": lead.stage.value,
+                        "campus_id": lead.campus_id or lead.tour_campus_id,
+                        "is_enrolling": True,
+                    })
+
     return {
         "parent": parent,
         "children": children,
-        "family": family
+        "family": family,
+        "enrolling_children": enrolling_children,
     }
 
 @app.get("/api/ask-auvora")

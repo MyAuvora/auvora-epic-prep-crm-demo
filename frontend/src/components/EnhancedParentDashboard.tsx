@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X, CreditCard, CheckCircle, Menu } from 'lucide-react'
+import { User, DollarSign, Calendar, BookOpen, GraduationCap, ExternalLink, RefreshCw, X, CreditCard, CheckCircle, Menu, Clock } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,16 @@ interface Family {
   last_payment_date: string
 }
 
+interface EnrollingChild {
+  lead_id: string
+  first_name: string
+  last_name: string
+  grade: string
+  stage: string
+  campus_id: string | null
+  is_enrolling: boolean
+}
+
 interface ParentData {
   parent: {
     parent_id: string
@@ -61,6 +71,7 @@ interface ParentData {
   }
   children: Student[]
   family: Family
+  enrolling_children?: EnrollingChild[]
 }
 
 interface EnhancedParentDashboardProps {
@@ -488,6 +499,34 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
                                 {child.overall_grade_flag}
                               </span>
                             </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {parentData.enrolling_children && parentData.enrolling_children.map((child) => (
+                      <Card key={child.lead_id} className="border-dashed border-2 border-blue-200 bg-blue-50/30">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                              <Clock className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold">
+                                {child.first_name} {child.last_name}
+                              </h3>
+                              <p className="text-sm text-gray-500">
+                                Grade {child.grade}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                              child.stage === 'Enrolled'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {child.stage === 'Enrolled' ? 'Enrollment Under Review' : 'Enrollment In Progress'}
+                            </span>
                           </div>
                         </CardContent>
                       </Card>
