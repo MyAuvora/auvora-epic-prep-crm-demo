@@ -184,7 +184,7 @@ def startup_db():
             # Ensure essential infrastructure exists (org + campuses)
             # These are real school locations, not demo data
             _seed_essential_infrastructure()
-            # Load whatever data exists into memory
+            _ensure_metzger_lead()
             load_data_from_db()
             return
         db.close()
