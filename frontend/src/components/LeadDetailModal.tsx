@@ -292,7 +292,7 @@ export function LeadDetailModal({ open, onClose, lead, mode, onLeadUpdated }: Le
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {stages.filter(s => s !== 'Enrolled' && s !== 'Finalized').map((stage) => (
+                    {stages.map((stage) => (
                       <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                     ))}
                   </SelectContent>
