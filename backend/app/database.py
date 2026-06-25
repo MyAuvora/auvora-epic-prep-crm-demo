@@ -125,6 +125,7 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE messages ADD COLUMN content TEXT DEFAULT NULL"))
             if "read" not in existing:
                 conn.execute(text("ALTER TABLE messages ADD COLUMN read BOOLEAN DEFAULT 0"))
+                conn.execute(text("UPDATE messages SET read = 1"))
         # CRM Notifications table: add parent recipient and related fields if missing
         if "crm_notifications" in inspector.get_table_names():
             existing = [c["name"] for c in inspector.get_columns("crm_notifications")]

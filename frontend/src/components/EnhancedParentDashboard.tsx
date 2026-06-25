@@ -127,10 +127,15 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
   useEffect(() => {
     if (notificationNavigation) {
       const targetView = notificationNavigation.view as typeof view
+      if (targetView === 'messages' && !messagingEnabled) {
+        // Don't navigate to messages if messaging is not enabled
+        if (onClearNotification) onClearNotification()
+        return
+      }
       setView(targetView)
       if (onClearNotification) onClearNotification()
     }
-  }, [notificationNavigation, onClearNotification])
+  }, [notificationNavigation, onClearNotification, messagingEnabled])
 
   useEffect(() => {
     fetchParentData()
@@ -810,8 +815,8 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
           <PhotoGallery role="parent" />
         )}
 
-        {view === 'messages' && (
-          <MessagingPlatform role="parent" userId={parentId} userType="Parent" />
+        {view === 'messages' && messagingEnabled && (
+          <MessagingPlatform role="parent" userId={parentId} userType="Parent" onUnreadCountChange={setUnreadMessageCount} />
         )}
 
               {view === 'health' && (
