@@ -3615,6 +3615,140 @@ async def update_lead(lead_id: str, lead: Lead):
         crm_notifications_db.append(notif)
         db_utils.save_crm_notification(notif)
 
+    # Auto-create records when manually moved to Finalized
+    if lead.stage == LeadStage.FINALIZED and old_lead.stage != LeadStage.FINALIZED:
+        import time as _time
+
+        existing_family = None
+        family_id = lead.family_id
+        if family_id:
+            existing_family = next((f for f in families_db if f.family_id == family_id), None)
+        existing_student = None
+        if existing_family:
+            existing_student = next(
+                (s for s in students_db
+                 if s.student_id in existing_family.student_ids
+                 and s.first_name == lead.child_first_name
+                 and s.last_name == lead.child_last_name),
+                None,
+            )
+
+        if not existing_student:
+            enrollment_data = lead.enrollment_data or {}
+            parents_data = enrollment_data.get("parents", [])
+            students_data = enrollment_data.get("students", [])
+            matching_student = None
+            for s in students_data:
+                if s.get("firstName") == lead.child_first_name and s.get("lastName") == lead.child_last_name:
+                    matching_student = s
+                    break
+            if not matching_student and students_data:
+                matching_student = students_data[0]
+
+            if not existing_family:
+                family_id = f"family_{int(_time.time() * 1000)}"
+                family = Family(
+                    family_id=family_id,
+                    family_name=f"The {lead.parent_last_name} Family",
+                    primary_parent_id="",
+                    parent_ids=[],
+                    student_ids=[],
+                    monthly_tuition_amount=0,
+                    current_balance=0,
+                    billing_status=BillingStatus.GREEN,
+                    last_payment_date=None,
+                    last_payment_amount=None,
+                )
+                families_db.append(family)
+
+                for i, p in enumerate(parents_data):
+                    parent_id = f"parent_{int(_time.time() * 1000)}_{i}"
+                    parent = Parent(
+                        parent_id=parent_id,
+                        first_name=p.get("firstName", lead.parent_first_name),
+                        last_name=p.get("lastName", lead.parent_last_name),
+                        email=p.get("email", lead.email),
+                        phone=p.get("phone", lead.phone),
+                        relationship=p.get("relationship", "parent") or "parent",
+                        primary_guardian=p.get("isPrimary", i == 0),
+                        preferred_contact_method="email",
+                        student_ids=[],
+                    )
+                    parents_db.append(parent)
+                    db_utils.save_parent(parent)
+                    family.parent_ids.append(parent_id)
+                    if p.get("isPrimary", i == 0):
+                        family.primary_parent_id = parent_id
+
+                if not parents_data:
+                    parent_id = f"parent_{int(_time.time() * 1000)}_0"
+                    parent = Parent(
+                        parent_id=parent_id,
+                        first_name=lead.parent_first_name,
+                        last_name=lead.parent_last_name,
+                        email=lead.email,
+                        phone=lead.phone,
+                        relationship="parent",
+                        primary_guardian=True,
+                        preferred_contact_method="email",
+                        student_ids=[],
+                    )
+                    parents_db.append(parent)
+                    db_utils.save_parent(parent)
+                    family.parent_ids.append(parent_id)
+                    family.primary_parent_id = parent_id
+            else:
+                family = existing_family
+
+            campus_id = lead.campus_id or lead.tour_campus_id or "campus_1"
+            student_id = f"student_{int(_time.time() * 1000)}"
+            session_val = Session.MORNING
+
+            funding = "Out-of-Pocket"
+            step_pct = 0
+            if matching_student:
+                step_up = matching_student.get("stepUpApplied", "")
+                if step_up in ("yes_approved", "yes_pending"):
+                    funding = "Step-Up"
+                    step_pct = 100 if step_up == "yes_approved" else 0
+
+            student = Student(
+                student_id=student_id,
+                campus_id=campus_id,
+                first_name=lead.child_first_name,
+                last_name=lead.child_last_name,
+                date_of_birth=lead.child_dob if lead.child_dob else date.today(),
+                grade=lead.desired_grade or "K",
+                session=session_val,
+                room="Unassigned",
+                status=StudentStatus.ACTIVE,
+                family_id=family_id,
+                enrollment_start_date=date.today(),
+                enrollment_end_date=None,
+                attendance_present_count=0,
+                attendance_absent_count=0,
+                attendance_tardy_count=0,
+                overall_grade_flag=GradeFlag.ON_TRACK,
+                ixl_status_flag=IXLStatus.ON_TRACK,
+                overall_risk_flag=RiskFlag.NONE,
+                funding_source=funding,
+                step_up_percentage=step_pct,
+            )
+            students_db.append(student)
+            db_utils.save_student(student)
+            family.student_ids.append(student_id)
+
+            for pid in family.parent_ids:
+                p = next((pp for pp in parents_db if pp.parent_id == pid), None)
+                if p:
+                    p.student_ids.append(student_id)
+                    db_utils.save_parent(p)
+
+            db_utils.save_family(family)
+            lead.family_id = family_id
+            leads_db[index] = lead
+            db_utils.save_lead(lead)
+
     # Auto-send invitation when invitation_sent flag is set
     if lead.invitation_sent and not old_lead.invitation_sent:
         import uuid
