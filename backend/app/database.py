@@ -114,6 +114,18 @@ def _run_migrations():
                 conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_sent BOOLEAN DEFAULT 0"))
             if "invitation_token" not in existing:
                 conn.execute(text("ALTER TABLE leads ADD COLUMN invitation_token VARCHAR DEFAULT NULL"))
+        # Messages table: add campus_id, subject, content, read if missing
+        if "messages" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("messages")]
+            if "campus_id" not in existing:
+                conn.execute(text("ALTER TABLE messages ADD COLUMN campus_id VARCHAR DEFAULT NULL"))
+            if "subject" not in existing:
+                conn.execute(text("ALTER TABLE messages ADD COLUMN subject VARCHAR DEFAULT NULL"))
+            if "content" not in existing:
+                conn.execute(text("ALTER TABLE messages ADD COLUMN content TEXT DEFAULT NULL"))
+            if "read" not in existing:
+                conn.execute(text("ALTER TABLE messages ADD COLUMN read BOOLEAN DEFAULT 0"))
+                conn.execute(text("UPDATE messages SET read = 1"))
         # CRM Notifications table: add parent recipient and related fields if missing
         if "crm_notifications" in inspector.get_table_names():
             existing = [c["name"] for c in inspector.get_columns("crm_notifications")]

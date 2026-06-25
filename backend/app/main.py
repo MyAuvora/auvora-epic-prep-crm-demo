@@ -790,13 +790,17 @@ class Conference(BaseModel):
 
 class Message(BaseModel):
     message_id: str
+    campus_id: Optional[str] = None
     sender_type: MessageSenderType
     sender_id: str
     recipient_type: MessageSenderType
     recipient_id: str
-    student_id: Optional[str]
+    student_id: Optional[str] = None
+    subject: Optional[str] = None
+    content: Optional[str] = None
     date_time: datetime
     content_preview: str
+    read: bool = False
 
 class Event(BaseModel):
     event_id: str
@@ -2210,6 +2214,15 @@ async def create_message(message: Message):
     messages_db.append(message)
     db_utils.save_message(message)
     return message
+
+@app.patch("/api/messages/{message_id}/read")
+async def mark_message_read(message_id: str):
+    msg = next((m for m in messages_db if m.message_id == message_id), None)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    msg.read = True
+    db_utils.save_message(msg)
+    return {"status": "ok"}
 
 @app.get("/api/dashboard/admin")
 async def get_admin_dashboard(campus_id: Optional[str] = None):

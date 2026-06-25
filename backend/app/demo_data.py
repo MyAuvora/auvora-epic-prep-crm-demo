@@ -694,28 +694,68 @@ def generate_all_demo_data():
         )
         conferences_db.append(conference)
     
+    parent_message_data = [
+        {
+            "subject": "Absence Notice",
+            "content": "{child} will be absent tomorrow due to a doctor's appointment. Please send any homework or assignments home with a sibling or I can pick them up later.",
+            "preview": "{child} will be absent tomorrow",
+        },
+        {
+            "subject": "Homework Question",
+            "content": "Hi, {child} is having trouble with the math homework assigned today. Could you provide some guidance on the word problems? We've been working through them but are stuck on the last two.",
+            "preview": "Question about homework assignment",
+        },
+        {
+            "subject": "Thank You",
+            "content": "Thank you so much for the progress update on {child}. We're really happy to see the improvement in reading. Keep up the great work!",
+            "preview": "Thank you for the update on progress",
+        },
+        {
+            "subject": "Conference Request",
+            "content": "Hi, we'd like to schedule a parent-teacher conference to discuss {child}'s progress this semester. Are there any available times next week?",
+            "preview": "Can we schedule a conference?",
+        },
+    ]
+    staff_message_data = [
+        {
+            "subject": "Daily Update",
+            "content": "{child} had a wonderful day today! They participated actively in class discussion and showed great teamwork during group activities. Keep encouraging that enthusiasm at home!",
+            "preview": "{child} had a great day today!",
+        },
+        {
+            "subject": "Permission Slip Reminder",
+            "content": "Just a friendly reminder that the field trip permission slip for {child} is due this Friday. Please sign and return it as soon as possible so we can finalize the headcount.",
+            "preview": "Reminder: Field trip permission slip due Friday",
+        },
+        {
+            "subject": "Missing Assignment",
+            "content": "{child} has a missing assignment in {subject_area} that was due last week. Please have them complete and turn it in by end of day tomorrow to avoid a grade penalty.",
+            "preview": "{child} needs to complete missing assignment",
+        },
+        {
+            "subject": "Progress Report Available",
+            "content": "The latest progress report for {child} is now available in the parent portal. Please review it at your earliest convenience. Feel free to reach out if you have any questions about their performance.",
+            "preview": "Progress report available in portal",
+        },
+    ]
+    subject_areas = ["Math", "ELA", "Science", "Social Studies"]
+
     for i in range(15):
         student = random.choice(students_db)
         family = next(f for f in families_db if f.family_id == student.family_id)
         teacher = random.choice([s for s in staff_db if s.role == StaffRole.COACH])
-        
+
         is_parent_sender = random.choice([True, False])
-        
+
         if is_parent_sender:
-            message_contents = [
-                f"{student.first_name} will be absent tomorrow",
-                "Question about homework assignment",
-                "Thank you for the update on progress",
-                "Can we schedule a conference?"
-            ]
+            msg_data = random.choice(parent_message_data)
         else:
-            message_contents = [
-                f"{student.first_name} had a great day today!",
-                "Reminder: Field trip permission slip due Friday",
-                f"{student.first_name} needs to complete missing assignment",
-                "Progress report available in portal"
-            ]
-        
+            msg_data = random.choice(staff_message_data)
+
+        subject = msg_data["subject"]
+        content = msg_data["content"].replace("{child}", student.first_name).replace("{subject_area}", random.choice(subject_areas))
+        preview = msg_data["preview"].replace("{child}", student.first_name)
+
         message = Message(
             message_id=f"msg_{i + 1}",
             campus_id=student.campus_id,
@@ -724,8 +764,11 @@ def generate_all_demo_data():
             recipient_type=MessageSenderType.STAFF if is_parent_sender else MessageSenderType.PARENT,
             recipient_id=teacher.staff_id if is_parent_sender else family.primary_parent_id,
             student_id=student.student_id,
+            subject=subject,
+            content=content,
             date_time=datetime.now() - timedelta(days=random.randint(0, 14)),
-            content_preview=random.choice(message_contents)
+            content_preview=preview,
+            read=random.choice([True, True, False]),
         )
         messages_db.append(message)
     
