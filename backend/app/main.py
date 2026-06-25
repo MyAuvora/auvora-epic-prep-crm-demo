@@ -123,17 +123,44 @@ def _seed_essential_infrastructure():
 
 
 def _ensure_metzger_lead():
-    """Ensure Leia Metzger's lead exists at Enrolled stage so messaging works for Patrick."""
+    """Ensure exactly one Leia Metzger lead exists at Enrolled stage."""
     db = SessionLocal()
     try:
-        existing = db.query(models.Lead).filter(
-            models.Lead.lead_id == "lead_metzger"
-        ).first()
-        if existing:
+        # Find all Leia Metzger leads (by name or by lead_id)
+        all_leia_leads = db.query(models.Lead).filter(
+            (models.Lead.lead_id == "lead_metzger") |
+            (
+                (models.Lead.child_first_name == "Leia") &
+                (models.Lead.child_last_name == "Metzger")
+            )
+        ).all()
+
+        if len(all_leia_leads) > 1:
+            # Keep the one with lead_id="lead_metzger" if it exists, otherwise keep the first
+            keep = next((l for l in all_leia_leads if l.lead_id == "lead_metzger"), all_leia_leads[0])
+            for lead in all_leia_leads:
+                if lead.id != keep.id:
+                    db.delete(lead)
+                    print(f"Deleted duplicate Leia lead: {lead.lead_id}")
+            keep.stage = "Enrolled"
+            keep.lead_id = "lead_metzger"
+            keep.family_id = "family_1"
+            keep.email = "myauvora@gmail.com"
+            keep.campus_id = "campus_1"
+            db.commit()
+            print("Deduplicated Leia leads, kept lead_metzger at Enrolled")
+        elif len(all_leia_leads) == 1:
+            existing = all_leia_leads[0]
+            changed = False
+            if existing.lead_id != "lead_metzger":
+                existing.lead_id = "lead_metzger"
+                changed = True
             if existing.stage != "Enrolled":
                 existing.stage = "Enrolled"
+                changed = True
+            if changed:
                 db.commit()
-                print("Updated lead_metzger to Enrolled stage")
+                print("Updated Leia lead to lead_metzger at Enrolled stage")
         else:
             lead = models.Lead(
                 lead_id="lead_metzger",
@@ -2371,15 +2398,21 @@ async def get_parent_dashboard(parent_id: str):
                     for s in children
                 )
                 if not already_student:
-                    enrolling_children.append({
-                        "lead_id": lead.lead_id,
-                        "first_name": lead.child_first_name,
-                        "last_name": lead.child_last_name,
-                        "grade": lead.desired_grade or "TBD",
-                        "stage": lead.stage.value,
-                        "campus_id": lead.campus_id or lead.tour_campus_id,
-                        "is_enrolling": True,
-                    })
+                    # Deduplicate by child name
+                    already_listed = any(
+                        ec["first_name"] == lead.child_first_name and ec["last_name"] == lead.child_last_name
+                        for ec in enrolling_children
+                    )
+                    if not already_listed:
+                        enrolling_children.append({
+                            "lead_id": lead.lead_id,
+                            "first_name": lead.child_first_name,
+                            "last_name": lead.child_last_name,
+                            "grade": lead.desired_grade or "TBD",
+                            "stage": lead.stage.value,
+                            "campus_id": lead.campus_id or lead.tour_campus_id,
+                            "is_enrolling": True,
+                        })
 
     return {
         "parent": parent,
