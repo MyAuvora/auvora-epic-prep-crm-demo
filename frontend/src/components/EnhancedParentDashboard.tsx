@@ -121,6 +121,7 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
     const [_enrollmentFeeLoading, setEnrollmentFeeLoading] = useState(true)
     const [unreadMessageCount, setUnreadMessageCount] = useState(0)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [messagingEnabled, setMessagingEnabled] = useState(false)
 
   // Handle notification navigation
   useEffect(() => {
@@ -135,6 +136,7 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
     fetchParentData()
     fetchEnrollmentFee()
     fetchUnreadMessages()
+    checkMessagingAccess()
   }, [parentId])
 
   // Fetch enrollment fee from admin-configured products
@@ -169,6 +171,30 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
       setUnreadMessageCount(unread)
     } catch (error) {
       console.error('Error fetching unread messages:', error)
+    }
+  }
+
+  const checkMessagingAccess = async () => {
+    try {
+      // Check if parent has enrolled students (past Finalized)
+      const parentResponse = await fetch(`${API_URL}/api/parents/${parentId}`)
+      const parentInfo = await parentResponse.json()
+      if (parentInfo.student_ids && parentInfo.student_ids.length > 0) {
+        setMessagingEnabled(true)
+        return
+      }
+      // Check if parent has a lead at Enrolled or Finalized stage
+      const leadsResponse = await fetch(`${API_URL}/api/leads`)
+      const leads = await leadsResponse.json()
+      const enrolledStages = ['Enrolled', 'Finalized']
+      const hasEnrolledLead = leads.some(
+        (l: { parent_email?: string; email?: string; stage?: string }) =>
+          (l.parent_email === parentInfo.email || l.email === parentInfo.email) &&
+          enrolledStages.includes(l.stage || '')
+      )
+      setMessagingEnabled(hasEnrolledLead)
+    } catch (error) {
+      console.error('Error checking messaging access:', error)
     }
   }
 
@@ -300,7 +326,7 @@ export function EnhancedParentDashboard({ parentId, notificationNavigation, onCl
       { id: 'documents', label: 'Documents' },
       { id: 'store', label: 'Store' },
       { id: 'photos', label: 'Photos' },
-      { id: 'messages', label: 'Messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined },
+      ...(messagingEnabled ? [{ id: 'messages', label: 'Messages', badge: unreadMessageCount > 0 ? unreadMessageCount : undefined }] : []),
       { id: 'health', label: 'Health' },
       { id: 'enrollment', label: 'Enrollment' },
     ]

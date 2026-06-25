@@ -1281,7 +1281,11 @@ def save_message(pydantic_msg):
             recipient_type=_enum_val(pydantic_msg.recipient_type),
             recipient_id=pydantic_msg.recipient_id,
             student_id=getattr(pydantic_msg, 'student_id', None),
+            campus_id=getattr(pydantic_msg, 'campus_id', None),
+            subject=getattr(pydantic_msg, 'subject', None),
+            content=getattr(pydantic_msg, 'content', None),
             content_preview=pydantic_msg.content_preview,
+            read=getattr(pydantic_msg, 'read', False),
             date_time=pydantic_msg.date_time,
         )
         _upsert(db, models.Message, "message_id", pydantic_msg.message_id, fields)
@@ -1957,11 +1961,15 @@ def _conference_to_dict(r):
 
 def _message_to_dict(r):
     return {
-        "message_id": r.message_id, "sender_type": r.sender_type or "Staff",
+        "message_id": r.message_id, "campus_id": getattr(r, 'campus_id', None),
+        "sender_type": r.sender_type or "Staff",
         "sender_id": r.sender_id or "", "recipient_type": r.recipient_type or "Parent",
         "recipient_id": r.recipient_id or "", "student_id": r.student_id,
+        "subject": getattr(r, 'subject', None),
+        "content": getattr(r, 'content', None),
         "date_time": r.date_time or datetime.utcnow(),
         "content_preview": r.content_preview or r.content or "",
+        "read": getattr(r, 'read', False) or False,
     }
 
 
@@ -2793,12 +2801,16 @@ def seed_from_demo_data():
         for item in data.get("messages", []):
             db.add(models.Message(
                 message_id=item.message_id,
+                campus_id=getattr(item, 'campus_id', None),
                 sender_type=_enum_val(item.sender_type),
                 sender_id=item.sender_id,
                 recipient_type=_enum_val(item.recipient_type),
                 recipient_id=item.recipient_id,
                 student_id=item.student_id,
+                subject=getattr(item, 'subject', None),
+                content=getattr(item, 'content', None),
                 content_preview=item.content_preview,
+                read=getattr(item, 'read', False),
                 date_time=item.date_time))
 
         # Events

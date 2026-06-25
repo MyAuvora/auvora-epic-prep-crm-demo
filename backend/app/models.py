@@ -390,6 +390,7 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(String, unique=True, index=True)
+    campus_id = Column(String)
     sender_type = Column(String)
     sender_id = Column(String)
     recipient_type = Column(String)
