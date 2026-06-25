@@ -296,12 +296,14 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
   const unreadCount = receivedMessages.filter(m => !m.read).length;
 
   const getAvailableStaff = () => {
+    const messageableRoles = ['Coach', 'Center Manager'];
     if (role === 'parent' && userCampusId) {
-      return staffMembers.filter(staff => staff.campus_ids.includes(userCampusId));
+      return staffMembers.filter(staff =>
+        messageableRoles.includes(staff.role) && staff.campus_ids.includes(userCampusId)
+      );
     }
     if (role === 'parent') {
-      // No campus determined — show all staff so parent can still message
-      return staffMembers;
+      return staffMembers.filter(staff => messageableRoles.includes(staff.role));
     }
     return staffMembers.filter(staff => staff.staff_id !== userId);
   };
