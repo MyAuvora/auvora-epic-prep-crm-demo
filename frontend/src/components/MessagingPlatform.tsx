@@ -130,7 +130,7 @@ export const MessagingPlatform: React.FC<MessagingPlatformProps> = ({ role, user
           setUserCampusId(studentData.campus_id);
         } else {
           // No enrolled students — try to find campus from lead data
-          const leadsResponse = await fetch(`${API_URL}/api/leads`);
+          const leadsResponse = await fetch(`${API_URL}/api/admissions/leads`);
           const leads = await leadsResponse.json();
           const parentData = data;
           const parentLead = leads.find((l: { parent_email?: string; email?: string }) =>
