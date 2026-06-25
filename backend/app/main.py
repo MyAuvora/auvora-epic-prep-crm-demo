@@ -2314,7 +2314,9 @@ async def get_parent_dashboard(parent_id: str):
     enrolling_stages = ["Enrolling", "Enrolled"]
     for lead in leads_db:
         if lead.stage and lead.stage.value in enrolling_stages:
-            if lead.email == parent.email or (hasattr(lead, 'parent_email') and lead.parent_email == parent.email):
+            family_match = family and lead.family_id and lead.family_id == family.family_id
+            email_match = lead.email == parent.email or (hasattr(lead, 'parent_email') and lead.parent_email == parent.email)
+            if family_match or email_match:
                 already_student = any(
                     s.first_name == lead.child_first_name and s.last_name == lead.child_last_name
                     for s in children
