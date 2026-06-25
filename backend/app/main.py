@@ -122,6 +122,50 @@ def _seed_essential_infrastructure():
         db.close()
 
 
+def _ensure_metzger_lead():
+    """Ensure Leia Metzger's lead exists at Enrolled stage so messaging works for Patrick."""
+    db = SessionLocal()
+    try:
+        existing = db.query(models.Lead).filter(
+            models.Lead.lead_id == "lead_metzger"
+        ).first()
+        if existing:
+            if existing.stage != "Enrolled":
+                existing.stage = "Enrolled"
+                db.commit()
+                print("Updated lead_metzger to Enrolled stage")
+        else:
+            lead = models.Lead(
+                lead_id="lead_metzger",
+                campus_id="campus_1",
+                parent_first_name="Patrick",
+                parent_last_name="Metzger",
+                email="myauvora@gmail.com",
+                phone="8508196553",
+                child_first_name="Leia",
+                child_last_name="Metzger",
+                child_dob=date(2018, 6, 15),
+                desired_grade="2",
+                desired_start_date=date.today() + timedelta(days=14),
+                stage="Enrolled",
+                source="Walk-in",
+                created_date=date.today() - timedelta(days=30),
+                last_contact_date=date.today() - timedelta(days=7),
+                tour_date=(date.today() - timedelta(days=14)).isoformat(),
+                tour_campus_id="campus_1",
+                notes="Interested in Pace campus. Attended open house.",
+                family_id="family_1",
+            )
+            db.add(lead)
+            db.commit()
+            print("Created lead_metzger at Enrolled stage")
+    except Exception as e:
+        db.rollback()
+        print(f"Error ensuring Metzger lead: {e}")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def startup_db():
     """Initialize database on startup and seed with demo data if empty"""
@@ -140,7 +184,7 @@ def startup_db():
             # Ensure essential infrastructure exists (org + campuses)
             # These are real school locations, not demo data
             _seed_essential_infrastructure()
-            # Load whatever data exists into memory
+            _ensure_metzger_lead()
             load_data_from_db()
             return
         db.close()
@@ -173,6 +217,11 @@ def startup_db():
                 db_utils.seed_from_demo_data()
             except Exception:
                 pass
+
+    # Ensure Leia's lead exists at Enrolled stage (persists across deploys)
+    _ensure_metzger_lead()
+    # Reload in-memory data to pick up any changes
+    load_data_from_db()
 
 # CORS configuration — restrict to known origins in production
 _allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
