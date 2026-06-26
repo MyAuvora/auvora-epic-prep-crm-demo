@@ -1,23 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, Repeat, CreditCard, RefreshCw, UserCheck, Trash2, ChevronRight, Home, Archive, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, Calendar, BookOpen, AlertTriangle, FileText, Phone, Mail, MapPin, Edit2, Save, X, Plus, RefreshCw, UserCheck, Trash2, ChevronRight, Home, Archive, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { VenmoCashAppPayment } from './VenmoCashAppPayment';
 
-interface PaymentSchedule {
-  schedule_id: string;
-  family_id: string;
-  description: string;
-  amount: number;
-  frequency: 'one-time' | 'monthly' | 'bi-monthly' | 'quarterly';
-  start_date: string;
-  end_date?: string;
-  next_due_date: string;
-  source: 'Out of Pocket' | 'SUFS';
-  status: 'active' | 'paused' | 'completed';
-  created_at: string;
-}
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -44,6 +30,9 @@ interface Student {
   overall_risk_flag: string;
   date_of_birth?: string;
   enrollment_date?: string;
+  annual_tuition?: number;
+  sufs_approved_amount?: number;
+  scholarship_amount?: number;
 }
 
 interface Family {
@@ -107,11 +96,21 @@ interface AcellusSummary {
 
 interface Invoice {
   invoice_id: string;
+  invoice_number?: string;
   invoice_date: string;
   due_date: string;
   amount: number;
+  total?: number;
+  subtotal?: number;
+  balance?: number;
+  amount_paid?: number;
   status: string;
   description: string;
+  billing_type?: string;
+  student_id?: string;
+  family_id?: string;
+  payment_method?: string;
+  payment_date?: string;
 }
 
 interface BillingRecord {
@@ -136,7 +135,7 @@ interface SUFSScholarship {
   status: string;
 }
 
-const ANNUAL_TUITION = 10000; // $10,000/year per student
+
 
 interface FullAccountViewProps {
   type: 'family' | 'student';
@@ -192,16 +191,21 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
   const [finalizing, setFinalizing] = useState(false);
   const [acellusCourses, setAcellusCourses] = useState<AcellusCourse[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
+  const [, setBillingRecords] = useState<BillingRecord[]>([]);
   const [scholarships, setScholarships] = useState<SUFSScholarship[]>([]);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [editingScholarshipId, setEditingScholarshipId] = useState<string | null>(null);
   const [editAwardAmount, setEditAwardAmount] = useState<string>('');
   
-  // Payment schedule state
-  const [paymentSchedules, setPaymentSchedules] = useState<PaymentSchedule[]>([]);
+  // Student billing edit state
+  const [editingStudentBilling, setEditingStudentBilling] = useState<string | null>(null);
+  const [editBillingValues, setEditBillingValues] = useState<{annual_tuition: string; sufs_approved_amount: string; scholarship_amount: string}>({annual_tuition: '', sufs_approved_amount: '', scholarship_amount: ''});
+  const [billingLoading, setBillingLoading] = useState(false);
+  // Mark invoice paid state
+  const [markingPaidInvoiceId, setMarkingPaidInvoiceId] = useState<string | null>(null);
+  const [paymentMethodInput, setPaymentMethodInput] = useState('Cash');
+  
   const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
-  const [showNewScheduleModal, setShowNewScheduleModal] = useState(false);
   
   // Re-enrollment state
   const [reEnrollmentStatus, setReEnrollmentStatus] = useState<Record<string, { enrolled: boolean; year: string }>>({});
@@ -220,14 +224,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     recurring_end_date: '',
     source: 'Out of Pocket' as 'Out of Pocket' | 'SUFS'
   });
-  const [newSchedule, setNewSchedule] = useState({
-    description: '',
-    amount: '',
-    frequency: 'monthly' as 'one-time' | 'monthly' | 'bi-monthly' | 'quarterly',
-    start_date: '',
-    end_date: '',
-    source: 'Out of Pocket' as 'Out of Pocket' | 'SUFS'
-  });
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -240,7 +237,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             const campusData = await campusRes.json();
             setCampuses(campusData);
           }
-        } catch (e) {
+        } catch {
           console.log('Campuses not available');
         }
 
@@ -262,7 +259,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const invoicesData = await invoicesRes.json();
               setInvoices(invoicesData);
             }
-          } catch (e) {
+          } catch {
             console.log('Invoices not available');
           }
 
@@ -273,7 +270,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const billingData = await billingRes.json();
               setBillingRecords(billingData);
             }
-          } catch (e) {
+          } catch {
             console.log('Billing records not available');
           }
 
@@ -284,7 +281,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const scholarshipsData = await scholarshipsRes.json();
               setScholarships(scholarshipsData);
             }
-          } catch (e) {
+          } catch {
             console.log('Scholarships not available');
           }
 
@@ -301,7 +298,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               });
               setFinalizeSettings(settings);
             }
-          } catch (e) {
+          } catch {
             console.log('Leads not available');
           }
         } else {
@@ -329,7 +326,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const ixlData = await ixlRes.json();
               setIxl(ixlData);
             }
-          } catch (e) {
+          } catch {
             console.log('IXL data not available');
           }
 
@@ -340,7 +337,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const acellusData = await acellusRes.json();
               setAcellus(acellusData);
             }
-          } catch (e) {
+          } catch {
             console.log('Acellus data not available');
           }
 
@@ -351,7 +348,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const coursesData = await coursesRes.json();
               setAcellusCourses(coursesData);
             }
-          } catch (e) {
+          } catch {
             console.log('Acellus courses not available');
           }
 
@@ -362,7 +359,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
               const scholarshipsData = await scholarshipsRes.json();
               setScholarships(scholarshipsData);
             }
-          } catch (e) {
+          } catch {
             console.log('Scholarships not available');
           }
         }
@@ -411,8 +408,10 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
 
   const handleSaveScholarship = async (scholarship: SUFSScholarship) => {
     const newAwardAmount = parseFloat(editAwardAmount);
-    if (isNaN(newAwardAmount) || newAwardAmount < 0 || newAwardAmount > ANNUAL_TUITION) {
-      alert(`Award amount must be between $0 and $${ANNUAL_TUITION.toLocaleString()}`);
+    const student = students.find(s => s.student_id === scholarship.student_id);
+    const studentTuition = student?.annual_tuition || 0;
+    if (isNaN(newAwardAmount) || newAwardAmount < 0 || newAwardAmount > studentTuition) {
+      alert(`Award amount must be between $0 and $${studentTuition.toLocaleString()}`);
       return;
     }
 
@@ -446,6 +445,75 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     } catch (error) {
       console.error('Error updating scholarship:', error);
       alert('Error updating scholarship');
+    }
+  };
+
+  const handleEditStudentBilling = (student: Student) => {
+    setEditingStudentBilling(student.student_id);
+    setEditBillingValues({
+      annual_tuition: (student.annual_tuition || 0).toString(),
+      sufs_approved_amount: (student.sufs_approved_amount || 0).toString(),
+      scholarship_amount: (student.scholarship_amount || 0).toString(),
+    });
+  };
+
+  const handleSaveStudentBilling = async (studentId: string) => {
+    setBillingLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/students/${studentId}/billing`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          annual_tuition: parseFloat(editBillingValues.annual_tuition) || 0,
+          sufs_approved_amount: parseFloat(editBillingValues.sufs_approved_amount) || 0,
+          scholarship_amount: parseFloat(editBillingValues.scholarship_amount) || 0,
+        })
+      });
+      if (response.ok) {
+        setStudents(prev => prev.map(s =>
+          s.student_id === studentId
+            ? {
+                ...s,
+                annual_tuition: parseFloat(editBillingValues.annual_tuition) || 0,
+                sufs_approved_amount: parseFloat(editBillingValues.sufs_approved_amount) || 0,
+                scholarship_amount: parseFloat(editBillingValues.scholarship_amount) || 0,
+              }
+            : s
+        ));
+        setEditingStudentBilling(null);
+      } else {
+        alert('Failed to update student billing');
+      }
+    } catch (error) {
+      console.error('Error updating student billing:', error);
+      alert('Error updating student billing');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleMarkInvoicePaid = async (invoiceId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/invoices/${invoiceId}/mark-paid`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_method: paymentMethodInput })
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setInvoices(prev => prev.map(inv =>
+          inv.invoice_id === invoiceId
+            ? { ...inv, status: updated.status || 'Paid', amount_paid: updated.amount_paid || inv.amount, balance: updated.balance || 0, payment_method: paymentMethodInput, payment_date: new Date().toISOString().split('T')[0] }
+            : inv
+        ));
+        setMarkingPaidInvoiceId(null);
+        setPaymentMethodInput('Cash');
+      } else {
+        alert('Failed to mark invoice as paid');
+      }
+    } catch (error) {
+      console.error('Error marking invoice paid:', error);
+      alert('Error marking invoice as paid');
     }
   };
 
@@ -547,56 +615,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
     }
   };
 
-  // Create recurring payment schedule
-  const handleCreateSchedule = async () => {
-    if (!newSchedule.description || !newSchedule.amount || !newSchedule.start_date) {
-      alert('Please fill in all required fields');
-      return;
-    }
 
-    const amount = parseFloat(newSchedule.amount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
-      return;
-    }
-
-    const schedule: PaymentSchedule = {
-      schedule_id: `sched_${Date.now()}`,
-      family_id: id,
-      description: newSchedule.description,
-      amount: amount,
-      frequency: newSchedule.frequency,
-      start_date: newSchedule.start_date,
-      end_date: newSchedule.end_date || undefined,
-      next_due_date: newSchedule.start_date,
-      source: newSchedule.source,
-      status: 'active',
-      created_at: new Date().toISOString()
-    };
-
-    // Add to local state (in a real app, this would be saved to the backend)
-    setPaymentSchedules(prev => [...prev, schedule]);
-    setShowNewScheduleModal(false);
-    setNewSchedule({
-      description: '',
-      amount: '',
-      frequency: 'monthly',
-      start_date: '',
-      end_date: '',
-      source: 'Out of Pocket'
-    });
-  };
-
-  // Get frequency label
-  const getFrequencyLabel = (freq: string) => {
-    switch (freq) {
-      case 'one-time': return 'One-time';
-      case 'monthly': return 'Monthly';
-      case 'bi-monthly': return 'Every 2 Months';
-      case 'quarterly': return 'Quarterly';
-      default: return freq;
-    }
-  };
 
   // Re-enrollment handlers
   const handleReEnroll = (studentId: string) => {
@@ -955,7 +974,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                   const err = await res.json();
                                   alert(`Error: ${err.detail || 'Failed to finalize'}`);
                                 }
-                              } catch (e) {
+                              } catch {
                                 alert('Failed to finalize enrollment');
                               }
                               setFinalizing(false);
@@ -1058,392 +1077,240 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
             </TabsContent>
 
             <TabsContent value="billing" className="mt-6 space-y-6">
-              {/* Family Billing Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Total Monthly Tuition</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-600">${(family.monthly_tuition_amount || 0).toFixed(2)}</div>
-                    <p className="text-xs text-gray-500">{students.length} student{students.length !== 1 ? 's' : ''} enrolled</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Family Balance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                                        <div className={`text-3xl font-bold ${(family.current_balance || 0) > 100 ? 'text-red-600' : 'text-green-600'}`}>
-                                          ${(family.current_balance || 0).toFixed(2)}
-                                        </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Scholarship Coverage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-600">
-                      ${scholarships.reduce((sum, s) => sum + ((s.annual_award_amount || 0) / 12), 0).toFixed(2)}
-                    </div>
-                    <p className="text-xs text-gray-500">Per month</p>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Family Billing Summary - Totals */}
+              {(() => {
+                const totalTuition = students.reduce((sum, s) => sum + (s.annual_tuition || 0), 0);
+                const totalSufs = students.reduce((sum, s) => sum + (s.sufs_approved_amount || 0), 0);
+                const totalScholarship = students.reduce((sum, s) => sum + (s.scholarship_amount || 0), 0);
+                const totalOop = Math.max(0, totalTuition - totalSufs - totalScholarship);
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="border-blue-200 bg-blue-50">
+                      <CardContent className="pt-4 pb-4">
+                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Annual Tuition</p>
+                        <p className="text-2xl font-bold text-blue-800">${totalTuition.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p className="text-xs text-blue-500 mt-1">{students.length} student{students.length !== 1 ? 's' : ''}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-green-200 bg-green-50">
+                      <CardContent className="pt-4 pb-4">
+                        <p className="text-xs font-medium text-green-600 uppercase tracking-wide">SUFS Approved</p>
+                        <p className="text-2xl font-bold text-green-800">${totalSufs.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p className="text-xs text-green-500 mt-1">Step Up For Students</p>
+                      </CardContent>
+                    </Card>
+                    {totalScholarship > 0 && (
+                      <Card className="border-purple-200 bg-purple-50">
+                        <CardContent className="pt-4 pb-4">
+                          <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Scholarship</p>
+                          <p className="text-2xl font-bold text-purple-800">${totalScholarship.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                          <p className="text-xs text-purple-500 mt-1">Owner-applied offset</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    <Card className="border-red-200 bg-red-50">
+                      <CardContent className="pt-4 pb-4">
+                        <p className="text-xs font-medium text-red-600 uppercase tracking-wide">Out of Pocket (OOP)</p>
+                        <p className="text-2xl font-bold text-red-800">${totalOop.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p className="text-xs text-red-500 mt-1">Annual family responsibility</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })()}
 
-              {/* Per-Student Financial Breakdown */}
-              {students.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Finances by Student
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {students.map((student) => {
-                      const studentRecords = billingRecords.filter(b => b.student_id === student.student_id);
-                      const unassignedRecords = billingRecords.filter(b => !b.student_id);
-                      const allStudentRecords = student === students[0] 
-                        ? [...studentRecords, ...unassignedRecords]
-                        : studentRecords;
-                      const charges = allStudentRecords.filter(b => b.type === 'Charge').reduce((sum, b) => sum + (b.amount || 0), 0);
-                      const payments = allStudentRecords.filter(b => b.type === 'Payment').reduce((sum, b) => sum + Math.abs(b.amount || 0), 0);
-                      const balance = charges - payments;
-                      const studentScholarship = scholarships.find(s => s.student_id === student.student_id);
-                      const monthlyTuition = students.length > 0 ? (family.monthly_tuition_amount || 0) / students.length : 0;
+              {/* Per-Student Billing Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Per-Student Billing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {students.length === 0 ? (
+                    <p className="text-gray-500 text-center py-6">No students enrolled yet</p>
+                  ) : (
+                    students.map((student) => {
+                      const tuition = student.annual_tuition || 0;
+                      const sufs = student.sufs_approved_amount || 0;
+                      const scholarship = student.scholarship_amount || 0;
+                      const oop = Math.max(0, tuition - sufs - scholarship);
+                      const isEditing = editingStudentBilling === student.student_id;
 
                       return (
                         <div key={student.student_id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <div
-                              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => onStudentClick?.(student.student_id, { familyName: family?.family_name })}
-                            >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
                                 {student.first_name[0]}{student.last_name[0]}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900 hover:text-blue-600">{student.first_name} {student.last_name}</h4>
-                                <p className="text-xs text-gray-500">{getCampusName(student.campus_id)} • Grade {student.grade} • {student.session || 'Full Day'} • {student.room}</p>
+                                <h4 className="font-semibold text-gray-900">{student.first_name} {student.last_name}</h4>
+                                <p className="text-xs text-gray-500">{getCampusName(student.campus_id)} &bull; Grade {student.grade}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className={`text-lg font-bold ${balance > 10 ? 'text-red-600' : 'text-green-600'}`}>
-                                ${balance.toFixed(2)}
+                            {!isEditing ? (
+                              <Button variant="outline" size="sm" onClick={() => handleEditStudentBilling(student)}>
+                                <Edit2 className="w-3 h-3 mr-1" /> Edit Billing
+                              </Button>
+                            ) : (
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleSaveStudentBilling(student.student_id)} disabled={billingLoading} className="bg-green-600 hover:bg-green-700 text-white">
+                                  <Save className="w-3 h-3 mr-1" /> Save
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setEditingStudentBilling(null)}>Cancel</Button>
                               </div>
-                              <p className="text-xs text-gray-500">Balance</p>
-                            </div>
+                            )}
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div className="bg-blue-50 rounded-lg p-3">
-                              <p className="text-xs text-blue-600 font-medium">Monthly Tuition</p>
-                              <p className="text-lg font-bold text-blue-700">${monthlyTuition.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <p className="text-xs text-gray-600 font-medium">Total Charges</p>
-                              <p className="text-lg font-bold text-gray-700">${charges.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-green-50 rounded-lg p-3">
-                              <p className="text-xs text-green-600 font-medium">Total Paid</p>
-                              <p className="text-lg font-bold text-green-700">${payments.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-purple-50 rounded-lg p-3">
-                              <p className="text-xs text-purple-600 font-medium">Scholarship</p>
-                              <p className="text-lg font-bold text-purple-700">
-                                {studentScholarship ? `$${((studentScholarship.annual_award_amount || 0) / 12).toFixed(2)}/mo` : 'None'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {allStudentRecords.length > 0 && (
-                            <details className="group">
-                              <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-                                View {allStudentRecords.length} transaction{allStudentRecords.length !== 1 ? 's' : ''}
-                              </summary>
-                              <div className="mt-3 overflow-x-auto">
-                                <table className="w-full text-sm">
-                                  <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-100">
-                                    {allStudentRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
-                                      <tr key={record.billing_record_id}>
-                                        <td className="px-3 py-2 text-gray-500">{new Date(record.date).toLocaleDateString()}</td>
-                                        <td className="px-3 py-2 text-gray-900">{record.description}</td>
-                                        <td className="px-3 py-2">
-                                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                                            record.type === 'Payment' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                          }`}>
-                                            {record.type}
-                                          </span>
-                                        </td>
-                                        <td className="px-3 py-2">
-                                          {record.source ? (
-                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                              record.source === 'Step-Up' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                                            }`}>
-                                              {record.source === 'Step-Up' ? 'SUFS' : 'Out of Pocket'}
-                                            </span>
-                                          ) : (
-                                            <span className="text-gray-400">-</span>
-                                          )}
-                                        </td>
-                                        <td className={`px-3 py-2 text-right font-medium ${
-                                          record.amount < 0 ? 'text-green-600' : 'text-gray-900'
-                                        }`}>
-                                          {record.amount < 0 ? '-' : ''}${Math.abs(record.amount || 0).toFixed(2)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                          {isEditing ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-gray-50 rounded-lg p-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Annual Tuition ($)</label>
+                                <input type="number" step="0.01" className="w-full border rounded px-2 py-1.5 text-sm" value={editBillingValues.annual_tuition} onChange={(e) => setEditBillingValues({...editBillingValues, annual_tuition: e.target.value})} />
                               </div>
-                            </details>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">SUFS Approved ($)</label>
+                                <input type="number" step="0.01" className="w-full border rounded px-2 py-1.5 text-sm" value={editBillingValues.sufs_approved_amount} onChange={(e) => setEditBillingValues({...editBillingValues, sufs_approved_amount: e.target.value})} />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Scholarship ($) <span className="text-gray-400 font-normal">optional</span></label>
+                                <input type="number" step="0.01" className="w-full border rounded px-2 py-1.5 text-sm" value={editBillingValues.scholarship_amount} onChange={(e) => setEditBillingValues({...editBillingValues, scholarship_amount: e.target.value})} />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={`grid grid-cols-2 ${scholarship > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3`}>
+                              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                <p className="text-xs text-blue-600 font-medium">Annual Tuition</p>
+                                <p className="text-lg font-bold text-blue-800">${tuition.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                              </div>
+                              <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+                                <p className="text-xs text-green-600 font-medium">SUFS Approved</p>
+                                <p className="text-lg font-bold text-green-800">${sufs.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                              </div>
+                              {scholarship > 0 && (
+                                <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                                  <p className="text-xs text-purple-600 font-medium">Scholarship</p>
+                                  <p className="text-lg font-bold text-purple-800">${scholarship.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                </div>
+                              )}
+                              <div className="bg-red-50 rounded-lg p-3 border border-red-100">
+                                <p className="text-xs text-red-600 font-medium">Out of Pocket</p>
+                                <p className="text-lg font-bold text-red-800">${oop.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                              </div>
+                            </div>
                           )}
                         </div>
                       );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
+                    })
+                  )}
+                </CardContent>
+              </Card>
 
-              {/* Custom Invoice/Payment Schedule Section */}
+              {/* Invoices */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Custom Invoices & Payment Schedules</CardTitle>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setShowNewInvoiceModal(true)}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Invoice
-                    </Button>
-                    <Button 
-                      onClick={() => setShowNewScheduleModal(true)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Repeat className="w-4 h-4 mr-2" />
-                      New Schedule
-                    </Button>
-                  </div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Invoices
+                  </CardTitle>
+                  <Button onClick={() => setShowNewInvoiceModal(true)} className="bg-red-600 hover:bg-red-700 text-white" size="sm">
+                    <Plus className="w-4 h-4 mr-1" /> New Invoice
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  {paymentSchedules.length > 0 ? (
+                  {invoices.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Due</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Due</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Paid</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {paymentSchedules.map((schedule) => (
-                            <tr key={schedule.schedule_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${schedule.amount.toFixed(2)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFrequencyLabel(schedule.frequency)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(schedule.next_due_date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                  schedule.source === 'SUFS' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                                }`}>
-                                  {schedule.source}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  schedule.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  schedule.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                        <tbody className="divide-y divide-gray-100">
+                          {invoices.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime()).map((inv) => {
+                            const studentMatch = students.find(s => s.student_id === inv.student_id);
+                            const invTotal = inv.total ?? inv.amount ?? 0;
+                            const invPaid = inv.amount_paid ?? 0;
+                            const invBalance = inv.balance ?? (invTotal - invPaid);
+                            return (
+                              <tr key={inv.invoice_id}>
+                                <td className="px-4 py-2 font-medium text-gray-900">{inv.invoice_number || inv.invoice_id}</td>
+                                <td className="px-4 py-2 text-gray-600">{studentMatch ? `${studentMatch.first_name} ${studentMatch.last_name}` : 'Family'}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                    inv.billing_type === 'SUFS' ? 'bg-green-100 text-green-800' :
+                                    inv.billing_type === 'Scholarship' ? 'bg-purple-100 text-purple-800' :
+                                    'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {inv.billing_type || 'OOP'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 text-gray-500">{new Date(inv.invoice_date).toLocaleDateString()}</td>
+                                <td className="px-4 py-2 text-gray-500">{new Date(inv.due_date).toLocaleDateString()}</td>
+                                <td className="px-4 py-2 text-right font-medium">${invTotal.toFixed(2)}</td>
+                                <td className="px-4 py-2 text-right text-green-600">${invPaid.toFixed(2)}</td>
+                                <td className={`px-4 py-2 text-right font-bold ${invBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>${invBalance.toFixed(2)}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    inv.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                    inv.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                    inv.status === 'Sent' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {inv.status}
+                                  </span>
+                                  {inv.payment_method && inv.status === 'Paid' && (
+                                    <span className="ml-1 text-xs text-gray-400">({inv.payment_method})</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2">
+                                  {inv.status !== 'Paid' && (
+                                    markingPaidInvoiceId === inv.invoice_id ? (
+                                      <div className="flex items-center gap-1">
+                                        <select className="border rounded px-1 py-0.5 text-xs" value={paymentMethodInput} onChange={(e) => setPaymentMethodInput(e.target.value)}>
+                                          <option value="Cash">Cash</option>
+                                          <option value="Check">Check</option>
+                                          <option value="Stripe">Stripe</option>
+                                          <option value="Venmo">Venmo</option>
+                                          <option value="CashApp">CashApp</option>
+                                        </select>
+                                        <Button size="sm" className="h-6 text-xs bg-green-600 hover:bg-green-700 text-white px-2" onClick={() => handleMarkInvoicePaid(inv.invoice_id)}>
+                                          Confirm
+                                        </Button>
+                                        <Button variant="ghost" size="sm" className="h-6 text-xs px-1" onClick={() => setMarkingPaidInvoiceId(null)}>
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setMarkingPaidInvoiceId(inv.invoice_id)}>
+                                        <DollarSign className="w-3 h-3 mr-0.5" /> Mark Paid
+                                      </Button>
+                                    )
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 mb-2">No custom payment schedules yet</p>
-                      <p className="text-sm text-gray-400">Create custom invoices or recurring payment schedules for this family</p>
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">No invoices yet</p>
+                      <p className="text-sm text-gray-400 mt-1">Use the AI Agent to create monthly invoices, or click &quot;New Invoice&quot; above</p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Recent Invoices */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Invoices</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {invoices.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {invoices.map((invoice) => (
-                            <tr key={invoice.invoice_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.invoice_id}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.invoice_date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.due_date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(invoice.amount || 0).toFixed(2)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                  invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {invoice.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No invoices found</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Payment Summary by Source */}
-              {billingRecords.length > 0 && (
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>Payment Summary by Source</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">Out of Pocket</span>
-                        </div>
-                        <div className="text-2xl font-bold text-blue-700">
-                          ${Math.abs(billingRecords.filter(b => b.type === 'Payment' && b.source === 'Out of pocket').reduce((sum, b) => sum + b.amount, 0)).toFixed(2)}
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1">Family payments</p>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-500 text-white">Step Up (SUFS)</span>
-                        </div>
-                        <div className="text-2xl font-bold text-green-700">
-                          ${Math.abs(billingRecords.filter(b => b.type === 'Payment' && b.source === 'Step-Up').reduce((sum, b) => sum + b.amount, 0)).toFixed(2)}
-                        </div>
-                        <p className="text-xs text-green-600 mt-1">Scholarship payments</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-500 text-white">Total Charges</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-700">
-                          ${billingRecords.filter(b => b.type === 'Charge').reduce((sum, b) => sum + b.amount, 0).toFixed(2)}
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1">All tuition charges</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Venmo / Cash App Payment */}
-              <VenmoCashAppPayment
-                familyId={family.family_id}
-                familyName={family.family_name}
-                currentBalance={family.current_balance || 0}
-                onPaymentComplete={() => {
-                  // Refresh family data after payment
-                  fetch(`${API_URL}/api/families/${family.family_id}`)
-                    .then(res => res.json())
-                    .then(data => setFamily(data))
-                    .catch(console.error);
-                }}
-              />
-
-              {/* Billing Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Billing Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {billingRecords.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {billingRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
-                            <tr key={record.billing_record_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(record.date).toLocaleDateString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  record.type === 'Payment' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {record.type}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                {record.source ? (
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    record.source === 'Step-Up' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                                  }`}>
-                                    {record.source === 'Step-Up' ? 'SUFS' : 'Out of Pocket'}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                                record.amount < 0 ? 'text-green-600' : 'text-gray-900'
-                              }`}>
-                                {record.amount < 0 ? '-' : ''}${Math.abs(record.amount || 0).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No billing activity found</p>
                   )}
                 </CardContent>
               </Card>
@@ -1453,7 +1320,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                   <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Create Custom Invoice</h3>
+                      <h3 className="text-lg font-semibold">Create Invoice</h3>
                       <Button variant="ghost" size="sm" onClick={() => setShowNewInvoiceModal(false)}>
                         <X className="h-4 w-4" />
                       </Button>
@@ -1461,193 +1328,30 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                        <input
-                          type="text"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newInvoice.description}
-                          onChange={(e) => setNewInvoice({...newInvoice, description: e.target.value})}
-                          placeholder="e.g., Registration Fee, Field Trip, etc."
-                        />
+                        <input type="text" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value={newInvoice.description} onChange={(e) => setNewInvoice({...newInvoice, description: e.target.value})} placeholder="e.g., September OOP Tuition" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Amount *</label>
                         <div className="flex items-center">
                           <span className="text-gray-500 mr-2">$</span>
-                          <input
-                            type="number"
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                            value={newInvoice.amount}
-                            onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})}
-                            placeholder="0.00"
-                            step="0.01"
-                          />
+                          <input type="number" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value={newInvoice.amount} onChange={(e) => setNewInvoice({...newInvoice, amount: e.target.value})} placeholder="0.00" step="0.01" />
                         </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-                        <input
-                          type="date"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newInvoice.due_date}
-                          onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})}
-                        />
+                        <input type="date" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value={newInvoice.due_date} onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Payment Source</label>
-                        <select
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newInvoice.source}
-                          onChange={(e) => setNewInvoice({...newInvoice, source: e.target.value as 'Out of Pocket' | 'SUFS'})}
-                        >
-                          <option value="Out of Pocket">Out of Pocket (Family)</option>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Billing Type</label>
+                        <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" value={newInvoice.source} onChange={(e) => setNewInvoice({...newInvoice, source: e.target.value as 'Out of Pocket' | 'SUFS'})}>
+                          <option value="Out of Pocket">Out of Pocket (OOP)</option>
                           <option value="SUFS">Step Up for Students (SUFS)</option>
                         </select>
                       </div>
-
-                      {/* Recurring Invoice Toggle */}
-                      <div className="border-t pt-4">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <div className="relative">
-                            <input
-                              type="checkbox"
-                              className="sr-only"
-                              checked={newInvoice.is_recurring}
-                              onChange={(e) => setNewInvoice({...newInvoice, is_recurring: e.target.checked})}
-                            />
-                            <div className={`w-10 h-5 rounded-full transition-colors ${newInvoice.is_recurring ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                              <div className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${newInvoice.is_recurring ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`} />
-                            </div>
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">Make this a recurring invoice</span>
-                        </label>
-                      </div>
-
-                      {newInvoice.is_recurring && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Frequency *</label>
-                            <select
-                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                              value={newInvoice.recurring_frequency}
-                              onChange={(e) => setNewInvoice({...newInvoice, recurring_frequency: e.target.value as 'weekly' | 'monthly' | 'quarterly' | 'yearly'})}
-                            >
-                              <option value="weekly">Weekly</option>
-                              <option value="monthly">Monthly</option>
-                              <option value="quarterly">Quarterly (Every 3 months)</option>
-                              <option value="yearly">Yearly</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date (optional)</label>
-                            <input
-                              type="date"
-                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                              value={newInvoice.recurring_end_date}
-                              onChange={(e) => setNewInvoice({...newInvoice, recurring_end_date: e.target.value})}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Leave blank for indefinite recurring</p>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-blue-700">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span>A new invoice of ${newInvoice.amount || '0.00'} will be auto-generated {newInvoice.recurring_frequency}</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
                       <Button variant="outline" onClick={() => { setShowNewInvoiceModal(false); resetInvoiceForm(); }}>Cancel</Button>
-                      <Button onClick={handleCreateInvoice} className="bg-red-600 hover:bg-red-700 text-white">
-                        {newInvoice.is_recurring ? 'Create Recurring Invoice' : 'Create Invoice'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* New Payment Schedule Modal */}
-              {showNewScheduleModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Create Payment Schedule</h3>
-                      <Button variant="ghost" size="sm" onClick={() => setShowNewScheduleModal(false)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                        <input
-                          type="text"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newSchedule.description}
-                          onChange={(e) => setNewSchedule({...newSchedule, description: e.target.value})}
-                          placeholder="e.g., Monthly Tuition, After-school Program, etc."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount per Payment *</label>
-                        <div className="flex items-center">
-                          <span className="text-gray-500 mr-2">$</span>
-                          <input
-                            type="number"
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                            value={newSchedule.amount}
-                            onChange={(e) => setNewSchedule({...newSchedule, amount: e.target.value})}
-                            placeholder="0.00"
-                            step="0.01"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency *</label>
-                        <select
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newSchedule.frequency}
-                          onChange={(e) => setNewSchedule({...newSchedule, frequency: e.target.value as 'one-time' | 'monthly' | 'bi-monthly' | 'quarterly'})}
-                        >
-                          <option value="one-time">One-time</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="bi-monthly">Every 2 Months (Bi-monthly)</option>
-                          <option value="quarterly">Quarterly</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-                        <input
-                          type="date"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newSchedule.start_date}
-                          onChange={(e) => setNewSchedule({...newSchedule, start_date: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date (Optional)</label>
-                        <input
-                          type="date"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newSchedule.end_date}
-                          onChange={(e) => setNewSchedule({...newSchedule, end_date: e.target.value})}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Leave blank for ongoing schedule</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Payment Source</label>
-                        <select
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                          value={newSchedule.source}
-                          onChange={(e) => setNewSchedule({...newSchedule, source: e.target.value as 'Out of Pocket' | 'SUFS'})}
-                        >
-                          <option value="Out of Pocket">Out of Pocket (Family)</option>
-                          <option value="SUFS">Step Up for Students (SUFS)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-6">
-                      <Button variant="outline" onClick={() => setShowNewScheduleModal(false)}>Cancel</Button>
-                      <Button onClick={handleCreateSchedule} className="bg-red-600 hover:bg-red-700 text-white">
-                        Create Schedule
-                      </Button>
+                      <Button onClick={handleCreateInvoice} className="bg-red-600 hover:bg-red-700 text-white">Create Invoice</Button>
                     </div>
                   </div>
                 </div>
@@ -1663,8 +1367,8 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="text-sm text-gray-600 mb-1">Annual Tuition (per student)</div>
-                      <div className="text-2xl font-bold text-gray-900">${ANNUAL_TUITION.toLocaleString()}</div>
+                      <div className="text-sm text-gray-600 mb-1">Total Annual Tuition</div>
+                      <div className="text-2xl font-bold text-gray-900">${students.reduce((sum, s) => sum + (s.annual_tuition || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     </div>
                     <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                       <div className="text-sm text-green-600 mb-1">Total Scholarship Awards</div>
@@ -1675,7 +1379,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <div className="text-sm text-blue-600 mb-1">Parent Responsibility</div>
                       <div className="text-2xl font-bold text-blue-700">
-                        ${((students.length * ANNUAL_TUITION) - scholarships.reduce((sum, s) => sum + (s.annual_award_amount || 0), 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        ${(students.reduce((sum, s) => sum + (s.annual_tuition || 0), 0) - scholarships.reduce((sum, s) => sum + (s.annual_award_amount || 0), 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </div>
                     </div>
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -1714,7 +1418,8 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                             const student = students.find(s => s.student_id === scholarship.student_id) || 
                                            students.find(s => s.student_id === scholarship.scholarship_id.split('-')[0]);
                             const isEditing = editingScholarshipId === scholarship.scholarship_id;
-                            const parentResponsibility = ANNUAL_TUITION - (scholarship.annual_award_amount || 0);
+                            const studentTuition = student?.annual_tuition || 0;
+                            const parentResponsibility = studentTuition - (scholarship.annual_award_amount || 0);
                             
                             return (
                               <tr key={scholarship.scholarship_id}>
@@ -1729,7 +1434,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                   ) : 'Unknown'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{scholarship.scholarship_type}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ANNUAL_TUITION.toLocaleString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(student?.annual_tuition || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   {isEditing ? (
                                     <div className="flex items-center space-x-2">
@@ -1740,7 +1445,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                         onChange={(e) => setEditAwardAmount(e.target.value)}
                                         className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
                                         min="0"
-                                        max={ANNUAL_TUITION}
+                                        max={student?.annual_tuition || 0}
                                         step="0.01"
                                       />
                                     </div>
@@ -1752,7 +1457,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`text-sm font-medium ${parentResponsibility > 0 ? 'text-blue-600' : 'text-green-600'}`}>
-                                    ${(isEditing ? (ANNUAL_TUITION - parseFloat(editAwardAmount || '0')) : parentResponsibility).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    ${(isEditing ? (studentTuition - parseFloat(editAwardAmount || '0')) : parentResponsibility).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">

@@ -1,53 +1,55 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, CreditCard, FileText, DollarSign } from 'lucide-react';
+import { CheckCircle, Clock, CreditCard, FileText, DollarSign, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-interface BillingSummary {
-  family_id: string;
-  family_name: string;
+interface StudentBilling {
+  student_id: string;
+  student_name: string;
+  grade: string;
   annual_tuition: number;
+  sufs_approved_amount: number;
   scholarship_amount: number;
-  parent_responsibility: number;
-  monthly_parent_payment: number;
-  total_paid_ytd: number;
-  scholarship_received_ytd: number;
-  parent_paid_ytd: number;
-  current_balance: number;
-  next_payment_due: string;
-  next_payment_amount: number;
-  payment_schedule: PaymentScheduleItem[];
+  annual_oop: number;
 }
 
-interface PaymentScheduleItem {
-  due_date: string;
-  amount: number;
-  type: 'parent' | 'scholarship';
-  status: 'paid' | 'pending' | 'overdue';
-}
-
-interface OOPInvoice {
+interface OpenInvoice {
   invoice_id: string;
   invoice_number: string;
-  invoice_date: string;
+  student_id: string;
   due_date: string;
-  status: string;
   total: number;
   amount_paid: number;
   balance: number;
-  notes?: string;
-  is_recurring?: string;
-  recurring_frequency?: string;
+  status: string;
+  billing_type: string;
 }
 
-interface OOPPayment {
-  billing_record_id: string;
-  date: string;
-  description: string;
-  amount: number;
-  source: string | null;
+interface PaymentRecord {
+  invoice_id: string;
+  invoice_number: string;
+  student_id: string;
+  amount_paid: number;
+  payment_method: string | null;
+  payment_date: string | null;
+  billing_type: string;
+}
+
+interface BillingSummaryData {
+  family_id: string;
+  family_name: string;
+  students_billing: StudentBilling[];
+  total_annual_tuition: number;
+  total_sufs_approved: number;
+  total_scholarship: number;
+  total_annual_oop: number;
+  total_invoiced: number;
+  total_paid: number;
+  outstanding_balance: number;
+  open_invoices: OpenInvoice[];
+  payment_history: PaymentRecord[];
 }
 
 interface SimplifiedBillingSummaryProps {
@@ -55,68 +57,30 @@ interface SimplifiedBillingSummaryProps {
 }
 
 export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryProps) {
-  const [summary, setSummary] = useState<BillingSummary | null>(null);
-  const [invoices, setInvoices] = useState<OOPInvoice[]>([]);
-  const [oopPayments, setOopPayments] = useState<OOPPayment[]>([]);
+  const [data, setData] = useState<BillingSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAll();
+    const fetchBilling = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/families/${familyId}/billing-summary`);
+        if (res.ok) {
+          setData(await res.json());
+        }
+      } catch (error) {
+        console.error('Error fetching billing:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBilling();
   }, [familyId]);
 
-  const fetchAll = async () => {
-    try {
-      const [summaryRes, invoicesRes, recordsRes] = await Promise.all([
-        fetch(`${API_URL}/api/families/${familyId}/billing-summary`),
-        fetch(`${API_URL}/api/invoices?family_id=${familyId}`),
-        fetch(`${API_URL}/api/billing/${familyId}`)
-      ]);
+  const fmt = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
 
-      if (summaryRes.ok) {
-        const data = await summaryRes.json();
-        setSummary(data);
-      }
-
-      if (invoicesRes.ok) {
-        const invData: OOPInvoice[] = await invoicesRes.json();
-        setInvoices(invData);
-      }
-
-      if (recordsRes.ok) {
-        const records: OOPPayment[] = await recordsRes.json();
-        const oop = records.filter(
-          (r: OOPPayment) => r.amount < 0 && r.source !== 'Step-Up' && r.source !== 'SUFS'
-        );
-        setOopPayments(oop.sort((a: OOPPayment, b: OOPPayment) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      }
-    } catch (error) {
-      console.error('Error fetching billing data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const getProgressPercentage = () => {
-    if (!summary) return 0;
-    const totalPaid = summary.scholarship_received_ytd + summary.parent_paid_ytd;
-    return Math.min(100, (totalPaid / summary.annual_tuition) * 100);
-  };
+  const fmtDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   if (loading) {
     return (
@@ -126,7 +90,7 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
     );
   }
 
-  if (!summary) {
+  if (!data) {
     return (
       <Card>
         <CardContent className="p-6 text-center text-gray-500">
@@ -136,287 +100,197 @@ export function SimplifiedBillingSummary({ familyId }: SimplifiedBillingSummaryP
     );
   }
 
-  const scholarshipPending = summary.payment_schedule.filter(p => p.type === 'scholarship' && p.status !== 'paid');
-
-  // OOP balance from invoices: exclude cancelled, compute from active only
-  const activeInvoices = invoices.filter(inv => inv.status !== 'Cancelled');
-  const oopInvoiceTotal = activeInvoices.reduce((sum, inv) => sum + inv.total, 0);
-  const oopInvoicePaid = activeInvoices.reduce((sum, inv) => sum + inv.amount_paid, 0);
-  const oopBalance = oopInvoiceTotal - oopInvoicePaid;
-  const unpaidInvoices = activeInvoices.filter(inv => inv.balance > 0 && inv.status !== 'Paid');
-  const paidInvoices = activeInvoices.filter(inv => inv.balance <= 0 || inv.status === 'Paid');
+  const hasScholarship = data.total_scholarship > 0;
+  const oopBalance = data.outstanding_balance;
 
   return (
     <div className="space-y-6">
-      {/* Main Summary Card */}
+      {/* Main Summary Header */}
       <Card className="bg-gradient-to-r from-[#0A2463] to-[#163B9A] text-white">
         <CardContent className="p-6">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold mb-2">Your Tuition Summary</h2>
-            <p className="text-blue-100">2025-2026 School Year</p>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between text-sm mb-2">
-              <span>Tuition Progress</span>
-              <span>{getProgressPercentage().toFixed(0)}% Paid</span>
+          <h2 className="text-2xl font-bold text-center mb-4">Your Tuition Summary</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-blue-200 text-xs uppercase tracking-wide">Annual Tuition</p>
+              <p className="text-2xl font-bold">{fmt(data.total_annual_tuition)}</p>
             </div>
-            <div className="w-full bg-blue-900 rounded-full h-4 overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${getProgressPercentage()}%`,
-                  background: 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'
-                }}
-              />
+            <div>
+              <p className="text-green-200 text-xs uppercase tracking-wide">SUFS Approved</p>
+              <p className="text-2xl font-bold text-green-300">{fmt(data.total_sufs_approved)}</p>
             </div>
-            <div className="flex justify-between text-xs mt-2 text-blue-200">
-              <span>{formatCurrency(summary.scholarship_received_ytd + summary.parent_paid_ytd)} paid</span>
-              <span>{formatCurrency(summary.annual_tuition)} total</span>
+            {hasScholarship && (
+              <div>
+                <p className="text-purple-200 text-xs uppercase tracking-wide">Scholarship</p>
+                <p className="text-2xl font-bold text-purple-300">{fmt(data.total_scholarship)}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-red-200 text-xs uppercase tracking-wide">Your OOP Cost</p>
+              <p className="text-2xl font-bold text-red-300">{fmt(data.total_annual_oop)}</p>
             </div>
-          </div>
-
-          {/* Annual Tuition */}
-          <div className="text-center mb-4">
-            <p className="text-blue-200 text-sm">Annual Tuition</p>
-            <p className="text-3xl font-bold">{formatCurrency(summary.annual_tuition)}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* ===== TWO-COLUMN: Step Up vs Out of Pocket ===== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* LEFT COLUMN — Step Up (SUFS) */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-            <h3 className="text-lg font-bold text-green-800">Step Up For Students</h3>
-          </div>
-          <Card className="border-2 border-green-200 bg-green-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">Annual Scholarship</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-700">{formatCurrency(summary.scholarship_amount)}</div>
-              <p className="text-xs text-green-600 mt-1">Awarded for the school year</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-green-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">Received Year-to-Date</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-700">{formatCurrency(summary.scholarship_received_ytd)}</div>
-              <p className="text-xs text-green-600 mt-1">Sent directly to the school by SUFS</p>
-              {summary.scholarship_amount > 0 && (
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs text-green-600 mb-1">
-                    <span>Disbursed</span>
-                    <span>{((summary.scholarship_received_ytd / summary.scholarship_amount) * 100).toFixed(0)}%</span>
+      {/* Per-Student Breakdown */}
+      {data.students_billing.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-600" />
+              Per-Student Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.students_billing.map((student) => (
+              <div key={student.student_id} className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                    {student.student_name.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div className="w-full bg-green-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (summary.scholarship_received_ytd / summary.scholarship_amount) * 100)}%` }}
-                    />
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{student.student_name}</p>
+                    <p className="text-xs text-gray-500">Grade {student.grade}</p>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-          {scholarshipPending.length > 0 && (
-            <Card className="border border-green-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-green-700">Upcoming SUFS Payments</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {scholarshipPending.slice(0, 3).map((payment, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-green-50 rounded-lg text-sm">
-                    <div>
-                      <p className="font-medium text-green-800">Scholarship Payment</p>
-                      <p className="text-xs text-green-600">{formatDate(payment.due_date)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-700">{formatCurrency(payment.amount)}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        payment.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {payment.status === 'overdue' ? 'Overdue' : 'Upcoming'}
-                      </span>
-                    </div>
+                <div className={`grid grid-cols-2 ${student.scholarship_amount > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-2`}>
+                  <div className="bg-blue-50 rounded p-2">
+                    <p className="text-xs text-blue-600">Tuition</p>
+                    <p className="font-bold text-blue-800 text-sm">{fmt(student.annual_tuition)}</p>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN — Out of Pocket */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-            <h3 className="text-lg font-bold text-blue-800">Out of Pocket</h3>
-          </div>
-
-          {/* Current Balance Card — the key card */}
-          <Card className={`border-2 ${oopBalance > 0 ? 'border-red-300 bg-red-50/50' : 'border-green-300 bg-green-50/50'}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                {oopBalance > 0 ? (
-                  <Clock className="h-4 w-4 text-red-500" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                )}
-                <span className={oopBalance > 0 ? 'text-red-700' : 'text-green-700'}>
-                  Current Balance
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-4xl font-bold ${oopBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {oopBalance > 0 ? `-${formatCurrency(oopBalance)}` : formatCurrency(0)}
+                  <div className="bg-green-50 rounded p-2">
+                    <p className="text-xs text-green-600">SUFS</p>
+                    <p className="font-bold text-green-800 text-sm">{fmt(student.sufs_approved_amount)}</p>
+                  </div>
+                  {student.scholarship_amount > 0 && (
+                    <div className="bg-purple-50 rounded p-2">
+                      <p className="text-xs text-purple-600">Scholarship</p>
+                      <p className="font-bold text-purple-800 text-sm">{fmt(student.scholarship_amount)}</p>
+                    </div>
+                  )}
+                  <div className="bg-red-50 rounded p-2">
+                    <p className="text-xs text-red-600">Out of Pocket</p>
+                    <p className="font-bold text-red-800 text-sm">{fmt(student.annual_oop)}</p>
+                  </div>
+                </div>
               </div>
-              {oopBalance > 0 ? (
-                <p className="text-sm text-red-600 mt-2">
-                  You owe {formatCurrency(oopBalance)} across {unpaidInvoices.length} invoice{unpaidInvoices.length !== 1 ? 's' : ''}
-                </p>
-              ) : (
-                <p className="text-sm text-green-600 mt-2">You're all caught up!</p>
-              )}
-              {oopBalance > 0 && (
-                <Button className="w-full mt-4 bg-[#0A2463] hover:bg-[#163B9A]">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Pay Now
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Unpaid invoices — what the owner has billed */}
-          {unpaidInvoices.length > 0 && (
-            <Card className="border border-blue-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Open Invoices
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {unpaidInvoices.map(inv => (
-                  <div key={inv.invoice_id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div>
-                      <p className="font-medium text-blue-900 text-sm">{inv.invoice_number}</p>
-                      <p className="text-xs text-blue-600">
-                        Due {formatDate(inv.due_date)}
-                        {inv.notes && <span className="ml-1">· {inv.notes}</span>}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-red-600">{formatCurrency(inv.balance)}</p>
-                      {inv.amount_paid > 0 && (
-                        <p className="text-xs text-green-600">
-                          {formatCurrency(inv.amount_paid)} paid
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+      {/* Current Balance */}
+      <Card className={`border-2 ${oopBalance > 0 ? 'border-red-300 bg-red-50/50' : 'border-green-300 bg-green-50/50'}`}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            {oopBalance > 0 ? (
+              <Clock className="h-4 w-4 text-red-500" />
+            ) : (
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            )}
+            <span className={oopBalance > 0 ? 'text-red-700' : 'text-green-700'}>Current Balance</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`text-4xl font-bold ${oopBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {oopBalance > 0 ? fmt(oopBalance) : '$0.00'}
+          </div>
+          {oopBalance > 0 ? (
+            <p className="text-sm text-red-600 mt-2">
+              You owe {fmt(oopBalance)} across {data.open_invoices.length} invoice{data.open_invoices.length !== 1 ? 's' : ''}
+            </p>
+          ) : (
+            <p className="text-sm text-green-600 mt-2">All invoices are paid — you&apos;re all caught up!</p>
           )}
+          {oopBalance > 0 && (
+            <Button className="w-full mt-4 bg-[#0A2463] hover:bg-[#163B9A]">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Pay Now
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
-          {/* Year-to-date paid summary */}
-          <Card className="border border-blue-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Paid Year-to-Date
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700">{formatCurrency(summary.parent_paid_ytd)}</div>
-              <p className="text-xs text-blue-600 mt-1">Total out-of-pocket payments made</p>
-              {summary.parent_responsibility > 0 && (
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs text-blue-600 mb-1">
-                    <span>Annual progress</span>
-                    <span>{((summary.parent_paid_ytd / summary.parent_responsibility) * 100).toFixed(0)}%</span>
+      {/* Open Invoices */}
+      {data.open_invoices.length > 0 && (
+        <Card className="border border-blue-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Open Invoices
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.open_invoices.map((inv) => {
+              const studentName = data.students_billing.find(s => s.student_id === inv.student_id)?.student_name || 'Family';
+              return (
+                <div key={inv.invoice_id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div>
+                    <p className="font-medium text-blue-900 text-sm">{inv.invoice_number}</p>
+                    <p className="text-xs text-blue-600">
+                      {studentName} &bull; Due {fmtDate(inv.due_date)}
+                    </p>
                   </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (summary.parent_paid_ytd / summary.parent_responsibility) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Previous payments list */}
-          <Card className="border border-blue-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Previous Payments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {oopPayments.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {oopPayments.map(payment => (
-                    <div key={payment.billing_record_id} className="flex justify-between items-center p-2 bg-white rounded-lg border text-sm">
-                      <div>
-                        <p className="font-medium text-gray-800">{payment.description}</p>
-                        <p className="text-xs text-gray-500">{formatDate(payment.date)}</p>
-                      </div>
-                      <p className="font-bold text-green-600">{formatCurrency(Math.abs(payment.amount))}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400 text-center py-4">No payments recorded yet</p>
-              )}
-
-              {/* Paid invoices — settled */}
-              {paidInvoices.length > 0 && (
-                <div className="mt-4 pt-3 border-t">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Settled Invoices</p>
-                  <div className="space-y-1">
-                    {paidInvoices.map(inv => (
-                      <div key={inv.invoice_id} className="flex justify-between items-center p-2 bg-green-50 rounded text-sm">
-                        <div>
-                          <p className="font-medium text-green-800">{inv.invoice_number}</p>
-                          <p className="text-xs text-green-600">{formatDate(inv.invoice_date)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-green-700">{formatCurrency(inv.total)}</p>
-                          <span className="text-xs text-green-600">Paid</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="text-right">
+                    <p className="font-bold text-red-600">{fmt(inv.balance)}</p>
+                    {inv.amount_paid > 0 && (
+                      <p className="text-xs text-green-600">{fmt(inv.amount_paid)} paid</p>
+                    )}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Total Applied footer */}
+      {/* Payment History */}
+      {data.payment_history.length > 0 && (
+        <Card className="border border-green-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-700 flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Payment History
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.payment_history.map((pmt) => {
+              const studentName = data.students_billing.find(s => s.student_id === pmt.student_id)?.student_name || 'Family';
+              return (
+                <div key={pmt.invoice_id} className="flex justify-between items-center p-2 bg-green-50 rounded-lg text-sm">
+                  <div>
+                    <p className="font-medium text-green-800">{pmt.invoice_number}</p>
+                    <p className="text-xs text-green-600">
+                      {studentName}
+                      {pmt.payment_date && ` • ${fmtDate(pmt.payment_date)}`}
+                      {pmt.payment_method && ` • ${pmt.payment_method}`}
+                    </p>
+                  </div>
+                  <p className="font-bold text-green-700">{fmt(pmt.amount_paid)}</p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary Footer */}
       <Card className="bg-gray-50">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              <span className="text-sm font-medium text-gray-700">Total Applied to Tuition</span>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Total Invoiced</p>
+              <p className="text-lg font-bold text-gray-700">{fmt(data.total_invoiced)}</p>
             </div>
-            <span className="text-xl font-bold text-purple-700">{formatCurrency(summary.total_paid_ytd)}</span>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Total Paid</p>
+              <p className="text-lg font-bold text-green-700">{fmt(data.total_paid)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Outstanding</p>
+              <p className={`text-lg font-bold ${data.outstanding_balance > 0 ? 'text-red-700' : 'text-green-700'}`}>{fmt(data.outstanding_balance)}</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1 text-center">
-            Scholarship payments are sent directly to the school by Step Up for Students every 2 months.
-          </p>
         </CardContent>
       </Card>
     </div>
