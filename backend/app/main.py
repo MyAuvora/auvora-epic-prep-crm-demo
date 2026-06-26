@@ -650,6 +650,9 @@ class Student(BaseModel):
     overall_risk_flag: RiskFlag
     funding_source: str = "Out-of-Pocket"
     step_up_percentage: int = 0
+    annual_tuition: float = 0.0
+    sufs_approved_amount: float = 0.0
+    scholarship_amount: float = 0.0
 
 class Family(BaseModel):
     family_id: str
@@ -1061,15 +1064,19 @@ class Invoice(BaseModel):
     invoice_id: str
     campus_id: str
     family_id: str
+    student_id: Optional[str] = None
     invoice_number: str
     invoice_date: date
     due_date: date
+    billing_type: str = "OOP"  # OOP, SUFS, Scholarship
     status: InvoiceStatus
     subtotal: float
     tax: float
     total: float
     amount_paid: float
     balance: float
+    payment_method: Optional[str] = None  # Stripe, Cash, Check
+    payment_date: Optional[date] = None
     notes: Optional[str] = None
     is_recurring: str = "false"
     recurring_frequency: Optional[str] = None  # weekly, monthly, quarterly, yearly
@@ -2595,6 +2602,7 @@ async def ai_chat(request: AIChatRequest):
         "sufs_scholarships": sufs_scholarships_db,
         "sufs_claims": sufs_claims_db,
         "sufs_payments": sufs_payments_db,
+        "invoices": invoices_db,
     }
     
     # Convert conversation history to the format expected by the AI agent
@@ -3191,20 +3199,25 @@ async def generate_monthly_invoices(month: str, campus_id: Optional[str] = None)
         line_items = []
         
         for student in family_students:
-            monthly_tuition = family.monthly_tuition_amount / len(family_students)
+            tuition = student.annual_tuition or 0.0
+            sufs = student.sufs_approved_amount or 0.0
+            scholarship = student.scholarship_amount or 0.0
+            monthly_oop = max(0.0, tuition - sufs - scholarship) / 9
+            if monthly_oop <= 0:
+                continue
             line_item = InvoiceLineItem(
                 line_item_id=f"line_{uuid.uuid4().hex[:8]}",
                 invoice_id=invoice_id,
-                description=f"Monthly Tuition - {student.first_name} {student.last_name}",
+                description=f"Monthly OOP Tuition - {student.first_name} {student.last_name}",
                 category=BillingCategory.TUITION,
                 student_id=student.student_id,
                 quantity=1,
-                unit_price=monthly_tuition,
-                total=monthly_tuition,
-                funding_source=student.funding_source
+                unit_price=round(monthly_oop, 2),
+                total=round(monthly_oop, 2),
+                funding_source="Out-of-Pocket"
             )
             line_items.append(line_item)
-            subtotal += monthly_tuition
+            subtotal += round(monthly_oop, 2)
         
         tax = 0.0
         total = subtotal + tax
@@ -3341,6 +3354,48 @@ async def process_recurring_invoices():
         generated.append(new_invoice)
 
     return {"count": len(generated), "invoices": generated}
+
+
+@app.put("/api/invoices/{invoice_id}/mark-paid")
+async def mark_invoice_paid(invoice_id: str, body: dict):
+    """Mark an invoice as paid. Accepts payment_method (Cash, Check, Stripe, etc.)."""
+    invoice = next((i for i in invoices_db if i.invoice_id == invoice_id), None)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    payment_method = body.get("payment_method", "Cash")
+    amount = body.get("amount", invoice.balance)
+    invoice.amount_paid = invoice.amount_paid + amount
+    invoice.balance = max(0.0, invoice.total - invoice.amount_paid)
+    invoice.payment_method = payment_method
+    invoice.payment_date = date.today()
+    if invoice.balance <= 0:
+        invoice.status = InvoiceStatus.PAID
+    invoice.last_updated = datetime.now()
+    db_utils.save_invoice(invoice)
+    return invoice
+
+
+@app.put("/api/students/{student_id}/billing")
+async def update_student_billing(student_id: str, body: dict):
+    """Update per-student billing fields: annual_tuition, sufs_approved_amount, scholarship_amount."""
+    student = next((s for s in students_db if s.student_id == student_id), None)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    if "annual_tuition" in body:
+        student.annual_tuition = float(body["annual_tuition"])
+    if "sufs_approved_amount" in body:
+        student.sufs_approved_amount = float(body["sufs_approved_amount"])
+    if "scholarship_amount" in body:
+        student.scholarship_amount = float(body["scholarship_amount"])
+    db_utils.save_student(student)
+    return {
+        "student_id": student.student_id,
+        "student_name": f"{student.first_name} {student.last_name}",
+        "annual_tuition": student.annual_tuition,
+        "sufs_approved_amount": student.sufs_approved_amount,
+        "scholarship_amount": student.scholarship_amount,
+        "annual_oop": max(0.0, (student.annual_tuition or 0) - (student.sufs_approved_amount or 0) - (student.scholarship_amount or 0)),
+    }
 
 
 @app.get("/api/payment-plans")
@@ -6505,97 +6560,93 @@ async def get_import_template(platform: str):
 
 @app.get("/api/families/{family_id}/billing-summary")
 async def get_family_billing_summary(family_id: str):
-    """Get simplified billing summary for a family showing scholarship vs parent responsibility"""
-    
-    # Find the family
-    family = None
-    for f in families_db:
-        if f.family_id == family_id:
-            family = f
-            break
-    
+    """Get billing summary for a family with per-student breakdown.
+    Uses owner-entered per-student tuition, SUFS, and scholarship amounts."""
+
+    family = next((f for f in families_db if f.family_id == family_id), None)
     if not family:
         raise HTTPException(status_code=404, detail="Family not found")
-    
-    # Get students in this family
+
     family_students = [s for s in students_db if s.family_id == family_id]
-    num_students = len(family_students)
-    
-    # Calculate annual tuition (assuming $10,000 per student per year)
-    annual_tuition_per_student = 10000
-    annual_tuition = annual_tuition_per_student * num_students
-    
-    # Get scholarship amounts for this family's students
-    total_scholarship = 0
-    for scholarship in sufs_scholarships_db:
-        if scholarship.family_id == family_id and scholarship.status == "Active":
-            total_scholarship += scholarship.annual_award_amount
-    
-    # Calculate parent responsibility
-    parent_responsibility = max(0, annual_tuition - total_scholarship)
-    monthly_parent_payment = parent_responsibility / 12
-    
-    # Calculate year-to-date payments
-    scholarship_received_ytd = 0
-    parent_paid_ytd = 0
-    
-    for record in billing_records_db:
-        if record.family_id == family_id and record.type == "Payment":
-            if record.source == PaymentSource.STEP_UP:
-                scholarship_received_ytd += abs(record.amount)
-            elif record.source == PaymentSource.OUT_OF_POCKET:
-                parent_paid_ytd += abs(record.amount)
-    
-    total_paid_ytd = scholarship_received_ytd + parent_paid_ytd
-    
-    # Generate payment schedule (next 6 months)
-    payment_schedule = []
-    today = date.today()
-    
-    # Parent payments (monthly on the 1st)
-    for i in range(6):
-        month_offset = i + 1
-        payment_date = date(today.year, today.month, 1) + timedelta(days=30 * month_offset)
-        payment_schedule.append({
-            "due_date": payment_date.isoformat(),
-            "amount": monthly_parent_payment,
-            "type": "parent",
-            "status": "pending"
+
+    # Per-student billing breakdown
+    students_billing = []
+    total_tuition = 0.0
+    total_sufs = 0.0
+    total_scholarship = 0.0
+    total_oop = 0.0
+
+    for student in family_students:
+        tuition = student.annual_tuition or 0.0
+        sufs = student.sufs_approved_amount or 0.0
+        scholarship = student.scholarship_amount or 0.0
+        oop = max(0.0, tuition - sufs - scholarship)
+        total_tuition += tuition
+        total_sufs += sufs
+        total_scholarship += scholarship
+        total_oop += oop
+        students_billing.append({
+            "student_id": student.student_id,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "grade": student.grade,
+            "annual_tuition": round(tuition, 2),
+            "sufs_approved_amount": round(sufs, 2),
+            "scholarship_amount": round(scholarship, 2),
+            "annual_oop": round(oop, 2),
         })
-    
-    # Scholarship payments (every 2 months)
-    bi_monthly_scholarship = total_scholarship / 6  # 6 payments per year
-    for i in range(3):
-        month_offset = (i + 1) * 2
-        payment_date = date(today.year, today.month, 15) + timedelta(days=30 * month_offset)
-        payment_schedule.append({
-            "due_date": payment_date.isoformat(),
-            "amount": bi_monthly_scholarship,
-            "type": "scholarship",
-            "status": "pending"
-        })
-    
-    # Sort by date
-    payment_schedule.sort(key=lambda x: x["due_date"])
-    
-    # Calculate next payment due
-    next_payment_due = payment_schedule[0]["due_date"] if payment_schedule else today.isoformat()
-    next_payment_amount = monthly_parent_payment
-    
+
+    # Get invoices for this family
+    family_invoices = [inv for inv in invoices_db if inv.family_id == family_id]
+    oop_invoices = [inv for inv in family_invoices if inv.billing_type == "OOP"]
+
+    # Calculate totals from invoices
+    total_invoiced = sum(inv.total for inv in oop_invoices)
+    total_paid = sum(inv.amount_paid for inv in oop_invoices)
+    total_balance = sum(inv.balance for inv in oop_invoices if inv.status not in ("Cancelled", "Draft"))
+
+    # Open invoices (Sent or Overdue, unpaid)
+    open_invoices = []
+    for inv in oop_invoices:
+        if inv.status in ("Sent", "Overdue") and inv.balance > 0:
+            open_invoices.append({
+                "invoice_id": inv.invoice_id,
+                "invoice_number": inv.invoice_number,
+                "student_id": inv.student_id,
+                "due_date": inv.due_date.isoformat() if inv.due_date else None,
+                "total": round(inv.total, 2),
+                "amount_paid": round(inv.amount_paid, 2),
+                "balance": round(inv.balance, 2),
+                "status": inv.status,
+                "billing_type": inv.billing_type,
+            })
+
+    # Payment history (paid invoices)
+    payment_history = []
+    for inv in family_invoices:
+        if inv.amount_paid > 0:
+            payment_history.append({
+                "invoice_id": inv.invoice_id,
+                "invoice_number": inv.invoice_number,
+                "student_id": inv.student_id,
+                "amount_paid": round(inv.amount_paid, 2),
+                "payment_method": inv.payment_method,
+                "payment_date": inv.payment_date.isoformat() if inv.payment_date else None,
+                "billing_type": inv.billing_type,
+            })
+
     return {
         "family_id": family_id,
         "family_name": family.family_name,
-        "annual_tuition": annual_tuition,
-        "scholarship_amount": total_scholarship,
-        "parent_responsibility": parent_responsibility,
-        "monthly_parent_payment": monthly_parent_payment,
-        "total_paid_ytd": total_paid_ytd,
-        "scholarship_received_ytd": scholarship_received_ytd,
-        "parent_paid_ytd": parent_paid_ytd,
-        "current_balance": family.current_balance,
-        "next_payment_due": next_payment_due,
-        "next_payment_amount": next_payment_amount,
-        "payment_schedule": payment_schedule
+        "students_billing": students_billing,
+        "total_annual_tuition": round(total_tuition, 2),
+        "total_sufs_approved": round(total_sufs, 2),
+        "total_scholarship": round(total_scholarship, 2),
+        "total_annual_oop": round(total_oop, 2),
+        "total_invoiced": round(total_invoiced, 2),
+        "total_paid": round(total_paid, 2),
+        "outstanding_balance": round(total_balance, 2),
+        "open_invoices": open_invoices,
+        "payment_history": payment_history,
     }
 
 # ============================================

@@ -1410,7 +1410,8 @@ AVAILABLE_FUNCTIONS = [
                     "family_name": {"type": "string", "description": "Family name"},
                     "family_id": {"type": "string", "description": "Family ID if known"},
                     "amount": {"type": "number", "description": "Payment amount in dollars"},
-                    "payment_method": {"type": "string", "enum": ["Cash", "Check", "Credit Card", "ACH", "Venmo", "Cash App", "Scholarship"], "description": "How the payment was made"},
+                    "payment_method": {"type": "string", "enum": ["Cash", "Check", "Credit Card", "ACH", "Venmo", "Cash App", "Stripe", "Scholarship"], "description": "How the payment was made"},
+                    "invoice_id": {"type": "string", "description": "Specific invoice ID to apply payment to (optional)"},
                     "description": {"type": "string", "description": "Payment description/notes"}
                 },
                 "required": ["amount"]
@@ -1695,7 +1696,9 @@ AVAILABLE_FUNCTIONS = [
                         },
                         "description": "Line items for the invoice"
                     },
-                    "due_date": {"type": "string", "description": "Payment due date"}
+                    "due_date": {"type": "string", "description": "Payment due date"},
+                    "billing_type": {"type": "string", "enum": ["OOP", "SUFS", "Scholarship"], "description": "Type of billing (OOP = Out-of-Pocket, default)"},
+                    "student_id": {"type": "string", "description": "Specific student ID to invoice (optional, defaults to all students in family)"}
                 },
                 "required": ["family_name"]
             }
@@ -2111,6 +2114,7 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
     sufs_scholarships_db = data_context.get("sufs_scholarships", [])
     sufs_claims_db = data_context.get("sufs_claims", [])
     sufs_payments_db = data_context.get("sufs_payments", [])
+    invoices_db = data_context.get("invoices", [])
     
     if function_name == "get_dashboard_summary":
         total_students = len([s for s in students_db if s.status.value == "Active"])
@@ -2349,7 +2353,11 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
                     "name": f"{s.first_name} {s.last_name}",
                     "grade": s.grade,
                     "status": s.status.value,
-                    "funding": s.funding_source
+                    "funding": s.funding_source,
+                    "annual_tuition": s.annual_tuition or 0,
+                    "sufs_approved_amount": s.sufs_approved_amount or 0,
+                    "scholarship_amount": s.scholarship_amount or 0,
+                    "annual_oop": max(0, (s.annual_tuition or 0) - (s.sufs_approved_amount or 0) - (s.scholarship_amount or 0)),
                 }
                 for s in students
             ],
@@ -2388,8 +2396,11 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         total_families = len(families_db)
         total_outstanding = sum(f.current_balance for f in families_db)
         
-        # Calculate expected monthly revenue
-        expected_monthly = sum(f.monthly_tuition_amount for f in families_db)
+        # Calculate totals from per-student billing fields
+        total_tuition = sum(s.annual_tuition or 0 for s in students_db)
+        total_sufs = sum(s.sufs_approved_amount or 0 for s in students_db)
+        total_scholarship_amt = sum(s.scholarship_amount or 0 for s in students_db)
+        total_oop = max(0, total_tuition - total_sufs - total_scholarship_amt)
         
         # Count by status
         green_count = len([f for f in families_db if f.billing_status.value == "Green"])
@@ -2405,7 +2416,10 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         
         return {
             "total_families": total_families,
-            "expected_monthly_revenue": round(expected_monthly, 2),
+            "total_annual_tuition": round(total_tuition, 2),
+            "total_sufs_approved": round(total_sufs, 2),
+            "total_scholarship": round(total_scholarship_amt, 2),
+            "total_annual_oop": round(total_oop, 2),
             "total_outstanding_balance": round(total_outstanding, 2),
             "billing_status_breakdown": {
                 "green": green_count,
@@ -3369,20 +3383,35 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
         family_name = arguments.get("family_name", "")
         amount = arguments.get("amount", 0)
         payment_method = arguments.get("payment_method", "Cash")
+        invoice_id = arguments.get("invoice_id", "")
         description = arguments.get("description", "Payment received")
         family = None
         if family_name:
             family = next((f for f in families_db if family_name.lower() in f.family_name.lower()), None)
+        payment_details = {
+            "amount": amount,
+            "method": payment_method,
+            "description": description,
+            "date": str(date.today()),
+            "family": family.family_name if family else family_name
+        }
+        if invoice_id:
+            payment_details["invoice_id"] = invoice_id
+            invoice = next((i for i in invoices_db if i.invoice_id == invoice_id), None)
+            if invoice:
+                invoice.amount_paid = (invoice.amount_paid or 0) + amount
+                invoice.balance = max(0.0, invoice.total - invoice.amount_paid)
+                invoice.payment_method = payment_method
+                invoice.payment_date = date.today()
+                if invoice.balance <= 0:
+                    invoice.status = "Paid"
+                invoice.last_updated = datetime.now()
+                payment_details["invoice_status"] = invoice.status if isinstance(invoice.status, str) else invoice.status.value
+                payment_details["remaining_balance"] = round(invoice.balance, 2)
         return {
             "success": True,
             "message": f"Payment of ${amount:.2f} recorded for {family.family_name if family else family_name} family via {payment_method}.",
-            "payment_details": {
-                "amount": amount,
-                "method": payment_method,
-                "description": description,
-                "date": str(date.today()),
-                "family": family.family_name if family else family_name
-            }
+            "payment_details": payment_details
         }
 
     if function_name == "send_message":
@@ -3744,27 +3773,74 @@ def execute_function(function_name: str, arguments: dict, data_context: dict) ->
     if function_name == "generate_invoice":
         family_name = arguments.get("family_name", "")
         items = arguments.get("items", [])
-        due_date = arguments.get("due_date", str(date.today() + timedelta(days=30)))
+        due_date_str = arguments.get("due_date", str(date.today() + timedelta(days=30)))
+        billing_type = arguments.get("billing_type", "OOP")
+        target_student_id = arguments.get("student_id")
         family = next((f for f in families_db if family_name.lower() in f.family_name.lower()), None)
         if not family:
             return {"success": False, "error": f"Family '{family_name}' not found"}
         if not items:
-            items = [{"description": "Monthly Tuition", "amount": family.monthly_tuition_amount}]
+            family_students = [s for s in students_db if s.family_id == family.family_id]
+            if target_student_id:
+                family_students = [s for s in family_students if s.student_id == target_student_id]
+            items = []
+            for student in family_students:
+                tuition = student.annual_tuition or 0.0
+                sufs = student.sufs_approved_amount or 0.0
+                scholarship = student.scholarship_amount or 0.0
+                oop = max(0.0, tuition - sufs - scholarship)
+                monthly_oop = round(oop / 9, 2) if oop > 0 else 0
+                if monthly_oop > 0:
+                    items.append({
+                        "description": f"Monthly OOP - {student.first_name} {student.last_name}",
+                        "amount": monthly_oop,
+                        "student_id": student.student_id
+                    })
         total = sum(item.get("amount", 0) for item in items)
-        return {
-            "success": True,
-            "invoice": {
-                "family": family.family_name,
-                "invoice_number": f"INV-{datetime.now().strftime('%Y%m%d%H%M')}",
-                "date": str(date.today()),
-                "due_date": due_date,
-                "items": items,
-                "subtotal": round(total, 2),
-                "total": round(total, 2),
-                "status": "Sent",
-                "current_balance": family.current_balance
-            }
+        inv_id = f"inv_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        inv_number = f"INV-{datetime.now().strftime('%Y%m%d%H%M')}"
+        try:
+            due_dt = date.fromisoformat(due_date_str)
+        except (ValueError, TypeError):
+            due_dt = date.today() + timedelta(days=30)
+        from app.main import Invoice as InvoicePydantic, invoices_db as main_invoices_db
+        new_invoice = InvoicePydantic(
+            invoice_id=inv_id,
+            campus_id=family.campus_id if hasattr(family, "campus_id") else "",
+            family_id=family.family_id,
+            student_id=target_student_id or "",
+            invoice_number=inv_number,
+            invoice_date=date.today(),
+            due_date=due_dt,
+            billing_type=billing_type,
+            status="Sent",
+            subtotal=round(total, 2),
+            tax=0.0,
+            total=round(total, 2),
+            amount_paid=0.0,
+            balance=round(total, 2),
+            created_date=datetime.now(),
+            last_updated=datetime.now(),
+        )
+        main_invoices_db.append(new_invoice)
+        from app.db_utils import save_invoice
+        save_invoice(new_invoice)
+        invoice_obj = {
+            "invoice_id": inv_id,
+            "family": family.family_name,
+            "family_id": family.family_id,
+            "invoice_number": inv_number,
+            "date": str(date.today()),
+            "due_date": due_date_str,
+            "billing_type": billing_type,
+            "items": items,
+            "subtotal": round(total, 2),
+            "total": round(total, 2),
+            "balance": round(total, 2),
+            "amount_paid": 0,
+            "status": "Sent",
         }
+        return {"success": True, "invoice": invoice_obj}
 
     # === UPGRADE 5: MULTI-STEP WORKFLOWS ===
     if function_name == "execute_workflow":
