@@ -126,6 +126,26 @@ def _run_migrations():
             if "read" not in existing:
                 conn.execute(text("ALTER TABLE messages ADD COLUMN read BOOLEAN DEFAULT 0"))
                 conn.execute(text("UPDATE messages SET read = 1"))
+        # Students table: add per-student billing fields if missing
+        if "students" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("students")]
+            if "annual_tuition" not in existing:
+                conn.execute(text("ALTER TABLE students ADD COLUMN annual_tuition FLOAT DEFAULT 0.0"))
+            if "sufs_approved_amount" not in existing:
+                conn.execute(text("ALTER TABLE students ADD COLUMN sufs_approved_amount FLOAT DEFAULT 0.0"))
+            if "scholarship_amount" not in existing:
+                conn.execute(text("ALTER TABLE students ADD COLUMN scholarship_amount FLOAT DEFAULT 0.0"))
+        # Invoices table: add billing_type, student_id, payment_method, payment_date if missing
+        if "invoices" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("invoices")]
+            if "billing_type" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN billing_type VARCHAR DEFAULT 'OOP'"))
+            if "student_id" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN student_id VARCHAR DEFAULT NULL"))
+            if "payment_method" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN payment_method VARCHAR DEFAULT NULL"))
+            if "payment_date" not in existing:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN payment_date DATE DEFAULT NULL"))
         # CRM Notifications table: add parent recipient and related fields if missing
         if "crm_notifications" in inspector.get_table_names():
             existing = [c["name"] for c in inspector.get_columns("crm_notifications")]
