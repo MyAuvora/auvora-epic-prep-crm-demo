@@ -561,11 +561,19 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
       };
 
       // Create the invoice via API
-      await fetch(`${API_URL}/api/invoices`, {
+      const invoiceRes = await fetch(`${API_URL}/api/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoicePayload)
       });
+
+      if (!invoiceRes.ok) {
+        const errData = await invoiceRes.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to create invoice');
+      }
+
+      const createdInvoice = await invoiceRes.json();
+      setInvoices(prev => [...prev, createdInvoice]);
 
       // Also create a billing record for the charge
       const billingRecord = {
@@ -597,19 +605,7 @@ export function FullAccountView({ type, id, onBack, onStudentClick, onFamilyClic
         : 'Invoice created successfully');
     } catch (error) {
       console.error('Error creating invoice:', error);
-      const billingRecord = {
-        billing_record_id: `br_${Date.now()}`,
-        family_id: id,
-        date: new Date().toISOString().split('T')[0],
-        type: 'Charge',
-        description: newInvoice.description,
-        amount: parseFloat(newInvoice.amount),
-        source: null,
-        period_month: null,
-        category: 'Custom Invoice',
-        student_id: null
-      };
-      setBillingRecords(prev => [...prev, billingRecord as BillingRecord]);
+      alert(error instanceof Error ? error.message : 'Failed to create invoice. Please try again.');
       setShowNewInvoiceModal(false);
       resetInvoiceForm();
     }
